@@ -93,6 +93,16 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 - **Moteur Docker prêt ~1,2 s après l'ordre de démarrage** (initrd 0,69 s, agent PID 1 0,76 s, dockerd 1,16 s), `docker version` depuis le CLI Windows via `\\.\pipe\solon` en 125 ms, `docker run --rm` en ~620 ms. Persistance du disque de données validée sur deux cycles, arrêt propre en ~0,4 s.
 - Quatre pièges levés et documentés dans `docs/measurements.md` : ACL du groupe Virtual Machines sur les disques, disposition du pied de VHD, environnement vide de PID 1, options netfilter en modules dans la configuration WSL, et absence de demi-fermeture des named pipes (relais réécrit).
 
+### 1.6 Résultats du bloc 2 (service Windows, 2 septembre 2026)
+
+- **Service `solon-service` opérationnel** (mode service Windows et mode console) : machine à états complète (§7.1), prérequis, image vérifiée par SHA-256, disque de données VHDX créé par `CreateVirtualDisk`, détection d'orphelines et rattachement, réseau HNS, machine, agent, configuration réseau de l'invité, attente de dockerd. Canal de contrôle `\\.\pipe\solon-control` et API Docker `\\.\pipe\solon` accessibles **sans élévation**.
+- **Réseau sortant validé** : réseau HNS de type ICS (comme WSL2), adresse statique poussée à l'agent, `docker pull` depuis un registre public en 0,9 s ; DNS de l'hôte relayés.
+- **Ports publiés** : détection dans l'invité par le flux d'événements de dockerd, relais TCP hôte → HvSocket → conteneur ; `http://localhost:8080` répond depuis Windows.
+- **Robustesse** : terminaison brutale de la machine pendant des écritures → redémarrage, `fsck` propre, volume conservé. Rattachement après crash du service : implémenté, test automatisé écrit (`tests/e2e/crash-service-kill.ps1`), exécution en attente (nécessite deux acceptations UAC).
+- **RAM au repos : 426–480 Mo** (machine + service) pour 2 048 Mo alloués, sous la cible de 500 Mo mais sans marge ; leviers restants : hints mémoire HCS, allocation initiale plus basse, `drop_caches` périodique.
+- **Temps de démarrage** : 11,7–12,7 s en build debug dont ~10 s de SHA-256 non optimisé ; mesure en build release à venir (la cible ~2 s reste plausible : le moteur est prêt 1,3 s après l'ordre de démarrage).
+- Trois découvertes documentées dans `docs/measurements.md` : `connect()` HvSocket bloqué 30 s sans `HVSOCKET_CONNECT_TIMEOUT` ; le CLI `docker events` ne vide pas sa sortie redirigée (lecture directe de `GET /events`) ; le CLI `docker` de Windows envoie des identifiants du gestionnaire d'identifiants Windows quand Docker Desktop est installé.
+
 ---
 
 ## 2. Virtualisation : choix et justification

@@ -596,6 +596,17 @@ fn supervise(state: Arc<State>) {
     }
 }
 
+/// `sync()` périodique : borne la perte de données non synchronisées à ~2 s en cas de coupure
+/// brutale (ext4 `data=ordered` ne valide sinon que toutes les 5 s). Coût négligeable au repos.
+pub fn start_periodic_sync() {
+    std::thread::spawn(|| {
+        loop {
+            std::thread::sleep(Duration::from_secs(2));
+            unsafe { libc::sync() };
+        }
+    });
+}
+
 /// Récolte les zombies ré-attachés à PID 1, sans voler les enfants attendus par l'agent.
 pub fn start_reaper(state: Arc<State>) {
     std::thread::spawn(move || {

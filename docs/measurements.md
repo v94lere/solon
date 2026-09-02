@@ -164,3 +164,53 @@ Premier démarrage (disque de données vierge) : le formatage ext4 de 20 Go ajou
 - L'invité voit 1,95 Go de RAM pour 2 048 Mo alloués, avec ~1,8 Go disponibles une fois dockerd démarré :
   **le moteur au repos occupe ~150 Mo côté invité**. La mesure côté hôte (processus `vmmem`, ballon, hints
   mémoire) est l'objet du bloc 2.
+
+## Bloc 2 — service Windows, réseau, ports publiés, robustesse (2 septembre 2026)
+
+Outil : `solon-service console --start` (Administrateur, build **debug**) puis le scénario non élevé
+`e2e.ps1` : état via `\.\pipe\solon-control`, CLI `docker` via `\.\pipe\solon`, `docker pull`,
+port publié relayé vers `localhost`, mesure mémoire, arrêt propre. Image `0.1.0-dev.2`, machine 2 048 Mo / 4 processeurs.
+
+| Mesure | Valeur |
+|---|---|
+| Provisionnement complet, prérequis → dockerd prêt (build debug, dont ~10 s de SHA-256 sur 300 Mo) | 11,7–12,7 s |
+| dont vérification SHA-256 de l'image (Rust non optimisé) | ~10 s (à re-mesurer en release, voir ci-dessous) |
+| Création du réseau HNS ICS + endpoint | ~0,7 s |
+| `docker version` depuis un utilisateur **non élevé** | 60–80 ms |
+| `docker pull public.ecr.aws/docker/library/alpine:3.20` (réseau sortant NAT + DNS, image ~3,5 Mo) | 0,9 s |
+| `docker run -d -p 8080:80` → première réponse HTTP sur `http://localhost:8080` depuis Windows | 2,3 s (dont démarrage du serveur dans le conteneur et détection de la publication) |
+| Fermeture du relais après suppression du conteneur | < 1 s |
+| **RAM au repos après 60 s** (processus `vmmem` + `solon-service`) | **426–480 Mo** (408–462 + 18) pour 2 048 Mo alloués |
+| Arrêt propre (agent → dockerd → `poweroff`, réseau HNS supprimé) | 0,6 s |
+
+### Faits établis par le bloc 2
+
+- **`connect()` HvSocket lancé avant que l'invité n'écoute reste bloqué 30 s** (délai système) au lieu
+  d'être refusé. Sans `HVSOCKET_CONNECT_TIMEOUT` (option de socket niveau `HV_PROTOCOL_RAW`), la boucle de
+  réessai ne réessaie jamais ; borné à 1 s par tentative.
+- **Réseau HNS de type ICS** (JSON WSL : `Type=ICS`, `Flags=9`, `IsolateSwitch=true`, sous-réseau statique)
+  créé par `HcnCreateNetwork` fonctionne sur Windows 11 26200 : carte `vEthernet (Solon)` 172.30.0.1/24,
+  invité 172.30.0.2 configuré statiquement par l'agent, NAT et résolution DNS opérationnels (DNS de l'hôte
+  relayés). L'endpoint reçoit un GUID distinct de la machine.
+- **Le CLI `docker events` ne vide pas sa sortie tant qu'il tourne** quand elle est redirigée : l'agent
+  lit désormais `GET /events` directement sur le socket Unix (HTTP/1.1 par morceaux). Les ports publiés sont
+  recalculés par `docker ps` + `docker inspect` à chaque événement de conteneur.
+- **Relais des ports publiés sans réseau virtuel** : écouteur TCP sur l'hôte → HvSocket → agent →
+  conteneur (`10.90.0.x`). Fonctionne pour `0.0.0.0` et `127.0.0.1` ; UDP hors périmètre.
+- **Le CLI `docker` de Windows avec Docker Desktop installé** utilise par défaut le gestionnaire
+  d'identifiants Windows (`docker-credential-wincred`) et envoie des identifiants Docker Hub périmés
+  (« unauthorized: incorrect username or password ») ; ce n'est pas lié à Solon (les tirages depuis un autre
+  registre réussissent). À documenter pour les utilisateurs ; l'application (bollard) n'envoie aucun identifiant.
+- **Test de coupure brutale** : voir le tableau de robustesse ci-dessous (complété au fil des exécutions).
+
+### Robustesse (scripts `tests/e2e/`)
+
+| Test | Résultat | Détail |
+|---|---|---|
+| `crash-force-stop.ps1` : terminaison brutale de la machine (`stop --force`, sans arrêt invité) pendant qu'un conteneur écrit en boucle dans un volume | **OK** | `e2fsck -p` code 0 (journal rejoué) ; compteur écrit avec `sync` : 507 avant, 514 après (rien de perdu) ; journal écrit sans `sync` : 513 lignes conservées sur ~514 (fenêtre de perte bornée à ~2 s par le `sync()` périodique de l'agent) ; conteneur marqué `Exited (255)` par dockerd au redémarrage ; moteur prêt 12,8 s après (build debug) |
+| `crash-service-kill.ps1` : service tué pendant que la machine tourne, relance, rattachement | écrit, **non exécuté** | nécessite deux acceptations UAC ; à jouer avec l'utilisateur présent |
+
+Sans le `sync()` périodique, la première exécution avait perdu **toutes** les écritures des 4 dernières
+secondes (compteur revenu à 0, conteneur en état « Created » car l'état de dockerd lui-même n'avait pas
+atteint le disque) : c'est le comportement ext4 `data=ordered` standard (validation toutes les 5 s). Le
+`sync()` toutes les 2 s dans l'agent ramène la fenêtre à ~2 s pour un coût négligeable au repos.

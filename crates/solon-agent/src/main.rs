@@ -73,6 +73,7 @@ fn main() {
             )),
         }
         system::start_engine(&state);
+        system::start_periodic_sync();
     } else {
         system::log("pas PID 1 : mode RPC seul (aucun service démarré)");
     }
