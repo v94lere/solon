@@ -1,0 +1,29 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/solon-core",
+    "crates/solon-vm-hcs",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+repository = "https://github.com/v94lere/solon"
+rust-version = "1.85"
+
+[workspace.dependencies]
+solon-core = { path = "crates/solon-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "io-util", "net", "fs", "process"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+windows = "0.62"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

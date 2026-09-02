@@ -1,0 +1,24 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Fichiers locaux de développement (noyaux de test, disques, journaux) — jamais versionnés
+/.local/
+
+# Frontend
+node_modules/
+dist/
+.vite/
+
+# Tauri
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/
+
+# Image Linux construite (les sources du pipeline sont versionnées, pas les artefacts)
+/image/out/
+
+# Éditeurs / OS
+.vscode/settings.json
+.idea/
+Thumbs.db
+*.swp
