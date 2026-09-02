@@ -1,0 +1,6 @@
+# Compilation croisée de l'agent invité (Linux, musl, statique) depuis Windows :
+# l'éditeur de liens est rust-lld fourni avec la toolchain, avec la CRT musl embarquée.
+#   cargo build -p solon-agent --release --target x86_64-unknown-linux-musl
+[target.x86_64-unknown-linux-musl]
+linker = "rust-lld"
+rustflags = ["-C", "link-self-contained=yes", "-C", "target-feature=+crt-static", "-C", "relocation-model=static"]
