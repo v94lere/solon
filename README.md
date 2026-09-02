@@ -138,9 +138,9 @@ perdues, comme sur toute machine Linux.
   jusqu'à la fin. Utilisez le CLI `docker compose` dans un terminal si vous voulez suivre en direct.
 - **Ports UDP** publiés non relayés vers `localhost` (TCP seulement).
 - **Un seul moteur par machine**, pas de profils multiples.
-- **Montages de dossiers Windows** : métadonnées lentes (voir plus haut) ; les chemins `C:\...` passés à
-  `docker run -v` depuis le CLI ne sont pas encore traduits automatiquement, utilisez l'interface ou le chemin
-  `/mnt/host/c/...`.
+- **Montages de dossiers Windows** : métadonnées lentes (voir plus haut). Un dossier n'est partagé avec le
+  moteur qu'à l'ouverture d'un projet Compose ; les chemins `C:\...` passés à `docker run -v` depuis le CLI ne
+  sont pas encore traduits (le lecteur partagé est visible sous `/mnt/host/c/...`).
 - **Docker Hub** : le CLI `docker` de Windows peut réutiliser des identifiants périmés stockés par Docker
   Desktop (voir « Utilisation »).
 - **Installeur non signé** (avertissement SmartScreen) ; le chemin « activation de Hyper-V puis redémarrage »
