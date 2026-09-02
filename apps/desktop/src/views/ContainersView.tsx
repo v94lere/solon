@@ -7,6 +7,14 @@ import { ComposePanel } from "../components/ComposePanel";
 
 const COMPOSE_LABEL = "com.docker.compose.project";
 
+/** Nom court d'une image : dernier segment du dépôt, tag conservé (`…/library/busybox:1.36` → `busybox:1.36`). */
+function shortImage(image: string | undefined): string {
+  if (!image) return "";
+  const at = image.indexOf("@");
+  const base = at >= 0 ? image.slice(0, at) : image;
+  return base.slice(base.lastIndexOf("/") + 1);
+}
+
 function stateClass(state: string) {
   switch (state) {
     case "running":
@@ -220,8 +228,8 @@ function GroupRows({
                 {name}
               </button>
             </td>
-            <td className="mono max-w-[260px] truncate" title={c.Image}>
-              {c.Image}
+            <td className="mono max-w-[220px] truncate" title={c.Image}>
+              {shortImage(c.Image)}
             </td>
             <td>
               <span className={`pill ${stateClass(c.State)}`} title={c.Status}>

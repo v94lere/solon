@@ -144,7 +144,7 @@ select {
 .btn-danger { color: var(--bad); border-color: var(--bad); }
 .btn-ghost { border-color: transparent; background: transparent; }
 .btn-ghost:hover { background: var(--surface-3); }
-.btn-sm { height: 26px; padding: 0 8px; font-size: 12px; }
+.btn-sm { height: 26px; padding: 0 7px; font-size: 12px; }
 
 .input {
   height: 30px;
