@@ -27,7 +27,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -37,9 +39,24 @@
     ],
     "windows": {
       "nsis": {
-        "languages": ["English", "French"],
-        "installMode": "perMachine"
+        "languages": [
+          "English",
+          "French"
+        ],
+        "installMode": "perMachine",
+        "installerHooks": "../../installer/hooks.nsh",
+        "displayLanguageSelector": true
       }
-    }
+    },
+    "resources": {
+      "../../target/release/solon-service.exe": "solon-service.exe",
+      "../../installer/setup.ps1": "installer/setup.ps1",
+      "../../image/out/0.1.0-dev.3/vmlinuz": "image/vmlinuz",
+      "../../image/out/0.1.0-dev.3/initrd.img": "image/initrd.img",
+      "../../image/out/0.1.0-dev.3/rootfs.vhd": "image/rootfs.vhd",
+      "../../image/out/0.1.0-dev.3/manifest.json": "image/manifest.json"
+    },
+    "licenseFile": "../../LICENSE",
+    "publisher": "Solon"
   }
 }

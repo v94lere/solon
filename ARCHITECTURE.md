@@ -115,6 +115,16 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 - Le partage de dossier à la demande implémente la §5.2 : un partage par lecteur, monté sur `/mnt/host/<lettre>`, chemin traduit ; découverte : le périphérique Plan9 doit être déclaré à la création de la machine pour accepter des ajouts à chaud.
 - Limites assumées : sortie Compose capturée en fin de commande (pas de flux), UDP non relayé, une seule machine par hôte.
 
+### 1.9 Résultats du bloc 5 (durcissement, 2 septembre 2026)
+
+- **Mémoire** : hints HCS `EnableHotHint/EnableColdHint/EnableColdDiscardHint` activés (c'est ce que fait WSL2 pour rendre la mémoire libérée par l'invité) ; l'agent relâche le cache de pages (`drop_caches`) toutes les 2 min quand la charge est basse. Mesure au repos : voir `docs/measurements.md` (bloc 5).
+- **Réseau** : MTU 1400 côté invité et côté conteneurs (`daemon.json`), pour survivre aux VPN qui encapsulent.
+- **Sécurité** : pipes `\.\pipe\solon` et `solon-control` accessibles aux utilisateurs **interactifs** (IU) et administrateurs seulement, plus au groupe « utilisateurs authentifiés » ; le service ne fait toujours aucune requête sortante.
+- **Réglages** appliqués au prochain démarrage du moteur sans redémarrer le service.
+- **Interface** : écran de démarrage avec le détail des prérequis (état, explication, action) ; contraste AA du texte secondaire relevé ; test `locales.rs` garantissant qu'aucun code d'erreur ni prérequis n'est sans traduction et que `en.json`/`fr.json` ont les mêmes clés.
+- **Installeur** : image et service installés à côté de l'exécutable (`<install>\image`, `<install>\solon-service.exe`), le service la trouve sans copie ; `installer/setup.ps1` (élevé) active les composants Windows, enregistre les GUID HvSocket et installe `SolonService` ; désinstallation avec question avant de supprimer `%ProgramData%\Solon`.
+- Reste fragile / à vérifier sur machine : démarrage en **vrai service Windows** (LocalSystem, session 0) et non en mode console — même code, mais l'environnement diffère (pas de `%USERPROFILE%`, ACL héritées) ; test de l'installeur bout en bout.
+
 ---
 
 ## 2. Virtualisation : choix et justification
@@ -372,8 +382,8 @@ MVP : flux `bollard` `/containers/{id}/stats?stream=1` par conteneur en marche, 
 
 ## 11. Packaging et signature
 
-- **NSIS** via le bundler Tauri, avec hooks personnalisés (`installer/hooks.nsh`) : élévation ; vérification et activation des fonctionnalités (`Microsoft-Hyper-V`, `VirtualMachinePlatform`) par DISM avec drapeau « redémarrage requis » et reprise après redémarrage ; enregistrement des GUID HvSocket ; installation et démarrage de `SolonService` (Automatique différé, redémarrage en cas d'échec) ; copie de `image/<version>/` dans `%ProgramData%\Solon\image` ; ACL de `%ProgramData%\Solon`. Désinstallation : arrêt du service, suppression de la VM et du réseau HNS, **question explicite** avant de supprimer `data.vhdx`.
-- Taille estimée : ~120 Mo (dont ~100 Mo d'image). Embarquée : un seul fichier, aucun téléchargement, cohérent avec « zéro requête sortante ».
+- **NSIS** via le bundler Tauri (`installMode: perMachine`, donc élevé), hooks `installer/hooks.nsh` → `installer/setup.ps1` : vérification et activation des fonctionnalités (`Microsoft-Hyper-V`, `VirtualMachinePlatform`) avec drapeau « redémarrage requis » (code 3010 → `SetRebootFlag`) ; enregistrement des GUID HvSocket (5000–5003, 9000–9199) ; installation et démarrage de `SolonService` (Automatique). L'image (`vmlinuz`, `initrd.img`, `rootfs.vhd`, `manifest.json`) et `solon-service.exe` sont installés **dans le dossier d'installation** ; le service cherche `image\` à côté de son exécutable avant `%ProgramData%\Solon\image`. Les données (`data.vhdx`, `state.json`, `settings.json`, journaux) restent dans `%ProgramData%\Solon`. Désinstallation : arrêt et suppression du service (qui arrête la machine et détache le réseau), **question explicite** avant de supprimer `%ProgramData%\Solon`.
+- Taille : image ~324 Mo décompressée (rootfs 307 Mo, très compressible), installeur attendu ~100 Mo. Embarquée : un seul fichier, aucun téléchargement, cohérent avec « zéro requête sortante ».
 - **Signature** : `bundle.windows.signCommand` dans `tauri.conf.json` vers `signtool` (certificat OV/EV en HSM ou Azure Trusted Signing). Sans certificat, SmartScreen avertira ; la réputation ne se construit qu'avec un certificat stable.
 - **Mises à jour** : hors MVP (impliquerait une requête réseau). Une nouvelle version se distribue par un nouvel installeur qui conserve `data.vhdx`.
 

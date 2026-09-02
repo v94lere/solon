@@ -32,8 +32,15 @@ fn engine_config() -> EngineConfig {
         .map(PathBuf::from)
         .unwrap_or_else(Paths::default_root);
     let paths = Paths::new(root);
+    // Image : variable d'environnement, sinon `image\` à côté de l'exécutable (installeur), sinon
+    // `%ProgramData%\Solon\image`.
+    let beside_exe = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.join("image")))
+        .filter(|d| d.join("manifest.json").is_file());
     let image_dir = std::env::var_os("SOLON_IMAGE_DIR")
         .map(PathBuf::from)
+        .or(beside_exe)
         .unwrap_or_else(|| paths.image_dir());
     let settings = settings::load_settings(&paths.settings_file());
     EngineConfig {

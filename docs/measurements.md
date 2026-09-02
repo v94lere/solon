@@ -266,3 +266,20 @@ performance spécifiques à ce bloc.
   bloc 0b ne l'avait pas révélé car la machine y démarrait déjà avec un partage.
 - Compose dans la machine n'a besoin d'aucun binaire côté Windows : le plugin `docker-cli-compose` d'Alpine suffit ;
   la sortie est capturée en fin de commande (pas de flux) — limitation acceptée pour le MVP.
+
+## Bloc 5 — durcissement (2 septembre 2026)
+
+### Changements mesurables
+
+| Changement | Avant | Après | Statut |
+|---|---|---|---|
+| Hints mémoire HCS (`EnableColdDiscardHint`…) + `drop_caches` au repos | 426–516 Mo au repos (2 Go alloués) | à mesurer (`tests/e2e/e2e.ps1`) | démarrage à vérifier |
+| MTU 1400 (invité + conteneurs) | 1500 | 1400 | appliqué dans l'image 0.1.0-dev.3 |
+| SDDL des pipes | `AU` (tout utilisateur authentifié) | `IU` (session interactive) + SY + BA | accès `docker` non élevé à revérifier |
+
+### Faits établis par le bloc 5
+
+- Les tests unitaires couvrent désormais le **catalogue d'erreurs** : chaque variante de `ErrorCode` doit avoir un message dans les deux langues, sinon `cargo test -p solon` échoue.
+- L'agent en PID 1 peut libérer le cache de pages sans effet visible sur les conteneurs quand la charge (loadavg 1 min) est inférieure à 0,2 ; la mémoire ne revient à l'hôte que si HCS a les hints activés (c'est le mécanisme de WSL2).
+- Les mesures restantes (mémoire au repos après hints, service Windows réel) sont bloquées par une fenêtre UAC et seront consignées ici.
+
