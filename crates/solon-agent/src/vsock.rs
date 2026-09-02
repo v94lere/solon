@@ -9,7 +9,11 @@ fn errno(context: &str) -> String {
 
 fn socket() -> Result<RawFd, String> {
     let fd = unsafe { libc::socket(libc::AF_VSOCK, libc::SOCK_STREAM | libc::SOCK_CLOEXEC, 0) };
-    if fd < 0 { Err(errno("socket(AF_VSOCK)")) } else { Ok(fd) }
+    if fd < 0 {
+        Err(errno("socket(AF_VSOCK)"))
+    } else {
+        Ok(fd)
+    }
 }
 
 fn addr(cid: u32, port: u32) -> libc::sockaddr_vm {
@@ -36,8 +40,19 @@ pub fn listen(port: u32) -> Result<RawFd, String> {
 
 /// Accepte une connexion et la renvoie sous forme de `File` (lecture/écriture).
 pub fn accept(listen_fd: RawFd) -> Result<File, String> {
-    let fd = unsafe { libc::accept4(listen_fd, std::ptr::null_mut(), std::ptr::null_mut(), libc::SOCK_CLOEXEC) };
-    if fd < 0 { Err(errno("accept(vsock)")) } else { Ok(unsafe { File::from_raw_fd(fd) }) }
+    let fd = unsafe {
+        libc::accept4(
+            listen_fd,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            libc::SOCK_CLOEXEC,
+        )
+    };
+    if fd < 0 {
+        Err(errno("accept(vsock)"))
+    } else {
+        Ok(unsafe { File::from_raw_fd(fd) })
+    }
 }
 
 /// Connexion vers l'hôte (CID 2), utilisée pour rejoindre le serveur 9P de HCS.

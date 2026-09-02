@@ -19,12 +19,17 @@ use std::sync::Once;
 use std::time::{Duration, Instant};
 
 use windows::Win32::Networking::WinSock::{
-    AF_HYPERV, SOCK_STREAM, SOCKADDR, SOCKET_ERROR, WSADATA, WSAGetLastError, WSAStartup, closesocket, connect, socket,
+    AF_HYPERV, SOCK_STREAM, SOCKADDR, SOCKET_ERROR, WSADATA, WSAGetLastError, WSAStartup,
+    closesocket, connect, setsockopt, socket,
 };
 use windows::core::GUID;
 
 /// Protocole brut des sockets Hyper-V (`HV_PROTOCOL_RAW` dans hvsocket.h).
 pub const HV_PROTOCOL_RAW: i32 = 1;
+/// Option de socket `HVSOCKET_CONNECT_TIMEOUT` (hvsocket.h), en millisecondes, niveau `HV_PROTOCOL_RAW`.
+pub const HVSOCKET_CONNECT_TIMEOUT: i32 = 0x01;
+/// Durée maximale d'une tentative de connexion ; la boucle de réessai enchaîne les tentatives.
+pub const CONNECT_ATTEMPT_TIMEOUT_MS: u32 = 1000;
 
 /// Modèle de GUID de service pour les invités Linux (`HV_GUID_VSOCK_TEMPLATE`).
 pub const VSOCK_TEMPLATE_DATA2: u16 = 0xfacb;
@@ -43,7 +48,12 @@ struct SockaddrHv {
 
 /// GUID de service correspondant à un port vsock Linux.
 pub fn service_id_for_port(port: u32) -> GUID {
-    GUID { data1: port, data2: VSOCK_TEMPLATE_DATA2, data3: VSOCK_TEMPLATE_DATA3, data4: VSOCK_TEMPLATE_DATA4 }
+    GUID {
+        data1: port,
+        data2: VSOCK_TEMPLATE_DATA2,
+        data3: VSOCK_TEMPLATE_DATA3,
+        data4: VSOCK_TEMPLATE_DATA4,
+    }
 }
 
 fn ensure_winsock() {
@@ -68,8 +78,31 @@ pub fn connect_once(vm_id: &GUID, port: u32) -> io::Result<TcpStream> {
     ensure_winsock();
     let sock = unsafe { socket(AF_HYPERV as i32, SOCK_STREAM, HV_PROTOCOL_RAW) }
         .map_err(|e| io::Error::other(format!("socket(AF_HYPERV) : {e}")))?;
-    let addr = SockaddrHv { family: AF_HYPERV, reserved: 0, vm_id: *vm_id, service_id: service_id_for_port(port) };
-    let rc = unsafe { connect(sock, &addr as *const SockaddrHv as *const SOCKADDR, std::mem::size_of::<SockaddrHv>() as i32) };
+    // Sans cette option, un connect() lancé avant que l'invité n'écoute reste en attente jusqu'au
+    // délai système (observé : 30 s) au lieu d'être refusé ; on borne chaque tentative pour que la
+    // boucle de réessai fonctionne.
+    let timeout_ms: u32 = CONNECT_ATTEMPT_TIMEOUT_MS;
+    unsafe {
+        setsockopt(
+            sock,
+            HV_PROTOCOL_RAW,
+            HVSOCKET_CONNECT_TIMEOUT,
+            Some(&timeout_ms.to_ne_bytes()),
+        );
+    }
+    let addr = SockaddrHv {
+        family: AF_HYPERV,
+        reserved: 0,
+        vm_id: *vm_id,
+        service_id: service_id_for_port(port),
+    };
+    let rc = unsafe {
+        connect(
+            sock,
+            &addr as *const SockaddrHv as *const SOCKADDR,
+            std::mem::size_of::<SockaddrHv>() as i32,
+        )
+    };
     if rc == SOCKET_ERROR {
         let err = last_wsa_error(&format!("connect(hvsock port {port})"));
         unsafe { closesocket(sock) };
@@ -99,7 +132,10 @@ mod tests {
     fn guid_de_service_encode_le_port() {
         let g = service_id_for_port(5000);
         assert_eq!(g.data1, 5000);
-        assert_eq!(format!("{g:?}").to_lowercase(), "00001388-facb-11e6-bd58-64006a7986d3");
+        assert_eq!(
+            format!("{g:?}").to_lowercase(),
+            "00001388-facb-11e6-bd58-64006a7986d3"
+        );
     }
 
     #[test]

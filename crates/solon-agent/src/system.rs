@@ -1,5 +1,5 @@
 //! Devoirs de PID 1 : montages, disque de données, réseau de base, supervision de containerd/dockerd,
-//! récolte des processus orphelins, arrêt propre.
+//! récolte des processus orphelins, montages 9P, exécution de commandes, arrêt propre.
 
 use std::collections::HashSet;
 use std::ffi::CString;
@@ -10,6 +10,14 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+
+use solon_core::protocol::{
+    AgentEvent, DataDiskReport, EngineStatus, ExecResult, HealthReport, MountResult,
+    MountShareRequest, PROTOCOL_VERSION,
+};
+
+use crate::events;
+use crate::vsock;
 
 pub const DATA_DEVICE: &str = "/dev/sdb";
 pub const DATA_MOUNT: &str = "/var/lib/solon";
@@ -23,34 +31,7 @@ pub struct State {
     pub data_disk: Mutex<Option<DataDiskReport>>,
     pub engine: Mutex<EngineStatus>,
     pub shutting_down: Mutex<bool>,
-}
-
-#[derive(Debug, Clone, Default, serde::Serialize)]
-pub struct DataDiskReport {
-    pub device: String,
-    pub formatted_now: bool,
-    pub fsck_exit: i32,
-    pub fsck_summary: String,
-    pub mounted_at: String,
-}
-
-impl std::fmt::Display for DataDiskReport {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} monté sur {} (formaté maintenant : {}, fsck code {} : {})",
-            self.device, self.mounted_at, self.formatted_now, self.fsck_exit, self.fsck_summary
-        )
-    }
-}
-
-#[derive(Debug, Clone, Default, serde::Serialize)]
-pub struct EngineStatus {
-    pub containerd_pid: Option<u32>,
-    pub dockerd_pid: Option<u32>,
-    pub docker_ready_at_uptime_s: Option<f64>,
-    pub restarts: u32,
-    pub last_error: Option<String>,
+    pub network_configured: Mutex<bool>,
 }
 
 pub fn log(msg: &str) {
@@ -64,15 +45,32 @@ pub fn uptime_secs() -> f64 {
         .unwrap_or(0.0)
 }
 
-fn mount(src: &str, target: &str, fstype: &str, flags: libc::c_ulong, data: &str) -> Result<(), String> {
+fn mount(
+    src: &str,
+    target: &str,
+    fstype: &str,
+    flags: libc::c_ulong,
+    data: &str,
+) -> Result<(), String> {
     let _ = fs::create_dir_all(target);
     let s = CString::new(src).unwrap();
     let t = CString::new(target).unwrap();
     let f = CString::new(fstype).unwrap();
     let d = CString::new(data).unwrap();
-    let rc = unsafe { libc::mount(s.as_ptr(), t.as_ptr(), f.as_ptr(), flags, d.as_ptr() as *const libc::c_void) };
+    let rc = unsafe {
+        libc::mount(
+            s.as_ptr(),
+            t.as_ptr(),
+            f.as_ptr(),
+            flags,
+            d.as_ptr() as *const libc::c_void,
+        )
+    };
     if rc < 0 {
-        Err(format!("mount {fstype} {src} → {target} : {}", std::io::Error::last_os_error()))
+        Err(format!(
+            "mount {fstype} {src} → {target} : {}",
+            std::io::Error::last_os_error()
+        ))
     } else {
         Ok(())
     }
@@ -80,8 +78,23 @@ fn mount(src: &str, target: &str, fstype: &str, flags: libc::c_ulong, data: &str
 
 fn is_mounted(target: &str) -> bool {
     fs::read_to_string("/proc/self/mounts")
-        .map(|m| m.lines().any(|l| l.split_whitespace().nth(1) == Some(target)))
+        .map(|m| {
+            m.lines()
+                .any(|l| l.split_whitespace().nth(1) == Some(target))
+        })
         .unwrap_or(false)
+}
+
+/// Points de montage 9P actuels.
+pub fn plan9_mounts() -> Vec<String> {
+    fs::read_to_string("/proc/self/mounts")
+        .map(|m| {
+            m.lines()
+                .filter(|l| l.split_whitespace().nth(2) == Some("9p"))
+                .filter_map(|l| l.split_whitespace().nth(1).map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 pub fn mount_virtual_filesystems() {
@@ -90,13 +103,43 @@ pub fn mount_virtual_filesystems() {
         ("proc", "/proc", "proc", std_flags, ""),
         ("sysfs", "/sys", "sysfs", std_flags, ""),
         ("devtmpfs", "/dev", "devtmpfs", libc::MS_NOSUID, "mode=0755"),
-        ("tmpfs", "/run", "tmpfs", libc::MS_NOSUID | libc::MS_NODEV, "mode=0755"),
-        ("devpts", "/dev/pts", "devpts", libc::MS_NOSUID | libc::MS_NOEXEC, "gid=5,mode=0620,ptmxmode=0666"),
+        (
+            "tmpfs",
+            "/run",
+            "tmpfs",
+            libc::MS_NOSUID | libc::MS_NODEV,
+            "mode=0755",
+        ),
+        (
+            "devpts",
+            "/dev/pts",
+            "devpts",
+            libc::MS_NOSUID | libc::MS_NOEXEC,
+            "gid=5,mode=0620,ptmxmode=0666",
+        ),
         ("tmpfs", "/dev/shm", "tmpfs", std_flags, "mode=1777"),
         ("mqueue", "/dev/mqueue", "mqueue", std_flags, ""),
-        ("tmpfs", "/tmp", "tmpfs", libc::MS_NOSUID | libc::MS_NODEV, "mode=1777"),
-        ("cgroup2", "/sys/fs/cgroup", "cgroup2", std_flags, "nsdelegate,memory_recursiveprot"),
-        ("securityfs", "/sys/kernel/security", "securityfs", std_flags, ""),
+        (
+            "tmpfs",
+            "/tmp",
+            "tmpfs",
+            libc::MS_NOSUID | libc::MS_NODEV,
+            "mode=1777",
+        ),
+        (
+            "cgroup2",
+            "/sys/fs/cgroup",
+            "cgroup2",
+            std_flags,
+            "nsdelegate,memory_recursiveprot",
+        ),
+        (
+            "securityfs",
+            "/sys/kernel/security",
+            "securityfs",
+            std_flags,
+            "",
+        ),
     ];
     for (src, target, fstype, flags, data) in attempts {
         if is_mounted(target) {
@@ -109,7 +152,6 @@ pub fn mount_virtual_filesystems() {
     let _ = fs::create_dir_all("/run/docker");
     let _ = fs::create_dir_all("/run/containerd");
     let _ = fs::write("/proc/sys/kernel/hostname", "solon\n");
-    // Rend tous les contrôleurs cgroup v2 disponibles aux enfants (dockerd en a besoin).
     if let Ok(ctrls) = fs::read_to_string("/sys/fs/cgroup/cgroup.controllers") {
         let line: String = ctrls.split_whitespace().map(|c| format!("+{c} ")).collect();
         let _ = fs::write("/sys/fs/cgroup/cgroup.subtree_control", line.trim());
@@ -120,12 +162,15 @@ pub fn configure_network_basics() {
     let _ = fs::write("/proc/sys/net/ipv4/ip_forward", "1\n");
     let _ = fs::write("/proc/sys/net/ipv4/conf/all/forwarding", "1\n");
     let _ = fs::write("/proc/sys/net/ipv6/conf/all/forwarding", "1\n");
-    // Interface de boucle locale : sans elle, dockerd ne peut pas ouvrir ses sockets locaux.
-    let _ = Command::new("/sbin/ip").args(["link", "set", "lo", "up"]).status();
-    let _ = Command::new("/sbin/ip").args(["addr", "add", "127.0.0.1/8", "dev", "lo"]).stderr(Stdio::null()).status();
+    let _ = Command::new("/sbin/ip")
+        .args(["link", "set", "lo", "up"])
+        .status();
+    let _ = Command::new("/sbin/ip")
+        .args(["addr", "add", "127.0.0.1/8", "dev", "lo"])
+        .stderr(Stdio::null())
+        .status();
 }
 
-/// Cherche la signature ext4 (magic 0xEF53 à l'octet 0x438 du superbloc).
 fn has_ext4_superblock(device: &str) -> Result<bool, String> {
     let mut f = fs::File::open(device).map_err(|e| format!("ouverture {device} : {e}"))?;
     f.seek(SeekFrom::Start(0x438)).map_err(|e| e.to_string())?;
@@ -144,28 +189,63 @@ pub fn prepare_data_disk(state: &State) -> Result<DataDiskReport, String> {
         }
         std::thread::sleep(Duration::from_millis(50));
     }
-    let mut report = DataDiskReport { device: DATA_DEVICE.into(), ..Default::default() };
+    let mut report = DataDiskReport {
+        device: DATA_DEVICE.into(),
+        ..Default::default()
+    };
     if !has_ext4_superblock(DATA_DEVICE)? {
         log("disque de données vierge : formatage ext4");
         let out = Command::new("/sbin/mkfs.ext4")
-            .args(["-q", "-F", "-L", "solon-data", "-E", "lazy_itable_init=1,lazy_journal_init=1", DATA_DEVICE])
+            .args([
+                "-q",
+                "-F",
+                "-L",
+                "solon-data",
+                "-E",
+                "lazy_itable_init=1,lazy_journal_init=1",
+                DATA_DEVICE,
+            ])
             .output()
             .map_err(|e| format!("mkfs.ext4 : {e}"))?;
         if !out.status.success() {
-            return Err(format!("mkfs.ext4 a échoué : {}", String::from_utf8_lossy(&out.stderr)));
+            return Err(format!(
+                "mkfs.ext4 a échoué : {}",
+                String::from_utf8_lossy(&out.stderr)
+            ));
         }
         report.formatted_now = true;
     }
-    // -p : réparations automatiques sans question ; codes 0 et 1 = sain (1 = corrigé).
-    let fsck = Command::new("/sbin/e2fsck").args(["-p", DATA_DEVICE]).output().map_err(|e| format!("e2fsck : {e}"))?;
+    let fsck = Command::new("/sbin/e2fsck")
+        .args(["-p", DATA_DEVICE])
+        .output()
+        .map_err(|e| format!("e2fsck : {e}"))?;
     report.fsck_exit = fsck.status.code().unwrap_or(-1);
-    report.fsck_summary = String::from_utf8_lossy(&fsck.stdout).lines().last().unwrap_or("").trim().to_owned();
+    report.fsck_summary = String::from_utf8_lossy(&fsck.stdout)
+        .lines()
+        .last()
+        .unwrap_or("")
+        .trim()
+        .to_owned();
     if report.fsck_exit >= 4 {
-        return Err(format!("e2fsck code {} : {}", report.fsck_exit, String::from_utf8_lossy(&fsck.stderr)));
+        return Err(format!(
+            "e2fsck code {} : {}",
+            report.fsck_exit,
+            String::from_utf8_lossy(&fsck.stderr)
+        ));
     }
-    mount(DATA_DEVICE, DATA_MOUNT, "ext4", libc::MS_NOATIME, "data=ordered")?;
+    mount(
+        DATA_DEVICE,
+        DATA_MOUNT,
+        "ext4",
+        libc::MS_NOATIME,
+        "data=ordered",
+    )?;
     report.mounted_at = DATA_MOUNT.into();
-    for (sub, target) in [("docker", "/var/lib/docker"), ("containerd", "/var/lib/containerd"), ("agent", "/var/lib/solon-agent")] {
+    for (sub, target) in [
+        ("docker", "/var/lib/docker"),
+        ("containerd", "/var/lib/containerd"),
+        ("agent", "/var/lib/solon-agent"),
+    ] {
         let src = format!("{DATA_MOUNT}/{sub}");
         let _ = fs::create_dir_all(&src);
         let _ = fs::create_dir_all(target);
@@ -175,27 +255,160 @@ pub fn prepare_data_disk(state: &State) -> Result<DataDiskReport, String> {
     Ok(report)
 }
 
-/// Options du noyau `solon.*` : `solon.nobridge` désactive le réseau des conteneurs (tests sans
-/// module bridge), `solon.debug` rend dockerd verbeux.
+/// Monte un partage Plan9 HCS : connexion vsock vers l'hôte puis `mount -t 9p -o trans=fd`.
+pub fn mount_plan9(req: &MountShareRequest) -> Result<MountResult, String> {
+    fs::create_dir_all(&req.target).map_err(|e| format!("mkdir {} : {e}", req.target))?;
+    let fd = vsock::connect_host(req.port)?;
+    let sz: libc::c_int = 4 * 1024 * 1024;
+    unsafe {
+        libc::setsockopt(
+            fd,
+            libc::SOL_SOCKET,
+            libc::SO_SNDBUF,
+            &sz as *const _ as *const libc::c_void,
+            4,
+        );
+        libc::setsockopt(
+            fd,
+            libc::SOL_SOCKET,
+            libc::SO_RCVBUF,
+            &sz as *const _ as *const libc::c_void,
+            4,
+        );
+    }
+    let mut data = format!("trans=fd,rfdno={fd},wfdno={fd},aname={}", req.name);
+    if !req.extra_options.contains("msize=") {
+        data.push_str(",msize=65536");
+    }
+    if !req.extra_options.is_empty() {
+        data.push(',');
+        data.push_str(&req.extra_options);
+    }
+    let flags = if req.read_only { libc::MS_RDONLY } else { 0 };
+    let t0 = Instant::now();
+    let src = CString::new("hcs-plan9").unwrap();
+    let tgt = CString::new(req.target.as_str()).unwrap();
+    let fstype = CString::new("9p").unwrap();
+    let opts = CString::new(data.clone()).unwrap();
+    let rc = unsafe {
+        libc::mount(
+            src.as_ptr(),
+            tgt.as_ptr(),
+            fstype.as_ptr(),
+            flags,
+            opts.as_ptr() as *const libc::c_void,
+        )
+    };
+    unsafe { libc::close(fd) };
+    if rc < 0 {
+        return Err(format!(
+            "mount 9p ({data}) : {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    Ok(MountResult {
+        target: req.target.clone(),
+        options: data,
+        mount_ms: t0.elapsed().as_millis() as u64,
+    })
+}
+
+pub fn umount(target: &str) -> Result<(), String> {
+    let t = CString::new(target).unwrap();
+    if unsafe { libc::umount2(t.as_ptr(), 0) } < 0 {
+        Err(format!(
+            "umount {target} : {}",
+            std::io::Error::last_os_error()
+        ))
+    } else {
+        Ok(())
+    }
+}
+
 fn cmdline_flag(flag: &str) -> bool {
-    fs::read_to_string("/proc/cmdline").map(|c| c.split_whitespace().any(|w| w == flag)).unwrap_or(false)
+    fs::read_to_string("/proc/cmdline")
+        .map(|c| c.split_whitespace().any(|w| w == flag))
+        .unwrap_or(false)
 }
 
 fn spawn_tracked(state: &State, mut cmd: Command) -> Result<Child, String> {
-    let child = cmd.spawn().map_err(|e| format!("{:?} : {e}", cmd.get_program()))?;
+    let child = cmd
+        .spawn()
+        .map_err(|e| format!("{:?} : {e}", cmd.get_program()))?;
     state.tracked.lock().unwrap().insert(child.id() as i32);
     Ok(child)
 }
 
 /// Exécute une commande en la protégeant du glaneur, renvoie sa sortie.
 pub fn run_tracked(state: &State, mut cmd: Command) -> std::io::Result<std::process::Output> {
-    cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).stdin(Stdio::null());
+    cmd.stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::null());
     let child = cmd.spawn()?;
     let pid = child.id() as i32;
     state.tracked.lock().unwrap().insert(pid);
     let out = child.wait_with_output();
     state.tracked.lock().unwrap().remove(&pid);
     out
+}
+
+/// Exécute une ligne shell avec délai maximal (sortie capturée).
+pub fn exec(state: &State, command: &str, timeout: Duration) -> ExecResult {
+    let t0 = Instant::now();
+    let mut cmd = Command::new("/bin/sh");
+    cmd.arg("-c")
+        .arg(command)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::null());
+    let mut child = match cmd.spawn() {
+        Ok(c) => c,
+        Err(e) => {
+            return ExecResult {
+                code: None,
+                stdout: String::new(),
+                stderr: e.to_string(),
+                ms: 0,
+                timed_out: false,
+            };
+        }
+    };
+    let pid = child.id() as i32;
+    state.tracked.lock().unwrap().insert(pid);
+    let mut so = child.stdout.take().unwrap();
+    let mut se = child.stderr.take().unwrap();
+    let out_t = std::thread::spawn(move || {
+        let mut v = Vec::new();
+        let _ = so.read_to_end(&mut v);
+        v
+    });
+    let err_t = std::thread::spawn(move || {
+        let mut v = Vec::new();
+        let _ = se.read_to_end(&mut v);
+        v
+    });
+    let deadline = Instant::now() + timeout;
+    let mut timed_out = false;
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(s)) => break Some(s),
+            Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(10)),
+            _ => {
+                timed_out = true;
+                let _ = child.kill();
+                let _ = child.wait();
+                break None;
+            }
+        }
+    };
+    state.tracked.lock().unwrap().remove(&pid);
+    ExecResult {
+        code: status.and_then(|s| s.code()),
+        stdout: String::from_utf8_lossy(&out_t.join().unwrap_or_default()).into_owned(),
+        stderr: String::from_utf8_lossy(&err_t.join().unwrap_or_default()).into_owned(),
+        ms: t0.elapsed().as_millis() as u64,
+        timed_out,
+    }
 }
 
 fn wait_for_socket(path: &str, timeout: Duration) -> bool {
@@ -211,13 +424,44 @@ fn wait_for_socket(path: &str, timeout: Duration) -> bool {
 
 /// Ping HTTP minimal de dockerd sur son socket Unix.
 pub fn docker_ping() -> bool {
-    let Ok(mut s) = UnixStream::connect(DOCKER_SOCK) else { return false };
+    let Ok(mut s) = UnixStream::connect(DOCKER_SOCK) else {
+        return false;
+    };
     let _ = s.set_read_timeout(Some(Duration::from_secs(2)));
-    if s.write_all(b"GET /_ping HTTP/1.1\r\nHost: docker\r\nConnection: close\r\n\r\n").is_err() {
+    if s.write_all(b"GET /_ping HTTP/1.1\r\nHost: docker\r\nConnection: close\r\n\r\n")
+        .is_err()
+    {
         return false;
     }
     let mut buf = [0u8; 256];
     matches!(s.read(&mut buf), Ok(n) if n > 0 && String::from_utf8_lossy(&buf[..n]).contains(" 200 "))
+}
+
+pub fn health(state: &State) -> HealthReport {
+    let mem = fs::read_to_string("/proc/meminfo").unwrap_or_default();
+    let field = |k: &str| -> u64 {
+        mem.lines()
+            .find(|l| l.starts_with(k))
+            .and_then(|l| l.split_whitespace().nth(1))
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(0)
+    };
+    HealthReport {
+        protocol_version: PROTOCOL_VERSION,
+        agent_version: env!("CARGO_PKG_VERSION").into(),
+        kernel: fs::read_to_string("/proc/sys/kernel/osrelease")
+            .unwrap_or_default()
+            .trim()
+            .to_owned(),
+        uptime_s: uptime_secs(),
+        docker_ping: docker_ping(),
+        engine: state.engine.lock().unwrap().clone(),
+        data_disk: state.data_disk.lock().unwrap().clone(),
+        mem_total_kb: field("MemTotal"),
+        mem_available_kb: field("MemAvailable"),
+        network_configured: *state.network_configured.lock().unwrap(),
+        mounts: plan9_mounts(),
+    }
 }
 
 /// Lance containerd puis dockerd et les supervise dans un thread.
@@ -228,16 +472,28 @@ pub fn start_engine(state: &Arc<State>) {
 
 fn engine_commands() -> (Command, Command) {
     let mut containerd = Command::new("/usr/bin/containerd");
-    containerd.args(["--config", "/etc/containerd/config.toml"]).stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    containerd
+        .args(["--config", "/etc/containerd/config.toml"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
     let mut dockerd = Command::new("/usr/bin/dockerd");
-    dockerd.args(["--config-file", "/etc/docker/daemon.json", "--containerd", CONTAINERD_SOCK]);
+    dockerd.args([
+        "--config-file",
+        "/etc/docker/daemon.json",
+        "--containerd",
+        CONTAINERD_SOCK,
+    ]);
     if cmdline_flag("solon.nobridge") {
         dockerd.args(["--bridge=none", "--iptables=false", "--ip6tables=false"]);
     }
     if cmdline_flag("solon.debug") {
         dockerd.arg("--debug");
     }
-    dockerd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    dockerd
+        .stdin(Stdio::null())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
     (containerd, dockerd)
 }
 
@@ -281,14 +537,19 @@ fn supervise(state: Arc<State>) {
                 let up = uptime_secs();
                 state.engine.lock().unwrap().docker_ready_at_uptime_s = Some(up);
                 println!("SOLON-ENGINE-READY uptime_s={up:.2}");
+                events::broadcast(&AgentEvent::EngineReady { uptime_s: up });
             }
             if !announced && Instant::now() > deadline {
                 log("dockerd n'a pas répondu en 60 s");
-                announced = true; // on cesse d'attendre, la supervision continue
+                announced = true;
             }
             match dockerd.try_wait() {
                 Ok(Some(status)) => {
                     log(&format!("dockerd terminé : {status}"));
+                    events::broadcast(&AgentEvent::EngineDown {
+                        exit: status.to_string(),
+                        restarts: restarts + 1,
+                    });
                     break;
                 }
                 Ok(None) => {}
@@ -301,6 +562,10 @@ fn supervise(state: Arc<State>) {
                 log(&format!("containerd terminé : {status}"));
                 let _ = dockerd.kill();
                 let _ = dockerd.wait();
+                events::broadcast(&AgentEvent::EngineDown {
+                    exit: format!("containerd : {status}"),
+                    restarts: restarts + 1,
+                });
                 break;
             }
             if *state.shutting_down.lock().unwrap() {
@@ -324,23 +589,34 @@ fn supervise(state: Arc<State>) {
             e.docker_ready_at_uptime_s = None;
         }
         let backoff = Duration::from_secs((2u64.pow(restarts.min(5))).min(30));
-        log(&format!("redémarrage du moteur dans {backoff:?} (tentative {restarts})"));
+        log(&format!(
+            "redémarrage du moteur dans {backoff:?} (tentative {restarts})"
+        ));
         std::thread::sleep(backoff);
     }
 }
 
 /// Récolte les zombies ré-attachés à PID 1, sans voler les enfants attendus par l'agent.
 pub fn start_reaper(state: Arc<State>) {
-    std::thread::spawn(move || loop {
-        let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
-        let rc = unsafe { libc::waitid(libc::P_ALL, 0, &mut info, libc::WEXITED | libc::WNOHANG | libc::WNOWAIT) };
-        let pid = if rc == 0 { unsafe { info.si_pid() } } else { 0 };
-        if pid > 0 && !state.tracked.lock().unwrap().contains(&pid) {
-            let mut status = 0;
-            unsafe { libc::waitpid(pid, &mut status, 0) };
-            continue;
+    std::thread::spawn(move || {
+        loop {
+            let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
+            let rc = unsafe {
+                libc::waitid(
+                    libc::P_ALL,
+                    0,
+                    &mut info,
+                    libc::WEXITED | libc::WNOHANG | libc::WNOWAIT,
+                )
+            };
+            let pid = if rc == 0 { unsafe { info.si_pid() } } else { 0 };
+            if pid > 0 && !state.tracked.lock().unwrap().contains(&pid) {
+                let mut status = 0;
+                unsafe { libc::waitpid(pid, &mut status, 0) };
+                continue;
+            }
+            std::thread::sleep(Duration::from_millis(100));
         }
-        std::thread::sleep(Duration::from_millis(100));
     });
 }
 
@@ -351,10 +627,20 @@ pub fn shutdown(state: &State, timeout: Duration) -> ! {
     let mut cmd = Command::new("/usr/bin/docker");
     cmd.args(["-H", &format!("unix://{DOCKER_SOCK}"), "ps", "-q"]);
     if let Ok(out) = run_tracked(state, cmd) {
-        let ids: Vec<String> = String::from_utf8_lossy(&out.stdout).split_whitespace().map(str::to_owned).collect();
+        let ids: Vec<String> = String::from_utf8_lossy(&out.stdout)
+            .split_whitespace()
+            .map(str::to_owned)
+            .collect();
         if !ids.is_empty() {
             let mut stop = Command::new("/usr/bin/docker");
-            stop.args(["-H", &format!("unix://{DOCKER_SOCK}"), "stop", "-t", &timeout.as_secs().to_string()]).args(&ids);
+            stop.args([
+                "-H",
+                &format!("unix://{DOCKER_SOCK}"),
+                "stop",
+                "-t",
+                &timeout.as_secs().to_string(),
+            ])
+            .args(&ids);
             let _ = run_tracked(state, stop);
         }
     }
@@ -366,11 +652,19 @@ pub fn shutdown(state: &State, timeout: Duration) -> ! {
         unsafe { libc::kill(pid as i32, libc::SIGTERM) };
     }
     let deadline = Instant::now() + Duration::from_secs(10);
-    while Instant::now() < deadline && Path::new(DOCKER_SOCK).exists() && UnixStream::connect(DOCKER_SOCK).is_ok() {
+    while Instant::now() < deadline
+        && Path::new(DOCKER_SOCK).exists()
+        && UnixStream::connect(DOCKER_SOCK).is_ok()
+    {
         std::thread::sleep(Duration::from_millis(100));
     }
     unsafe { libc::sync() };
-    for target in ["/var/lib/docker", "/var/lib/containerd", "/var/lib/solon-agent", DATA_MOUNT] {
+    for target in [
+        "/var/lib/docker",
+        "/var/lib/containerd",
+        "/var/lib/solon-agent",
+        DATA_MOUNT,
+    ] {
         let t = CString::new(target).unwrap();
         unsafe { libc::umount2(t.as_ptr(), libc::MNT_DETACH) };
     }

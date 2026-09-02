@@ -35,7 +35,10 @@ impl Out {
         }
     }
     fn check(&mut self, name: &str, ok: bool, detail: &str) {
-        self.line(&format!("{} {name} — {detail}", if ok { "OK  " } else { "ÉCHEC" }));
+        self.line(&format!(
+            "{} {name} — {detail}",
+            if ok { "OK  " } else { "ÉCHEC" }
+        ));
         if !ok {
             self.failures += 1;
         }
@@ -47,7 +50,12 @@ struct Console {
     lines: Vec<(u128, String)>,
 }
 
-fn console_reader(pipe: String, t0: Instant, console: Arc<Mutex<Console>>, tx: mpsc::Sender<String>) {
+fn console_reader(
+    pipe: String,
+    t0: Instant,
+    console: Arc<Mutex<Console>>,
+    tx: mpsc::Sender<String>,
+) {
     let deadline = Instant::now() + Duration::from_secs(10);
     let file = loop {
         match OpenOptions::new().read(true).write(true).open(&pipe) {
@@ -66,8 +74,14 @@ fn console_reader(pipe: String, t0: Instant, console: Arc<Mutex<Console>>, tx: m
                 pending.extend_from_slice(&buf[..n]);
                 while let Some(pos) = pending.iter().position(|&b| b == b'\n') {
                     let line: Vec<u8> = pending.drain(..=pos).collect();
-                    let text = String::from_utf8_lossy(&line).trim_end_matches(['\r', '\n']).to_owned();
-                    console.lock().unwrap().lines.push((t0.elapsed().as_millis(), text.clone()));
+                    let text = String::from_utf8_lossy(&line)
+                        .trim_end_matches(['\r', '\n'])
+                        .to_owned();
+                    console
+                        .lock()
+                        .unwrap()
+                        .lines
+                        .push((t0.elapsed().as_millis(), text.clone()));
                     let _ = tx.send(text);
                 }
             }
@@ -84,13 +98,18 @@ impl Rpc {
     fn connect(vm: &GUID) -> std::io::Result<Self> {
         let s = solon_hvsock::connect_with_retry(vm, 5000, Duration::from_secs(10))?;
         s.set_read_timeout(Some(Duration::from_secs(120)))?;
-        Ok(Self { reader: BufReader::new(s.try_clone()?), writer: s })
+        Ok(Self {
+            reader: BufReader::new(s.try_clone()?),
+            writer: s,
+        })
     }
     fn call(&mut self, cmd: &str) -> std::io::Result<serde_json::Value> {
         self.writer.write_all(format!("{cmd}\n").as_bytes())?;
         let mut line = String::new();
         self.reader.read_line(&mut line)?;
-        serde_json::from_str(line.trim()).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e} : {line}")))
+        serde_json::from_str(line.trim()).map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e} : {line}"))
+        })
     }
 }
 
@@ -129,7 +148,12 @@ fn docker(args: &[&str], stdin: Option<&[u8]>) -> (bool, String, u128) {
     use std::process::Stdio;
     let t = Instant::now();
     let mut cmd = Command::new("docker");
-    cmd.arg("-H").arg(DOCKER_HOST).args(args).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    cmd.arg("-H")
+        .arg(DOCKER_HOST)
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
     let mut child = match cmd.spawn() {
         Ok(c) => c,
         Err(e) => return (false, e.to_string(), t.elapsed().as_millis()),
@@ -167,7 +191,13 @@ fn docker(args: &[&str], stdin: Option<&[u8]>) -> (bool, String, u128) {
     };
     let stdout = out_thread.join().unwrap_or_default();
     let stderr = err_thread.join().unwrap_or_default();
-    let mut text = format!("{}{}", String::from_utf8_lossy(&stdout), String::from_utf8_lossy(&stderr)).trim().to_owned();
+    let mut text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&stdout),
+        String::from_utf8_lossy(&stderr)
+    )
+    .trim()
+    .to_owned();
     let ok = match status {
         Some(s) => s.success(),
         None => {
@@ -198,7 +228,14 @@ fn boot(out: &mut Out, config: &VmConfig) -> Result<BootResult, String> {
         std::thread::spawn(move || console_reader(pipe, t_start, c, tx));
     }
     vm.start().map_err(|e| format!("démarrage : {e}"))?;
-    let mut r = BootResult { guid: GUID::zeroed(), vm, initrd_ok_ms: None, agent_ready_ms: None, engine_ready_ms: None, console };
+    let mut r = BootResult {
+        guid: GUID::zeroed(),
+        vm,
+        initrd_ok_ms: None,
+        agent_ready_ms: None,
+        engine_ready_ms: None,
+        console,
+    };
     let deadline = Instant::now() + Duration::from_secs(90);
     while Instant::now() < deadline && r.engine_ready_ms.is_none() {
         if let Ok(line) = rx.recv_timeout(Duration::from_millis(100)) {
@@ -233,7 +270,9 @@ fn dump_console(out: &mut Out, console: &Arc<Mutex<Console>>, max: usize) {
 }
 
 fn main() {
-    tracing_subscriber::fmt().with_env_filter(std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into())).init();
+    tracing_subscriber::fmt()
+        .with_env_filter(std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()))
+        .init();
     let mut args = std::env::args().skip(1);
     let kernel = PathBuf::from(args.next().expect("noyau"));
     let initrd = PathBuf::from(args.next().expect("initrd"));
@@ -252,10 +291,15 @@ fn main() {
             other => panic!("option inconnue : {other}"),
         }
     }
-    let mut out = Out { file: log.map(|p| std::fs::File::create(p).unwrap()), start: Instant::now(), failures: 0 };
+    let mut out = Out {
+        file: log.map(|p| std::fs::File::create(p).unwrap()),
+        start: Instant::now(),
+        failures: 0,
+    };
     let _ = HcsVm::terminate_orphans(None);
 
-    let mut cmdline = "console=ttyS0,115200 8250_core.nr_uarts=1 panic=-1 pci=off rdinit=/init".to_owned();
+    let mut cmdline =
+        "console=ttyS0,115200 8250_core.nr_uarts=1 panic=-1 pci=off rdinit=/init".to_owned();
     if nobridge {
         cmdline.push_str(" solon.nobridge");
     }
@@ -268,14 +312,25 @@ fn main() {
         memory_mb: mem,
         processors: 4,
         disks: vec![
-            DiskAttachment { path: rootfs.clone(), read_only: true },
-            DiskAttachment { path: data.clone(), read_only: false },
+            DiskAttachment {
+                path: rootfs.clone(),
+                read_only: true,
+            },
+            DiskAttachment {
+                path: data.clone(),
+                read_only: false,
+            },
         ],
         shares: vec![],
         serial_pipe: Some(format!(r"\\.\pipe\solon-console-{}", &id[..8])),
+        network_adapter: None,
     };
 
-    let rt = tokio::runtime::Builder::new_multi_thread().enable_all().worker_threads(2).build().unwrap();
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .worker_threads(2)
+        .build()
+        .unwrap();
     let mut boot_times = Vec::new();
 
     for cycle in 1..=2 {
@@ -291,7 +346,10 @@ fn main() {
         out.check(
             &format!("cycle {cycle} : moteur prêt"),
             r.engine_ready_ms.is_some(),
-            &format!("initrd {:?} ms, agent {:?} ms, moteur {:?} ms après HcsStart", r.initrd_ok_ms, r.agent_ready_ms, r.engine_ready_ms),
+            &format!(
+                "initrd {:?} ms, agent {:?} ms, moteur {:?} ms après HcsStart",
+                r.initrd_ok_ms, r.agent_ready_ms, r.engine_ready_ms
+            ),
         );
         if r.engine_ready_ms.is_none() {
             dump_console(&mut out, &r.console, 80);
@@ -309,17 +367,43 @@ fn main() {
             }
         };
         match rpc.call("HEALTH") {
-            Ok(v) => out.check("HEALTH", v["data"]["docker_ping"] == true, &v["data"].to_string()),
+            Ok(v) => out.check(
+                "HEALTH",
+                v["data"]["docker_ping"] == true,
+                &v["data"].to_string(),
+            ),
             Err(e) => out.check("HEALTH", false, &e.to_string()),
         }
 
         // Relais de l'API Docker sur le named pipe.
-        let relay = rt.spawn(solon_hvsock::relay::serve_named_pipe(PIPE.into(), r.guid, 5001));
+        let relay = rt.spawn(solon_hvsock::relay::serve_named_pipe(
+            PIPE.into(),
+            r.guid,
+            5001,
+        ));
         std::thread::sleep(Duration::from_millis(200));
 
-        let (ok, txt, ms) = docker(&["version", "--format", "{{.Server.Version}} api={{.Server.APIVersion}} os={{.Server.Os}}"], None);
-        out.check("docker version via \\\\.\\pipe\\solon", ok, &format!("{txt} ({ms} ms)"));
-        let (ok, txt, ms) = docker(&["info", "--format", "{{.Driver}} cgroup={{.CgroupDriver}}/{{.CgroupVersion}} kernel={{.KernelVersion}} mem={{.MemTotal}}"], None);
+        let (ok, txt, ms) = docker(
+            &[
+                "version",
+                "--format",
+                "{{.Server.Version}} api={{.Server.APIVersion}} os={{.Server.Os}}",
+            ],
+            None,
+        );
+        out.check(
+            "docker version via \\\\.\\pipe\\solon",
+            ok,
+            &format!("{txt} ({ms} ms)"),
+        );
+        let (ok, txt, ms) = docker(
+            &[
+                "info",
+                "--format",
+                "{{.Driver}} cgroup={{.CgroupDriver}}/{{.CgroupVersion}} kernel={{.KernelVersion}} mem={{.MemTotal}}",
+            ],
+            None,
+        );
         out.check("docker info", ok, &format!("{txt} ({ms} ms)"));
 
         if cycle == 1 {
@@ -327,15 +411,56 @@ fn main() {
                 let data = std::fs::read(bb).expect("busybox");
                 let tar = busybox_tar(&data);
                 let (ok, txt, ms) = docker(&["import", "-", "solon/busybox:test"], Some(&tar));
-                out.check("docker import (image de test)", ok, &format!("{txt} ({ms} ms)"));
+                out.check(
+                    "docker import (image de test)",
+                    ok,
+                    &format!("{txt} ({ms} ms)"),
+                );
             }
         }
-        let (ok, txt, ms) = docker(&["images", "--format", "{{.Repository}}:{{.Tag}} {{.Size}}"], None);
-        out.check(&format!("cycle {cycle} : docker images (persistance)"), ok && txt.contains("solon/busybox"), &format!("{} ({ms} ms)", txt.replace('\n', " | ")));
-        let (ok, txt, ms) = docker(&["run", "--rm", "solon/busybox:test", "/bin/busybox", "echo", "bonjour-depuis-le-conteneur"], None);
-        out.check(&format!("cycle {cycle} : docker run --rm"), ok && txt.contains("bonjour-depuis-le-conteneur"), &format!("{txt} ({ms} ms)"));
-        let (ok, txt, ms) = docker(&["run", "-d", "--name", "solon-sleeper", "solon/busybox:test", "/bin/busybox", "sleep", "300"], None);
-        out.check("docker run -d", ok, &format!("{} ({ms} ms)", &txt[..txt.len().min(12)]));
+        let (ok, txt, ms) = docker(
+            &["images", "--format", "{{.Repository}}:{{.Tag}} {{.Size}}"],
+            None,
+        );
+        out.check(
+            &format!("cycle {cycle} : docker images (persistance)"),
+            ok && txt.contains("solon/busybox"),
+            &format!("{} ({ms} ms)", txt.replace('\n', " | ")),
+        );
+        let (ok, txt, ms) = docker(
+            &[
+                "run",
+                "--rm",
+                "solon/busybox:test",
+                "/bin/busybox",
+                "echo",
+                "bonjour-depuis-le-conteneur",
+            ],
+            None,
+        );
+        out.check(
+            &format!("cycle {cycle} : docker run --rm"),
+            ok && txt.contains("bonjour-depuis-le-conteneur"),
+            &format!("{txt} ({ms} ms)"),
+        );
+        let (ok, txt, ms) = docker(
+            &[
+                "run",
+                "-d",
+                "--name",
+                "solon-sleeper",
+                "solon/busybox:test",
+                "/bin/busybox",
+                "sleep",
+                "300",
+            ],
+            None,
+        );
+        out.check(
+            "docker run -d",
+            ok,
+            &format!("{} ({ms} ms)", &txt[..txt.len().min(12)]),
+        );
         let (ok, txt, _) = docker(&["ps", "--format", "{{.Names}} {{.Status}}"], None);
         out.check("docker ps", ok && txt.contains("solon-sleeper"), &txt);
         let (ok, _, ms) = docker(&["rm", "-f", "solon-sleeper"], None);
@@ -344,7 +469,12 @@ fn main() {
         relay.abort();
         let _ = rpc.call("POWEROFF 5");
         let exit = r.vm.wait_exit(Duration::from_secs(30));
-        out.check(&format!("cycle {cycle} : arrêt propre"), exit.as_ref().is_some_and(|e| e.data.as_deref().unwrap_or("").contains("GracefulExit")), &format!("{:?}", exit.as_ref().and_then(|e| e.data.clone())));
+        out.check(
+            &format!("cycle {cycle} : arrêt propre"),
+            exit.as_ref()
+                .is_some_and(|e| e.data.as_deref().unwrap_or("").contains("GracefulExit")),
+            &format!("{:?}", exit.as_ref().and_then(|e| e.data.clone())),
+        );
         if exit.is_none() {
             let _ = r.vm.terminate();
         }
@@ -353,9 +483,15 @@ fn main() {
 
     out.line("---- RÉSUMÉ ----");
     for (i, t) in boot_times.iter().enumerate() {
-        out.line(&format!("cycle {} : moteur Docker prêt {t} ms après HcsStartComputeSystem", i + 1));
+        out.line(&format!(
+            "cycle {} : moteur Docker prêt {t} ms après HcsStartComputeSystem",
+            i + 1
+        ));
     }
-    out.line(&format!("RÉSULTAT : {}", if out.failures == 0 { "OK" } else { "ÉCHEC" }));
+    out.line(&format!(
+        "RÉSULTAT : {}",
+        if out.failures == 0 { "OK" } else { "ÉCHEC" }
+    ));
     out.line(&format!("échecs : {}", out.failures));
     std::process::exit(if out.failures == 0 { 0 } else { 1 });
 }

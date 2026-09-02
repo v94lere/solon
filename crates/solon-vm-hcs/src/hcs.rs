@@ -44,7 +44,10 @@ impl Operation {
     pub fn new() -> Result<Self> {
         let op = unsafe { HcsCreateOperation(None, None) };
         if op.0.is_null() {
-            return Err(SolonError::new(ErrorCode::HcsError, "HcsCreateOperation a renvoyé un handle nul"));
+            return Err(SolonError::new(
+                ErrorCode::HcsError,
+                "HcsCreateOperation a renvoyé un handle nul",
+            ));
         }
         Ok(Self(op))
     }
@@ -57,7 +60,8 @@ impl Operation {
     /// au message d'erreur.
     pub fn wait(&self, context: &str, timeout: Duration) -> Result<Option<String>> {
         let mut doc = PWSTR::null();
-        let outcome = unsafe { HcsWaitForOperationResult(self.0, timeout_ms(timeout), Some(&mut doc)) };
+        let outcome =
+            unsafe { HcsWaitForOperationResult(self.0, timeout_ms(timeout), Some(&mut doc)) };
         let text = take_document(doc);
         match outcome {
             Ok(()) => Ok(text),
@@ -149,7 +153,11 @@ unsafe extern "system" fn on_event(event: *const HCS_EVENT, context: *const c_vo
         unsafe { ev.EventData.to_string() }.ok()
     };
     tracing::debug!(kind = ?HcsEventKind::from(ev.Type), data = ?data, "événement HCS");
-    sink.push(HcsEvent { kind: ev.Type.into(), data, at: Instant::now() });
+    sink.push(HcsEvent {
+        kind: ev.Type.into(),
+        data,
+        at: Instant::now(),
+    });
 }
 
 /// Handle sur un compute system, fermé automatiquement (la machine, elle, continue de tourner
@@ -167,8 +175,15 @@ impl ComputeSystem {
     /// Crée un compute system à partir de son document JSON. La machine n'est pas démarrée.
     pub fn create(id: &str, document_json: &str) -> Result<Self> {
         let op = Operation::new()?;
-        let handle = unsafe { HcsCreateComputeSystem(&HSTRING::from(id), &HSTRING::from(document_json), op.raw(), None) }
-            .map_err(|e| hresult::from_windows("HcsCreateComputeSystem", &e, None))?;
+        let handle = unsafe {
+            HcsCreateComputeSystem(
+                &HSTRING::from(id),
+                &HSTRING::from(document_json),
+                op.raw(),
+                None,
+            )
+        }
+        .map_err(|e| hresult::from_windows("HcsCreateComputeSystem", &e, None))?;
         let system = Self::attach(handle)?;
         op.wait("HcsCreateComputeSystem", Duration::from_secs(60))?;
         Ok(system)
@@ -184,8 +199,10 @@ impl ComputeSystem {
     fn attach(handle: HCS_SYSTEM) -> Result<Self> {
         let sink = Arc::new(EventSink::default());
         let ctx = Arc::as_ptr(&sink) as *const c_void;
-        unsafe { HcsSetComputeSystemCallback(handle, HcsEventOptionNone, Some(ctx), Some(on_event)) }
-            .map_err(|e| hresult::from_windows("HcsSetComputeSystemCallback", &e, None))?;
+        unsafe {
+            HcsSetComputeSystemCallback(handle, HcsEventOptionNone, Some(ctx), Some(on_event))
+        }
+        .map_err(|e| hresult::from_windows("HcsSetComputeSystemCallback", &e, None))?;
         Ok(Self { handle, sink })
     }
 
@@ -215,14 +232,18 @@ impl ComputeSystem {
         let op = Operation::new()?;
         unsafe { HcsGetComputeSystemProperties(self.handle, op.raw(), PCWSTR::null()) }
             .map_err(|e| hresult::from_windows("HcsGetComputeSystemProperties", &e, None))?;
-        Ok(op.wait("HcsGetComputeSystemProperties", timeout)?.unwrap_or_default())
+        Ok(op
+            .wait("HcsGetComputeSystemProperties", timeout)?
+            .unwrap_or_default())
     }
 
     /// Envoie une requête de modification (ajout/retrait de périphérique à chaud).
     pub fn modify(&self, request_json: &str, timeout: Duration) -> Result<Option<String>> {
         let op = Operation::new()?;
-        unsafe { HcsModifyComputeSystem(self.handle, op.raw(), &HSTRING::from(request_json), None) }
-            .map_err(|e| hresult::from_windows("HcsModifyComputeSystem", &e, None))?;
+        unsafe {
+            HcsModifyComputeSystem(self.handle, op.raw(), &HSTRING::from(request_json), None)
+        }
+        .map_err(|e| hresult::from_windows("HcsModifyComputeSystem", &e, None))?;
         op.wait("HcsModifyComputeSystem", timeout)
     }
 
@@ -240,9 +261,12 @@ impl ComputeSystem {
         let op = Operation::new()?;
         unsafe { HcsEnumerateComputeSystems(&HSTRING::from(query_json), op.raw()) }
             .map_err(|e| hresult::from_windows("HcsEnumerateComputeSystems", &e, None))?;
-        let doc = op.wait("HcsEnumerateComputeSystems", timeout)?.unwrap_or_else(|| "[]".to_owned());
-        let list = serde_json::from_str(&doc)
-            .map_err(|e| SolonError::internal(format!("énumération HCS illisible : {e} — {doc}")))?;
+        let doc = op
+            .wait("HcsEnumerateComputeSystems", timeout)?
+            .unwrap_or_else(|| "[]".to_owned());
+        let list = serde_json::from_str(&doc).map_err(|e| {
+            SolonError::internal(format!("énumération HCS illisible : {e} — {doc}"))
+        })?;
         Ok(list)
     }
 }

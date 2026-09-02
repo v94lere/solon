@@ -5,6 +5,8 @@ members = [
     "crates/solon-vm-hcs",
     "crates/solon-hvsock",
     "crates/solon-agent",
+    "crates/solon-prereq",
+    "crates/solon-service",
 ]
 
 [workspace.package]
@@ -17,12 +19,14 @@ rust-version = "1.85"
 [workspace.dependencies]
 solon-core = { path = "crates/solon-core" }
 solon-hvsock = { path = "crates/solon-hvsock" }
+solon-vm-hcs = { path = "crates/solon-vm-hcs" }
+solon-prereq = { path = "crates/solon-prereq" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "io-util", "net", "fs", "process"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "io-util", "net", "fs", "process", "signal"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 windows = "0.62"
 libc = "0.2"

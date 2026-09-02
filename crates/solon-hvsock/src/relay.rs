@@ -11,14 +11,75 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::windows::named_pipe::{NamedPipeServer, ServerOptions};
 use windows::core::GUID;
 
+/// Descripteur de sécurité par défaut du pipe Docker : SYSTEM et Administrateurs en contrôle
+/// total, utilisateurs authentifiés en lecture/écriture (nécessaire pour que l'application et le
+/// CLI `docker`, non élevés, puissent s'y connecter).
+pub const DOCKER_PIPE_SDDL: &str = "D:(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;AU)";
+
+/// Crée une instance de serveur de pipe avec un descripteur de sécurité SDDL.
+pub fn create_server(
+    pipe_name: &str,
+    first: bool,
+    sddl: Option<&str>,
+) -> io::Result<NamedPipeServer> {
+    let mut opts = ServerOptions::new();
+    opts.first_pipe_instance(first);
+    match sddl {
+        None => opts.create(pipe_name),
+        Some(sddl) => {
+            use windows::Win32::Security::Authorization::ConvertStringSecurityDescriptorToSecurityDescriptorW;
+            use windows::Win32::Security::{PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES};
+            use windows::core::HSTRING;
+            let mut sd = PSECURITY_DESCRIPTOR::default();
+            unsafe {
+                ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                    &HSTRING::from(sddl),
+                    1,
+                    &mut sd,
+                    None,
+                )
+            }
+            .map_err(|e| io::Error::other(format!("SDDL invalide : {e}")))?;
+            let mut attrs = SECURITY_ATTRIBUTES {
+                nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+                lpSecurityDescriptor: sd.0,
+                bInheritHandle: false.into(),
+            };
+            // SAFETY : `attrs` vit jusqu'à la fin de l'appel ; le descripteur est libéré ensuite.
+            let r = unsafe {
+                opts.create_with_security_attributes_raw(
+                    pipe_name,
+                    &mut attrs as *mut _ as *mut std::ffi::c_void,
+                )
+            };
+            unsafe {
+                windows::Win32::Foundation::LocalFree(Some(windows::Win32::Foundation::HLOCAL(
+                    sd.0,
+                )));
+            }
+            r
+        }
+    }
+}
+
 /// Sert `pipe_name` (ex. `\\.\pipe\solon`) indéfiniment. À lancer dans une tâche Tokio.
 pub async fn serve_named_pipe(pipe_name: String, vm_id: GUID, port: u32) -> io::Result<()> {
-    let mut server = ServerOptions::new().first_pipe_instance(true).create(&pipe_name)?;
+    serve_named_pipe_with_sddl(pipe_name, vm_id, port, None).await
+}
+
+/// Comme [`serve_named_pipe`], avec un descripteur de sécurité (voir [`DOCKER_PIPE_SDDL`]).
+pub async fn serve_named_pipe_with_sddl(
+    pipe_name: String,
+    vm_id: GUID,
+    port: u32,
+    sddl: Option<&str>,
+) -> io::Result<()> {
+    let mut server = create_server(&pipe_name, true, sddl)?;
     tracing::info!(pipe = %pipe_name, port, "relais à l'écoute");
     loop {
         server.connect().await?;
         let connected = server;
-        server = ServerOptions::new().create(&pipe_name)?;
+        server = create_server(&pipe_name, false, sddl)?;
         tokio::spawn(async move {
             if let Err(e) = handle(connected, vm_id, port).await {
                 tracing::debug!("connexion relais terminée : {e}");
@@ -31,9 +92,11 @@ pub async fn serve_named_pipe(pipe_name: String, vm_id: GUID, port: u32) -> io::
 /// « hijacké » (`docker run`, `exec`, `logs -f`) que si le serveur **déconnecte** le pipe. On copie
 /// donc les deux sens séparément et, dès que l'un des deux se termine, on ferme tout.
 async fn handle(pipe: NamedPipeServer, vm_id: GUID, port: u32) -> io::Result<()> {
-    let std_stream = tokio::task::spawn_blocking(move || super::connect_with_retry(&vm_id, port, Duration::from_secs(5)))
-        .await
-        .map_err(io::Error::other)??;
+    let std_stream = tokio::task::spawn_blocking(move || {
+        super::connect_with_retry(&vm_id, port, Duration::from_secs(5))
+    })
+    .await
+    .map_err(io::Error::other)??;
     std_stream.set_nonblocking(true)?;
     let hv = tokio::net::TcpStream::from_std(std_stream)?;
 

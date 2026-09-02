@@ -36,14 +36,17 @@ pub const ERROR_VIRTUALIZATION_NOT_RUNNING: u32 = 0x8007_1D18;
 /// Classe un HRESULT en code d'erreur Solon.
 pub fn classify(hresult: u32) -> ErrorCode {
     match hresult {
-        HCS_E_HYPERV_NOT_INSTALLED | ERROR_VIRTUALIZATION_NOT_RUNNING => ErrorCode::HypervisorNotRunning,
+        HCS_E_HYPERV_NOT_INSTALLED | ERROR_VIRTUALIZATION_NOT_RUNNING => {
+            ErrorCode::HypervisorNotRunning
+        }
         HCS_E_SERVICE_NOT_AVAILABLE | HCS_E_SERVICE_DISCONNECT | RPC_S_SERVER_UNAVAILABLE => {
             ErrorCode::HostComputeServiceUnavailable
         }
         HCS_E_ACCESS_DENIED | E_ACCESSDENIED => ErrorCode::InsufficientPrivileges,
-        HCS_E_INVALID_JSON | E_INVALIDARG | HCS_E_WINDOWS_INSIDER_REQUIRED | HCS_E_IMAGE_MISMATCH => {
-            ErrorCode::VmConfigurationRejected
-        }
+        HCS_E_INVALID_JSON
+        | E_INVALIDARG
+        | HCS_E_WINDOWS_INSIDER_REQUIRED
+        | HCS_E_IMAGE_MISMATCH => ErrorCode::VmConfigurationRejected,
         ERROR_FILE_NOT_FOUND | ERROR_PATH_NOT_FOUND => ErrorCode::ImageCorrupted,
         HCS_E_OPERATION_TIMEOUT | HCS_E_CONNECTION_TIMEOUT => ErrorCode::VmBootTimeout,
         _ => ErrorCode::HcsError,
@@ -52,7 +55,11 @@ pub fn classify(hresult: u32) -> ErrorCode {
 
 /// Construit une erreur Solon à partir d'une erreur `windows` et du document de résultat
 /// éventuellement renvoyé par HCS (JSON décrivant l'échec).
-pub fn from_windows(context: &str, error: &windows::core::Error, result_document: Option<&str>) -> SolonError {
+pub fn from_windows(
+    context: &str,
+    error: &windows::core::Error,
+    result_document: Option<&str>,
+) -> SolonError {
     let hresult = error.code().0 as u32;
     let mut message = format!("{context} : {} (0x{hresult:08X})", error.message());
     if let Some(doc) = result_document.filter(|d| !d.trim().is_empty()) {
@@ -91,17 +98,29 @@ mod tests {
 
     #[test]
     fn classe_les_codes_connus() {
-        assert_eq!(classify(HCS_E_HYPERV_NOT_INSTALLED), ErrorCode::HypervisorNotRunning);
+        assert_eq!(
+            classify(HCS_E_HYPERV_NOT_INSTALLED),
+            ErrorCode::HypervisorNotRunning
+        );
         assert_eq!(classify(E_ACCESSDENIED), ErrorCode::InsufficientPrivileges);
-        assert_eq!(classify(HCS_E_INVALID_JSON), ErrorCode::VmConfigurationRejected);
-        assert_eq!(classify(RPC_S_SERVER_UNAVAILABLE), ErrorCode::HostComputeServiceUnavailable);
+        assert_eq!(
+            classify(HCS_E_INVALID_JSON),
+            ErrorCode::VmConfigurationRejected
+        );
+        assert_eq!(
+            classify(RPC_S_SERVER_UNAVAILABLE),
+            ErrorCode::HostComputeServiceUnavailable
+        );
         assert_eq!(classify(0x8037_0FFF), ErrorCode::HcsError);
     }
 
     #[test]
     fn resume_un_document_d_erreur() {
         let doc = r#"{"Error":-2143878653,"ErrorMessage":"Le fichier spécifié est introuvable.","ErrorEvents":[]}"#;
-        assert_eq!(summarize_result_document(doc), "Le fichier spécifié est introuvable.");
+        assert_eq!(
+            summarize_result_document(doc),
+            "Le fichier spécifié est introuvable."
+        );
         let doc2 = r#"{"ErrorEvents":[{"Message":"a"},{"Message":"b"}]}"#;
         assert_eq!(summarize_result_document(doc2), "a | b");
         assert_eq!(summarize_result_document("pas du json"), "pas du json");

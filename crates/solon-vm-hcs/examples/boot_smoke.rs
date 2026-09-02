@@ -88,7 +88,9 @@ fn console_reader(pipe: String, tx: mpsc::Sender<String>, deadline: Instant) {
                 pending.extend_from_slice(&buf[..n]);
                 while let Some(pos) = pending.iter().position(|&b| b == b'\n') {
                     let line: Vec<u8> = pending.drain(..=pos).collect();
-                    let text = String::from_utf8_lossy(&line).trim_end_matches(['\r', '\n']).to_owned();
+                    let text = String::from_utf8_lossy(&line)
+                        .trim_end_matches(['\r', '\n'])
+                        .to_owned();
                     if tx.send(text).is_err() {
                         return;
                     }
@@ -104,13 +106,24 @@ fn console_reader(pipe: String, tx: mpsc::Sender<String>, deadline: Instant) {
 }
 
 fn main() {
-    tracing_subscriber::fmt().with_env_filter(std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into())).init();
+    tracing_subscriber::fmt()
+        .with_env_filter(std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()))
+        .init();
     let args = parse_args();
     let mut out = Out {
-        file: args.log.as_ref().map(|p| std::fs::File::create(p).expect("fichier de log")),
+        file: args
+            .log
+            .as_ref()
+            .map(|p| std::fs::File::create(p).expect("fichier de log")),
         start: Instant::now(),
     };
-    out.line(&format!("noyau={} initrd={} mem={}MB cpus={}", args.kernel.display(), args.initrd.display(), args.mem, args.cpus));
+    out.line(&format!(
+        "noyau={} initrd={} mem={}MB cpus={}",
+        args.kernel.display(),
+        args.initrd.display(),
+        args.mem,
+        args.cpus
+    ));
     out.line(&format!("cmdline={}", args.cmdline));
 
     match HcsVm::terminate_orphans(None) {
@@ -132,6 +145,7 @@ fn main() {
         disks: vec![],
         shares: vec![],
         serial_pipe: Some(pipe.clone()),
+        network_adapter: None,
     };
 
     let t_create = Instant::now();
@@ -142,7 +156,10 @@ fn main() {
             std::process::exit(2);
         }
     };
-    out.line(&format!("créée id={id} en {} ms", t_create.elapsed().as_millis()));
+    out.line(&format!(
+        "créée id={id} en {} ms",
+        t_create.elapsed().as_millis()
+    ));
 
     let (tx, rx) = mpsc::channel::<String>();
     let reader_pipe = pipe.clone();
@@ -156,7 +173,9 @@ fn main() {
         std::process::exit(3);
     }
     let start_ms = t_start.elapsed().as_millis();
-    out.line(&format!("démarrée (HcsStartComputeSystem) en {start_ms} ms"));
+    out.line(&format!(
+        "démarrée (HcsStartComputeSystem) en {start_ms} ms"
+    ));
 
     let mut first_byte: Option<u128> = None;
     let mut init_start: Option<u128> = None;
@@ -191,9 +210,15 @@ fn main() {
         out.line(&format!("  | {line}"));
     }
 
-    let exit_ms = exited.as_ref().map(|e| e.at.duration_since(t_start).as_millis());
+    let exit_ms = exited
+        .as_ref()
+        .map(|e| e.at.duration_since(t_start).as_millis());
     match &exited {
-        Some(ev) => out.line(&format!("machine arrêtée d'elle-même après {} ms ; données : {:?}", exit_ms.unwrap(), ev.data)),
+        Some(ev) => out.line(&format!(
+            "machine arrêtée d'elle-même après {} ms ; données : {:?}",
+            exit_ms.unwrap(),
+            ev.data
+        )),
         None => {
             out.line("!! pas d'arrêt spontané dans le délai : terminaison forcée");
             match vm.properties() {
@@ -206,12 +231,28 @@ fn main() {
 
     out.line("---- RÉSUMÉ ----");
     out.line(&format!("HcsStartComputeSystem      : {start_ms} ms"));
-    out.line(&format!("premier octet console      : {}", first_byte.map_or("jamais".into(), |v| format!("{v} ms"))));
-    out.line(&format!("init démarré (userspace)   : {}", init_start.map_or("jamais".into(), |v| format!("{v} ms"))));
-    out.line(&format!("init terminé (SOLON-INIT-OK): {}", init_ok.map_or("jamais".into(), |v| format!("{v} ms"))));
-    out.line(&format!("arrêt constaté par HCS     : {}", exit_ms.map_or("jamais".into(), |v| format!("{v} ms"))));
+    out.line(&format!(
+        "premier octet console      : {}",
+        first_byte.map_or("jamais".into(), |v| format!("{v} ms"))
+    ));
+    out.line(&format!(
+        "init démarré (userspace)   : {}",
+        init_start.map_or("jamais".into(), |v| format!("{v} ms"))
+    ));
+    out.line(&format!(
+        "init terminé (SOLON-INIT-OK): {}",
+        init_ok.map_or("jamais".into(), |v| format!("{v} ms"))
+    ));
+    out.line(&format!(
+        "arrêt constaté par HCS     : {}",
+        exit_ms.map_or("jamais".into(), |v| format!("{v} ms"))
+    ));
 
     let ok = init_ok.is_some() && exited.is_some();
-    out.line(if ok { "RÉSULTAT : OK" } else { "RÉSULTAT : ÉCHEC" });
+    out.line(if ok {
+        "RÉSULTAT : OK"
+    } else {
+        "RÉSULTAT : ÉCHEC"
+    });
     std::process::exit(if ok { 0 } else { 1 });
 }

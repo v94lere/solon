@@ -43,20 +43,30 @@ impl HcsVm {
         acl::grant_vm_access(&config.kernel, acl::Access::Read)?;
         acl::grant_vm_access(&config.initrd, acl::Access::Read)?;
         for disk in &config.disks {
-            let access = if disk.read_only { acl::Access::Read } else { acl::Access::ReadWrite };
+            let access = if disk.read_only {
+                acl::Access::Read
+            } else {
+                acl::Access::ReadWrite
+            };
             acl::grant_vm_access(&disk.path, access)?;
         }
         let document = ComputeSystemDocument::from_config(config);
         let json = serde_json::to_string(&document)?;
         tracing::debug!(id = %config.id, "document HCS : {json}");
         let system = ComputeSystem::create(&config.id, &json)?;
-        Ok(Self { id: config.id.clone(), system })
+        Ok(Self {
+            id: config.id.clone(),
+            system,
+        })
     }
 
     /// Se rattache à un compute system encore en marche (après redémarrage du service).
     pub fn open(id: &str) -> Result<Self> {
         let system = ComputeSystem::open(id)?;
-        Ok(Self { id: id.to_owned(), system })
+        Ok(Self {
+            id: id.to_owned(),
+            system,
+        })
     }
 
     pub fn id(&self) -> &str {
@@ -96,7 +106,9 @@ impl HcsVm {
             .get("RuntimeId")
             .and_then(|v| v.as_str())
             .map(str::to_owned)
-            .ok_or_else(|| SolonError::internal(format!("RuntimeId absent des propriétés HCS : {props}")))
+            .ok_or_else(|| {
+                SolonError::internal(format!("RuntimeId absent des propriétés HCS : {props}"))
+            })
     }
 
     /// Ajoute un partage 9P à chaud. L'invité doit ensuite le monter (RPC agent).
@@ -106,7 +118,9 @@ impl HcsVm {
             request_type: schema::RequestType::Add,
             settings: Some(schema::Plan9Share::from_host_share(share)),
         };
-        self.system.modify(&serde_json::to_string(&req)?, Duration::from_secs(30)).map(|_| ())
+        self.system
+            .modify(&serde_json::to_string(&req)?, Duration::from_secs(30))
+            .map(|_| ())
     }
 
     /// Retire un partage 9P à chaud (l'invité doit l'avoir démonté avant).
@@ -116,7 +130,9 @@ impl HcsVm {
             request_type: schema::RequestType::Remove,
             settings: Some(schema::Plan9Share::from_host_share(share)),
         };
-        self.system.modify(&serde_json::to_string(&req)?, Duration::from_secs(30)).map(|_| ())
+        self.system
+            .modify(&serde_json::to_string(&req)?, Duration::from_secs(30))
+            .map(|_| ())
     }
 
     /// Liste les compute systems appartenant à Solon, quel que soit le processus créateur.
@@ -138,7 +154,9 @@ impl HcsVm {
                 Ok(system) => {
                     if let Err(e) = system.terminate(Duration::from_secs(30)) {
                         // Déjà arrêtée entre l'énumération et la terminaison : pas une erreur.
-                        if e.code != ErrorCode::HcsError || e.hresult != Some(hresult::HCS_E_SYSTEM_ALREADY_STOPPED) {
+                        if e.code != ErrorCode::HcsError
+                            || e.hresult != Some(hresult::HCS_E_SYSTEM_ALREADY_STOPPED)
+                        {
                             return Err(e);
                         }
                     }
@@ -162,4 +180,3 @@ impl std::fmt::Debug for HcsVm {
         f.debug_struct("HcsVm").field("id", &self.id).finish()
     }
 }
-

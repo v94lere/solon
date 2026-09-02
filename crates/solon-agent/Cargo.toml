@@ -12,6 +12,7 @@ name = "solon-agent"
 path = "src/main.rs"
 
 [dependencies]
+solon-core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

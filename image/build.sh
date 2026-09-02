@@ -23,6 +23,8 @@ if [ "${SKIP_KERNEL:-0}" = 1 ] && [ -f "$OUT_BASE/kernel/vmlinuz" ]; then
 else
     bash "$HERE/kernel/build-kernel.sh" "$OUT_BASE/kernel"
 fi
+# rm préalable : un fichier déjà utilisé par le service porte une ACE supplémentaire qui gêne la réécriture depuis WSL.
+rm -f "$DEST/vmlinuz" "$DEST/initrd.img" "$DEST/rootfs.vhd" 2>/dev/null || true
 cp "$OUT_BASE/kernel/vmlinuz" "$DEST/vmlinuz"
 cp "$OUT_BASE/kernel/kernel.release" "$OUT_BASE/kernel/kernel.config" "$DEST/"
 

@@ -57,7 +57,8 @@ pub fn run(dir: &str) -> Result<Value, String> {
 
     let t = Instant::now();
     for i in 0..n_small {
-        let mut f = File::create(small_dir.join(format!("f{i:04}.dat"))).map_err(|e| e.to_string())?;
+        let mut f =
+            File::create(small_dir.join(format!("f{i:04}.dat"))).map_err(|e| e.to_string())?;
         f.write_all(&payload).map_err(|e| e.to_string())?;
     }
     let create_ms = t.elapsed().as_millis() as u64;
@@ -81,7 +82,9 @@ pub fn run(dir: &str) -> Result<Value, String> {
     let read_small_ms = t.elapsed().as_millis() as u64;
 
     let t = Instant::now();
-    let entries = std::fs::read_dir(&small_dir).map_err(|e| e.to_string())?.count();
+    let entries = std::fs::read_dir(&small_dir)
+        .map_err(|e| e.to_string())?
+        .count();
     let readdir_ms = t.elapsed().as_millis() as u64;
 
     let t = Instant::now();

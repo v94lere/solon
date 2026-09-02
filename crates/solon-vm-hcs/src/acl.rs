@@ -11,12 +11,17 @@ use std::ffi::c_void;
 use std::path::Path;
 
 use solon_core::{ErrorCode, Result, SolonError};
-use windows::Win32::Foundation::{GENERIC_EXECUTE, GENERIC_READ, GENERIC_WRITE, HLOCAL, LocalFree, WIN32_ERROR};
-use windows::Win32::Security::Authorization::{
-    ConvertStringSidToSidW, EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, SE_FILE_OBJECT, SetEntriesInAclW,
-    SetNamedSecurityInfoW, TRUSTEE_IS_SID, TRUSTEE_IS_WELL_KNOWN_GROUP, TRUSTEE_W,
+use windows::Win32::Foundation::{
+    GENERIC_EXECUTE, GENERIC_READ, GENERIC_WRITE, HLOCAL, LocalFree, WIN32_ERROR,
 };
-use windows::Win32::Security::{ACL, DACL_SECURITY_INFORMATION, NO_INHERITANCE, PSECURITY_DESCRIPTOR, PSID};
+use windows::Win32::Security::Authorization::{
+    ConvertStringSidToSidW, EXPLICIT_ACCESS_W, GRANT_ACCESS, GetNamedSecurityInfoW, SE_FILE_OBJECT,
+    SetEntriesInAclW, SetNamedSecurityInfoW, TRUSTEE_IS_SID, TRUSTEE_IS_WELL_KNOWN_GROUP,
+    TRUSTEE_W,
+};
+use windows::Win32::Security::{
+    ACL, DACL_SECURITY_INFORMATION, NO_INHERITANCE, PSECURITY_DESCRIPTOR, PSID,
+};
 use windows::core::{HSTRING, PWSTR};
 
 /// Groupe « Virtual Machines ».
@@ -31,7 +36,11 @@ pub enum Access {
 fn win32_err(context: &str, path: &Path, code: WIN32_ERROR) -> SolonError {
     let hresult = 0x8007_0000u32 | (code.0 & 0xFFFF);
     SolonError::new(
-        if code.0 == 5 { ErrorCode::InsufficientPrivileges } else { ErrorCode::Io },
+        if code.0 == 5 {
+            ErrorCode::InsufficientPrivileges
+        } else {
+            ErrorCode::Io
+        },
         format!("{context} sur {} : erreur Win32 {}", path.display(), code.0),
     )
     .with_hresult(hresult)
@@ -47,7 +56,16 @@ fn grant(path: &Path, mask: u32) -> Result<()> {
     let mut old_dacl: *mut ACL = std::ptr::null_mut();
     let mut sd = PSECURITY_DESCRIPTOR::default();
     let rc = unsafe {
-        GetNamedSecurityInfoW(&name, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, None, None, Some(&mut old_dacl), None, &mut sd)
+        GetNamedSecurityInfoW(
+            &name,
+            SE_FILE_OBJECT,
+            DACL_SECURITY_INFORMATION,
+            None,
+            None,
+            Some(&mut old_dacl),
+            None,
+            &mut sd,
+        )
     };
     if rc.0 != 0 {
         unsafe { LocalFree(Some(HLOCAL(sid.0))) };
@@ -72,9 +90,21 @@ fn grant(path: &Path, mask: u32) -> Result<()> {
         Err(win32_err("SetEntriesInAclW", path, rc))
     } else {
         let rc = unsafe {
-            SetNamedSecurityInfoW(&name, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, None, None, Some(new_dacl as *const ACL), None)
+            SetNamedSecurityInfoW(
+                &name,
+                SE_FILE_OBJECT,
+                DACL_SECURITY_INFORMATION,
+                None,
+                None,
+                Some(new_dacl as *const ACL),
+                None,
+            )
         };
-        if rc.0 != 0 { Err(win32_err("SetNamedSecurityInfoW", path, rc)) } else { Ok(()) }
+        if rc.0 != 0 {
+            Err(win32_err("SetNamedSecurityInfoW", path, rc))
+        } else {
+            Ok(())
+        }
     };
     unsafe {
         if !new_dacl.is_null() {

@@ -40,6 +40,17 @@ pub struct VmConfig {
     pub shares: Vec<HostShare>,
     /// Named pipe Windows recevant la console série (COM1), pour le diagnostic.
     pub serial_pipe: Option<String>,
+    /// Carte réseau attachée à un endpoint HNS (réseau sortant).
+    #[serde(default)]
+    pub network_adapter: Option<NetworkAdapterConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NetworkAdapterConfig {
+    /// Identifiant (GUID) de l'endpoint HNS.
+    pub endpoint_id: String,
+    /// Adresse MAC de l'endpoint, format `00-15-5D-xx-xx-xx`.
+    pub mac_address: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

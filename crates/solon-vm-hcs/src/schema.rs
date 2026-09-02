@@ -284,11 +284,32 @@ impl ComputeSystemDocument {
         }
 
         if let Some(pipe) = &config.serial_pipe {
-            devices.com_ports = Some(BTreeMap::from([("0".to_owned(), ComPort { named_pipe: pipe.clone() })]));
+            devices.com_ports = Some(BTreeMap::from([(
+                "0".to_owned(),
+                ComPort {
+                    named_pipe: pipe.clone(),
+                },
+            )]));
         }
 
         if !config.shares.is_empty() {
-            devices.plan9 = Some(Plan9 { shares: config.shares.iter().map(Plan9Share::from_host_share).collect() });
+            devices.plan9 = Some(Plan9 {
+                shares: config
+                    .shares
+                    .iter()
+                    .map(Plan9Share::from_host_share)
+                    .collect(),
+            });
+        }
+
+        if let Some(nic) = &config.network_adapter {
+            devices.network_adapters = Some(BTreeMap::from([(
+                nic.endpoint_id.clone(),
+                NetworkAdapter {
+                    endpoint_id: nic.endpoint_id.clone(),
+                    mac_address: nic.mac_address.clone(),
+                },
+            )]));
         }
 
         devices.hv_socket = Some(HvSocket {
@@ -319,7 +340,9 @@ impl ComputeSystemDocument {
                         enable_deferred_commit: Some(true),
                         ..Memory::default()
                     },
-                    processor: Processor { count: config.processors },
+                    processor: Processor {
+                        count: config.processors,
+                    },
                 },
                 devices,
             },
@@ -343,8 +366,14 @@ mod tests {
             memory_mb: 2048,
             processors: 2,
             disks: vec![
-                DiskAttachment { path: PathBuf::from(r"C:\ProgramData\Solon\image\rootfs.vhdx"), read_only: true },
-                DiskAttachment { path: PathBuf::from(r"C:\ProgramData\Solon\data.vhdx"), read_only: false },
+                DiskAttachment {
+                    path: PathBuf::from(r"C:\ProgramData\Solon\image\rootfs.vhdx"),
+                    read_only: true,
+                },
+                DiskAttachment {
+                    path: PathBuf::from(r"C:\ProgramData\Solon\data.vhdx"),
+                    read_only: false,
+                },
             ],
             shares: vec![solon_core::vm::HostShare {
                 name: "c".into(),
@@ -353,6 +382,7 @@ mod tests {
                 read_only: false,
             }],
             serial_pipe: Some(r"\\.\pipe\solon-com1".into()),
+            network_adapter: None,
         }
     }
 
@@ -372,7 +402,13 @@ mod tests {
         let req = ModifySettingRequest {
             resource_path: PLAN9_SHARES_RESOURCE_PATH.into(),
             request_type: RequestType::Add,
-            settings: Some(Plan9Share { name: "x".into(), access_name: "x".into(), path: r"D:\".into(), port: 9001, flags: 4 }),
+            settings: Some(Plan9Share {
+                name: "x".into(),
+                access_name: "x".into(),
+                path: r"D:\".into(),
+                port: 9001,
+                flags: 4,
+            }),
         };
         let json = serde_json::to_value(&req).unwrap();
         assert_eq!(json["ResourcePath"], "VirtualMachine/Devices/Plan9/Shares");
@@ -389,17 +425,34 @@ mod tests {
         assert_eq!(json["Owner"], "Solon");
         assert_eq!(json["ShouldTerminateOnLastHandleClosed"], false);
         let vm = &json["VirtualMachine"];
-        assert_eq!(vm["Chipset"]["LinuxKernelDirect"]["KernelFilePath"], r"C:\ProgramData\Solon\image\vmlinuz");
-        assert_eq!(vm["Chipset"]["LinuxKernelDirect"]["KernelCmdLine"], "console=ttyS0 panic=-1");
+        assert_eq!(
+            vm["Chipset"]["LinuxKernelDirect"]["KernelFilePath"],
+            r"C:\ProgramData\Solon\image\vmlinuz"
+        );
+        assert_eq!(
+            vm["Chipset"]["LinuxKernelDirect"]["KernelCmdLine"],
+            "console=ttyS0 panic=-1"
+        );
         assert_eq!(vm["ComputeTopology"]["Memory"]["SizeInMB"], 2048);
         assert_eq!(vm["ComputeTopology"]["Memory"]["AllowOvercommit"], true);
-        assert!(vm["ComputeTopology"]["Memory"].get("EnableHotHint").is_none(), "champ optionnel non émis");
+        assert!(
+            vm["ComputeTopology"]["Memory"]
+                .get("EnableHotHint")
+                .is_none(),
+            "champ optionnel non émis"
+        );
         assert_eq!(vm["ComputeTopology"]["Processor"]["Count"], 2);
         let scsi = &vm["Devices"]["Scsi"]["0"]["Attachments"];
         assert_eq!(scsi["0"]["Type"], "VirtualDisk");
         assert_eq!(scsi["0"]["ReadOnly"], true);
-        assert!(scsi["1"].get("ReadOnly").is_none(), "ReadOnly=false n'est pas émis");
-        assert_eq!(vm["Devices"]["ComPorts"]["0"]["NamedPipe"], r"\\.\pipe\solon-com1");
+        assert!(
+            scsi["1"].get("ReadOnly").is_none(),
+            "ReadOnly=false n'est pas émis"
+        );
+        assert_eq!(
+            vm["Devices"]["ComPorts"]["0"]["NamedPipe"],
+            r"\\.\pipe\solon-com1"
+        );
         assert_eq!(
             vm["Devices"]["HvSocket"]["HvSocketConfig"]["DefaultBindSecurityDescriptor"],
             SDDL_SYSTEM_AND_ADMINS

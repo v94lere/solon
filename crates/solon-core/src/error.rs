@@ -52,7 +52,7 @@ pub enum ErrorCode {
 }
 
 /// Erreur principale de Solon.
-#[derive(Debug, thiserror::Error, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize, Deserialize)]
 #[error("[{code:?}] {message}")]
 pub struct SolonError {
     pub code: ErrorCode,
@@ -64,7 +64,11 @@ pub struct SolonError {
 
 impl SolonError {
     pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
-        Self { code, message: message.into(), hresult: None }
+        Self {
+            code,
+            message: message.into(),
+            hresult: None,
+        }
     }
 
     pub fn with_hresult(mut self, hresult: u32) -> Self {

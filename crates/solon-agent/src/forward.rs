@@ -1,26 +1,27 @@
-//! Relais de l'API Docker : chaque connexion vsock sur le port 5001 est reliée à `/run/docker.sock`.
-//! Copie bidirectionnelle par deux threads ; la fermeture d'un côté ferme l'autre (nécessaire
-//! pour les flux « hijackés » d'`exec`/`attach`).
+//! Relais de l'API Docker (vsock 5001 → `/run/docker.sock`) et copie bidirectionnelle générique.
 
+use std::fs::File;
 use std::io::{Read, Write};
-use std::os::fd::AsRawFd;
+use std::os::fd::{FromRawFd, IntoRawFd, RawFd};
 use std::os::unix::net::UnixStream;
 use std::sync::Arc;
+
+use solon_core::protocol::PORT_DOCKER;
 
 use crate::system::{DOCKER_SOCK, State, log};
 use crate::vsock;
 
-pub const DOCKER_API_PORT: u32 = 5001;
-
 pub fn serve(_state: Arc<State>) {
-    let listen_fd = match vsock::listen(DOCKER_API_PORT) {
+    let listen_fd = match vsock::listen(PORT_DOCKER) {
         Ok(fd) => fd,
         Err(e) => {
             log(&format!("relais API Docker : {e}"));
             return;
         }
     };
-    log(&format!("relais API Docker à l'écoute (vsock {DOCKER_API_PORT})"));
+    log(&format!(
+        "relais API Docker à l'écoute (vsock {PORT_DOCKER})"
+    ));
     loop {
         let client = match vsock::accept(listen_fd) {
             Ok(c) => c,
@@ -38,46 +39,45 @@ pub fn serve(_state: Arc<State>) {
                     return;
                 }
             };
-            pump(client, docker);
+            pump_fds(client.into_raw_fd(), docker.into_raw_fd());
         });
     }
 }
 
-fn shutdown_write(fd: i32) {
-    unsafe { libc::shutdown(fd, libc::SHUT_WR) };
+/// Copie bidirectionnelle entre deux descripteurs de sockets. Quand un sens atteint la fin de
+/// flux, la demi-fermeture est propagée (`shutdown(SHUT_WR)`) ; les deux descripteurs sont fermés
+/// à la sortie. Prend possession des deux descripteurs.
+pub fn pump_fds(a: RawFd, b: RawFd) {
+    let a_dup = unsafe { libc::dup(a) };
+    let b_dup = unsafe { libc::dup(b) };
+    if a_dup < 0 || b_dup < 0 {
+        unsafe {
+            libc::close(a);
+            libc::close(b);
+        }
+        return;
+    }
+    let (mut a_read, mut b_write) = unsafe { (File::from_raw_fd(a), File::from_raw_fd(b_dup)) };
+    let (mut b_read, mut a_write) = unsafe { (File::from_raw_fd(b), File::from_raw_fd(a_dup)) };
+
+    let forward = std::thread::spawn(move || {
+        copy_then_shutdown(&mut a_read, &mut b_write, b_dup);
+    });
+    copy_then_shutdown(&mut b_read, &mut a_write, a_dup);
+    let _ = forward.join();
 }
 
-fn pump(client: std::fs::File, docker: UnixStream) {
-    let mut c_read = client.try_clone().expect("dup client");
-    let mut c_write = client;
-    let mut d_read = docker.try_clone().expect("dup docker");
-    let mut d_write = docker;
-
-    let up = std::thread::spawn(move || {
-        let mut buf = vec![0u8; 64 * 1024];
-        loop {
-            match c_read.read(&mut buf) {
-                Ok(0) | Err(_) => break,
-                Ok(n) => {
-                    if d_write.write_all(&buf[..n]).is_err() {
-                        break;
-                    }
-                }
-            }
-        }
-        shutdown_write(d_write.as_raw_fd());
-    });
+fn copy_then_shutdown(from: &mut File, to: &mut File, to_fd: RawFd) {
     let mut buf = vec![0u8; 64 * 1024];
     loop {
-        match d_read.read(&mut buf) {
+        match from.read(&mut buf) {
             Ok(0) | Err(_) => break,
             Ok(n) => {
-                if c_write.write_all(&buf[..n]).is_err() {
+                if to.write_all(&buf[..n]).is_err() {
                     break;
                 }
             }
         }
     }
-    shutdown_write(c_write.as_raw_fd());
-    let _ = up.join();
+    unsafe { libc::shutdown(to_fd, libc::SHUT_WR) };
 }

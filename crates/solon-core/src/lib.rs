@@ -4,6 +4,8 @@
 //! celui-ci ne contient que les types partagés entre le service, l'application et l'agent.
 
 pub mod error;
+pub mod ipc;
+pub mod protocol;
 pub mod vm;
 
 pub use error::{ErrorCode, Result, SolonError};
