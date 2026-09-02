@@ -109,6 +109,12 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 - Aucune élévation dans l'application : tout passe par les deux named pipes du service ; le client réessaie sur `ERROR_PIPE_BUSY` (découverte du bloc).
 - Fonctionnalités MVP couvertes à ce stade : 1 (provisionnement), 2 (vue conteneurs), 3 (actions, logs, terminal). Restent 4, 5, 6, 7 pour le bloc 4.
 
+### 1.8 Résultats du bloc 4 (images, volumes, réseaux, Compose, barre des tâches, 2 septembre 2026)
+
+- **Les 7 fonctionnalités du MVP sont présentes** : vues Images (lancer, inspecter, supprimer), Volumes et Réseaux (créer, inspecter, supprimer), Compose (dossier Windows partagé à la demande par 9P, `docker compose` exécuté dans la machine via l'agent, regroupement par projet), icône de barre des tâches (état, conteneurs en marche, démarrer/arrêter, ouvrir, quitter).
+- Le partage de dossier à la demande implémente la §5.2 : un partage par lecteur, monté sur `/mnt/host/<lettre>`, chemin traduit ; découverte : le périphérique Plan9 doit être déclaré à la création de la machine pour accepter des ajouts à chaud.
+- Limites assumées : sortie Compose capturée en fin de commande (pas de flux), UDP non relayé, une seule machine par hôte.
+
 ---
 
 ## 2. Virtualisation : choix et justification

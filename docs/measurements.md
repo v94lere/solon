@@ -243,3 +243,26 @@ performance spécifiques à ce bloc.
 - Les Channels Tauri v2 transportent sans difficulté les flux de journaux, de statistiques et le terminal
   (octets en base64) ; chaque flux a un identifiant et une fermeture explicite au démontage de la vue.
 - `i18next` v26 attend les clés de pluriel `count_one` / `count_other` (plus `count_plural`).
+
+## Bloc 4 — images, volumes, réseaux, Compose, barre des tâches (2 septembre 2026)
+
+### Validé
+
+- **Compose** : dossier Windows partagé à la demande (`EnsureShare` → partage 9P du lecteur `C:` ajouté à chaud,
+  monté sur `/mnt/host/c` par l'agent, chemin traduit), puis `docker compose up -d` exécuté **dans la machine**
+  via l'agent : deux services démarrés, port `8090` publié relayé vers `http://localhost:8090` (réponse reçue),
+  bind mount `./data` créé côté Windows par le conteneur (traverse le partage 9P). `docker compose ps` et
+  regroupement par projet dans la vue conteneurs.
+- Vues **Images** (lancer un conteneur avec ports/variables/commande, inspecter, supprimer avec confirmation),
+  **Volumes** (créer, inspecter, supprimer avec confirmation) et **Réseaux** (créer, inspecter, supprimer ; réseaux
+  intégrés protégés) alimentées par bollard et rafraîchies par les événements Docker.
+- **Barre des tâches** : icône avec état du moteur, nombre de conteneurs en marche (rafraîchi toutes les 5 s),
+  démarrer / arrêter, ouvrir, quitter ; fermer la fenêtre la cache.
+
+### Faits établis par le bloc 4
+
+- **Le périphérique `Plan9` doit exister dès la création de la machine** (`Devices.Plan9.Shares = []`), sinon
+  `HcsModifyComputeSystem` pour ajouter un partage échoue avec `ERROR_NOT_FOUND` (`0x80070490`). Le spike du
+  bloc 0b ne l'avait pas révélé car la machine y démarrait déjà avec un partage.
+- Compose dans la machine n'a besoin d'aucun binaire côté Windows : le plugin `docker-cli-compose` d'Alpine suffit ;
+  la sortie est capturée en fin de commande (pas de flux) — limitation acceptée pour le MVP.

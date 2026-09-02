@@ -229,8 +229,8 @@ function GroupRows({
               </span>
             </td>
             <td className="mono">{portsText(c)}</td>
-            <td className="mono text-right">{running && s ? `${s.cpu_percent.toFixed(1)} %` : "—"}</td>
-            <td className="mono text-right">{running && s ? formatBytes(s.mem_usage) : "—"}</td>
+            <td className="mono text-right whitespace-nowrap">{running && s ? `${s.cpu_percent.toFixed(1)} %` : "—"}</td>
+            <td className="mono text-right whitespace-nowrap">{running && s ? formatBytes(s.mem_usage) : "—"}</td>
             <td>
               <div className="flex justify-end gap-1">
                 {running ? (
