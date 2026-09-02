@@ -87,6 +87,12 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 - Un partage n'accepte **qu'une session 9P** (second montage : `EFAULT`) ; ajout/retrait à chaud de partages validés ; `ReadOnly` et `LinuxMetadata` (chmod conservé) validés ; écritures visibles instantanément des deux côtés.
 - L'agent invité (Rust, musl statique) se compile croisé depuis Windows avec `rust-lld`, sans chaîne C.
 
+### 1.5 Résultats du bloc 1 (image complète et moteur Docker, 2 septembre 2026)
+
+- Pipeline `image/build.sh` opérationnel : noyau `6.18.40.1-solon` compilé depuis le dépôt WSL2 (fragment `solon.config`, familles netfilter en dur), rootfs Alpine v3.24 avec Docker Engine 29.5.3 en VHD fixe de 293 Mo, initrd de 0,6 Mo, manifeste avec SHA-256.
+- **Moteur Docker prêt ~1,2 s après l'ordre de démarrage** (initrd 0,69 s, agent PID 1 0,76 s, dockerd 1,16 s), `docker version` depuis le CLI Windows via `\\.\pipe\solon` en 125 ms, `docker run --rm` en ~620 ms. Persistance du disque de données validée sur deux cycles, arrêt propre en ~0,4 s.
+- Quatre pièges levés et documentés dans `docs/measurements.md` : ACL du groupe Virtual Machines sur les disques, disposition du pied de VHD, environnement vide de PID 1, options netfilter en modules dans la configuration WSL, et absence de demi-fermeture des named pipes (relais réécrit).
+
 ---
 
 ## 2. Virtualisation : choix et justification
@@ -117,11 +123,13 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 
 ```
 image/<version>/
-├── vmlinuz           noyau Linux, bzImage (~10–12 Mo)
-├── initrd.img        initramfs minimal : busybox + solon-agent + fsck (~5 Mo)
-├── rootfs.vhdx       système racine en LECTURE SEULE (~250 Mo décompressés, ~80–100 Mo compressés)
+├── vmlinuz           noyau Linux, bzImage (15 Mo mesurés, 6.18.40.1-solon)
+├── initrd.img        initramfs minimal : busybox + script init (0,6 Mo mesurés)
+├── rootfs.vhd        système racine en LECTURE SEULE, ext4 sans journal dans un VHD fixe (293 Mo mesurés)
 └── manifest.json     versions, SHA-256 des trois fichiers, options noyau, date de build
 ```
+
+Choix du bloc 1 : le disque racine est un **VHD à taille fixe** (données brutes + pied de 512 octets) et non un VHDX. Le format se génère avec 60 lignes de Python (`image/tools/mkvhd.py`), sans `qemu-img` ni outil Windows, et HCS l'accepte. Comme il est en lecture seule et compressé dans l'installeur, sa taille pleine est sans conséquence. Le disque de données, lui, est un **VHDX dynamique** créé par Windows (`CreateVirtualDisk`) au premier lancement. L'agent (`/sbin/solon-agent`) vit dans le rootfs, pas dans l'initrd : l'initrd ne fait que monter le rootfs sous une surcouche `overlay` en tmpfs et `switch_root`.
 
 Au premier démarrage, le service crée en plus `data.vhdx` (VHDX dynamique, 64 Go max par défaut) que l'agent formate en ext4 dans la VM. Il contient `/var/lib/docker`, `/var/lib/containerd`, l'état de l'agent, et il **survit aux mises à jour de l'image** : mettre Solon à jour remplace `image/<version>/`, jamais `data.vhdx`.
 
