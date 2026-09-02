@@ -2,6 +2,14 @@
 ; L'installeur est élevé (installMode perMachine) : c'est ici, et nulle part ailleurs, que Solon
 ; touche aux composants Windows et au Gestionnaire de services. L'application, elle, n'est jamais élevée.
 
+!macro NSIS_HOOK_PREINSTALL
+  ; Mise à jour par-dessus une installation existante : le service tient solon-service.exe ouvert.
+  ; L'arrêter arrête proprement le moteur (les données de %ProgramData%\Solon sont conservées).
+  DetailPrint "Arrêt du service Solon s'il est présent…"
+  nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "Stop-Service -Name SolonService -Force -ErrorAction SilentlyContinue; Get-Process solon -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"'
+  Pop $0
+!macroend
+
 !macro NSIS_HOOK_POSTINSTALL
   DetailPrint "Configuration de Solon (composants Windows, service)…"
   ; setup.ps1 : active Hyper-V et la Plateforme de machine virtuelle si nécessaire, installe et
