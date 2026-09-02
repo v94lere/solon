@@ -25,6 +25,11 @@ pub struct PersistedState {
     /// Identifiant de la dernière machine créée (GUID).
     pub vm_id: Option<String>,
     pub endpoint_id: Option<String>,
+    /// Adresse IPv4 de l'invité, pour l'afficher après un rattachement.
+    #[serde(default)]
+    pub guest_address: Option<String>,
+    #[serde(default)]
+    pub image_version: Option<String>,
     /// `true` dès que la machine est arrêtée proprement par le service.
     pub clean_shutdown: bool,
     pub updated_unix_ms: u64,

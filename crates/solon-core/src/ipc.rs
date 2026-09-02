@@ -98,6 +98,9 @@ pub struct EngineSnapshot {
     pub published_ports: Vec<PortBinding>,
     /// Dernier arrêt non propre détecté au démarrage (état précédent laissé en marche).
     pub recovered_from_crash: bool,
+    /// Le service s'est rattaché à une machine déjà en marche (redémarrage du service).
+    #[serde(default)]
+    pub reattached: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

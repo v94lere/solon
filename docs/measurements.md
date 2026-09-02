@@ -173,14 +173,15 @@ port publié relayé vers `localhost`, mesure mémoire, arrêt propre. Image `0.
 
 | Mesure | Valeur |
 |---|---|
-| Provisionnement complet, prérequis → dockerd prêt (build debug, dont ~10 s de SHA-256 sur 300 Mo) | 11,7–12,7 s |
-| dont vérification SHA-256 de l'image (Rust non optimisé) | ~10 s (à re-mesurer en release, voir ci-dessous) |
+| **Provisionnement complet, prérequis → dockerd prêt, build release** (premier démarrage de la session : 2 606 ms ; redémarrage à chaud : 2 500 ms) | **2,5–2,6 s** |
+| Le même en build debug (dont ~10 s de SHA-256 non optimisé sur 300 Mo) | 11,7–12,8 s |
+| dont vérification SHA-256 de l'image en release (300 Mo) | ~1 s |
 | Création du réseau HNS ICS + endpoint | ~0,7 s |
 | `docker version` depuis un utilisateur **non élevé** | 60–80 ms |
 | `docker pull public.ecr.aws/docker/library/alpine:3.20` (réseau sortant NAT + DNS, image ~3,5 Mo) | 0,9 s |
 | `docker run -d -p 8080:80` → première réponse HTTP sur `http://localhost:8080` depuis Windows | 2,3 s (dont démarrage du serveur dans le conteneur et détection de la publication) |
 | Fermeture du relais après suppression du conteneur | < 1 s |
-| **RAM au repos après 60 s** (processus `vmmem` + `solon-service`) | **426–480 Mo** (408–462 + 18) pour 2 048 Mo alloués |
+| **RAM au repos après 60 s** (processus `vmmem` + `solon-service`), 4 exécutions | **426–516 Mo** (408–500 + 16–18) pour 2 048 Mo alloués ; la variation suit le cache de pages de l'invité (images tirées juste avant) |
 | Arrêt propre (agent → dockerd → `poweroff`, réseau HNS supprimé) | 0,6 s |
 
 ### Faits établis par le bloc 2
@@ -201,14 +202,14 @@ port publié relayé vers `localhost`, mesure mémoire, arrêt propre. Image `0.
   d'identifiants Windows (`docker-credential-wincred`) et envoie des identifiants Docker Hub périmés
   (« unauthorized: incorrect username or password ») ; ce n'est pas lié à Solon (les tirages depuis un autre
   registre réussissent). À documenter pour les utilisateurs ; l'application (bollard) n'envoie aucun identifiant.
-- **Test de coupure brutale** : voir le tableau de robustesse ci-dessous (complété au fil des exécutions).
+- **La cible RAM < 500 Mo est atteinte sans marge** (426–516 Mo mesurés). Leviers identifiés pour le bloc de durcissement : `drop_caches` côté invité après inactivité, hints mémoire HCS (`EnableColdDiscardHint`), allocation initiale plus basse que 2 Go quand la machine hôte a peu de RAM.
 
 ### Robustesse (scripts `tests/e2e/`)
 
 | Test | Résultat | Détail |
 |---|---|---|
 | `crash-force-stop.ps1` : terminaison brutale de la machine (`stop --force`, sans arrêt invité) pendant qu'un conteneur écrit en boucle dans un volume | **OK** | `e2fsck -p` code 0 (journal rejoué) ; compteur écrit avec `sync` : 507 avant, 514 après (rien de perdu) ; journal écrit sans `sync` : 513 lignes conservées sur ~514 (fenêtre de perte bornée à ~2 s par le `sync()` périodique de l'agent) ; conteneur marqué `Exited (255)` par dockerd au redémarrage ; moteur prêt 12,8 s après (build debug) |
-| `crash-service-kill.ps1` : service tué pendant que la machine tourne, relance, rattachement | écrit, **non exécuté** | nécessite deux acceptations UAC ; à jouer avec l'utilisateur présent |
+| `crash-service-kill.ps1` : service tué (`taskkill /F`) pendant que la machine tourne, relance du service, rattachement | **OK** | même identifiant de machine avant/après, conteneur `solon-survivor` toujours `Up`, journal « rattachement à une machine encore en marche » ; le rattachement passe désormais avant la vérification d'image (chemin rapide) |
 
 Sans le `sync()` périodique, la première exécution avait perdu **toutes** les écritures des 4 dernières
 secondes (compteur revenu à 0, conteneur en état « Created » car l'état de dockerd lui-même n'avait pas

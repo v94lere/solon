@@ -171,21 +171,6 @@ impl Engine {
             ));
         }
 
-        self.step(ProvisionStep::VerifyingImage);
-        let image_dir = cfg.image_dir.clone();
-        let image = tokio::task::spawn_blocking(move || ResolvedImage::load_verified(&image_dir))
-            .await
-            .map_err(|e| SolonError::internal(e.to_string()))?
-            .map_err(|e| SolonError::new(ErrorCode::ImageCorrupted, e))?;
-        self.set(|s| s.image_version = Some(image.manifest.version.clone()));
-
-        self.step(ProvisionStep::PreparingDataDisk);
-        let disk_path = cfg.paths.data_disk();
-        let gib = cfg.settings.data_disk_gib;
-        tokio::task::spawn_blocking(move || crate::disk::ensure_data_disk(&disk_path, gib))
-            .await
-            .map_err(|e| SolonError::internal(e.to_string()))??;
-
         self.step(ProvisionStep::CleaningOrphans);
         let state_path = cfg.paths.state_file();
         let previous = settings::load_state(&state_path);
@@ -201,9 +186,21 @@ impl Engine {
                                     id = prev_id,
                                     "rattachement à une machine encore en marche"
                                 );
-                                return self
+                                let mut running = self
                                     .attach(Arc::new(vm), guid, agent, previous.endpoint_id.clone())
-                                    .await;
+                                    .await?;
+                                if let Some(addr) = previous
+                                    .guest_address
+                                    .as_deref()
+                                    .and_then(|a| a.parse().ok())
+                                {
+                                    running.network.address = addr;
+                                }
+                                self.set(|s| {
+                                    s.image_version = previous.image_version.clone();
+                                    s.reattached = true;
+                                });
+                                return Ok(running);
                             }
                         }
                     }
@@ -216,6 +213,21 @@ impl Engine {
                 self.set(|s| s.recovered_from_crash = true);
             }
         }
+        self.step(ProvisionStep::VerifyingImage);
+        let image_dir = cfg.image_dir.clone();
+        let image = tokio::task::spawn_blocking(move || ResolvedImage::load_verified(&image_dir))
+            .await
+            .map_err(|e| SolonError::internal(e.to_string()))?
+            .map_err(|e| SolonError::new(ErrorCode::ImageCorrupted, e))?;
+        self.set(|s| s.image_version = Some(image.manifest.version.clone()));
+
+        self.step(ProvisionStep::PreparingDataDisk);
+        let disk_path = cfg.paths.data_disk();
+        let gib = cfg.settings.data_disk_gib;
+        tokio::task::spawn_blocking(move || crate::disk::ensure_data_disk(&disk_path, gib))
+            .await
+            .map_err(|e| SolonError::internal(e.to_string()))??;
+
         let terminated = tokio::task::spawn_blocking(|| HcsVm::terminate_orphans(None))
             .await
             .map_err(|e| SolonError::internal(e.to_string()))??;
@@ -271,6 +283,8 @@ impl Engine {
             &PersistedState {
                 vm_id: Some(vm_id.clone()),
                 endpoint_id: Some(guest_net.endpoint_id.clone()),
+                guest_address: Some(guest_net.address.to_string()),
+                image_version: Some(image.manifest.version.clone()),
                 clean_shutdown: false,
                 updated_unix_ms: settings::now_unix_ms(),
             },

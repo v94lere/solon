@@ -15,8 +15,8 @@ Start-Sleep 2
 $alive = @(Get-Process | Where-Object { $_.ProcessName -like "vmmem*" -and $_.ProcessName -ne "vmmemWSL" })
 Check "machine toujours en vie après la mort du service" ($alive.Count -ge 1) ($alive.ProcessName -join ",")
 
-$args = @("-ImageDir", $ImageDir); if ($Release) { $args += "-Release" }
-& (Join-Path $PSScriptRoot "start-console.ps1") @args | Out-Null
+$startArgs = @{ ImageDir = $ImageDir }; if ($Release) { $startArgs.Release = $true }
+& (Join-Path $PSScriptRoot "start-console.ps1") @startArgs | Out-Null
 $after = WaitState @("ready", "failed") 120
 Check "service relancé et moteur prêt" ($after.state -eq "ready") "boot=$($after.last_boot_ms) ms crash=$($after.recovered_from_crash)"
 Check "même machine (rattachement)" ($after.vm_id -eq $s.vm_id) "avant=$($s.vm_id) après=$($after.vm_id)"
