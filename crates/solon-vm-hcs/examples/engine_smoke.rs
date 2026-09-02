@@ -344,7 +344,7 @@ fn main() {
         relay.abort();
         let _ = rpc.call("POWEROFF 5");
         let exit = r.vm.wait_exit(Duration::from_secs(30));
-        out.check(&format!("cycle {cycle} : arrêt propre"), exit.as_ref().map_or(false, |e| e.data.as_deref().unwrap_or("").contains("GracefulExit")), &format!("{:?}", exit.as_ref().and_then(|e| e.data.clone())));
+        out.check(&format!("cycle {cycle} : arrêt propre"), exit.as_ref().is_some_and(|e| e.data.as_deref().unwrap_or("").contains("GracefulExit")), &format!("{:?}", exit.as_ref().and_then(|e| e.data.clone())));
         if exit.is_none() {
             let _ = r.vm.terminate();
         }

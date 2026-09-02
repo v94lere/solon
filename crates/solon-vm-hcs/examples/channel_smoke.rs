@@ -157,17 +157,14 @@ fn main() {
     let mut agent_ready: Option<u128> = None;
     let deadline = Instant::now() + Duration::from_secs(20);
     while Instant::now() < deadline {
-        match rx.recv_timeout(Duration::from_millis(100)) {
-            Ok(line) => {
-                if line.contains("SOLON-AGENT-READY") {
-                    agent_ready = Some(t_start.elapsed().as_millis());
-                    break;
-                }
-                if line.contains("SOLON-AGENT-FAILED") || line.contains("solon-agent]") {
-                    out.line(&format!("  | {line}"));
-                }
+        if let Ok(line) = rx.recv_timeout(Duration::from_millis(100)) {
+            if line.contains("SOLON-AGENT-READY") {
+                agent_ready = Some(t_start.elapsed().as_millis());
+                break;
             }
-            Err(_) => {}
+            if line.contains("SOLON-AGENT-FAILED") || line.contains("solon-agent]") {
+                out.line(&format!("  | {line}"));
+            }
         }
     }
     check(&mut out, "agent prêt (console)", agent_ready.is_some(), &format!("{:?} ms après le démarrage", agent_ready));

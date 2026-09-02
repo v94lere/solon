@@ -60,14 +60,14 @@ fn ensure_winsock() {
 
 fn last_wsa_error(context: &str) -> io::Error {
     let code = unsafe { WSAGetLastError() }.0;
-    io::Error::new(io::ErrorKind::Other, format!("{context} : WSA {code}"))
+    io::Error::other(format!("{context} : WSA {code}"))
 }
 
 /// Ouvre une connexion vers `port` (vsock) dans la machine `vm_id`. Bloquant.
 pub fn connect_once(vm_id: &GUID, port: u32) -> io::Result<TcpStream> {
     ensure_winsock();
     let sock = unsafe { socket(AF_HYPERV as i32, SOCK_STREAM, HV_PROTOCOL_RAW) }
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("socket(AF_HYPERV) : {e}")))?;
+        .map_err(|e| io::Error::other(format!("socket(AF_HYPERV) : {e}")))?;
     let addr = SockaddrHv { family: AF_HYPERV, reserved: 0, vm_id: *vm_id, service_id: service_id_for_port(port) };
     let rc = unsafe { connect(sock, &addr as *const SockaddrHv as *const SOCKADDR, std::mem::size_of::<SockaddrHv>() as i32) };
     if rc == SOCKET_ERROR {

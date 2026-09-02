@@ -33,7 +33,7 @@ pub async fn serve_named_pipe(pipe_name: String, vm_id: GUID, port: u32) -> io::
 async fn handle(pipe: NamedPipeServer, vm_id: GUID, port: u32) -> io::Result<()> {
     let std_stream = tokio::task::spawn_blocking(move || super::connect_with_retry(&vm_id, port, Duration::from_secs(5)))
         .await
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))??;
+        .map_err(io::Error::other)??;
     std_stream.set_nonblocking(true)?;
     let hv = tokio::net::TcpStream::from_std(std_stream)?;
 
