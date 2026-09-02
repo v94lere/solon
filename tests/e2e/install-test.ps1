@@ -18,11 +18,11 @@ Log "installation silencieuse : $Setup"
 $p = Start-Process -FilePath $Setup -ArgumentList "/S" -Verb RunAs -PassThru -Wait
 Check "installeur terminé" ($p.ExitCode -eq 0) "code $($p.ExitCode)"
 
-$svc = Get-Service -Name SolonService -ErrorAction SilentlyContinue
-Check "service SolonService présent" ($null -ne $svc) "$($svc.StartType)"
-if ($svc) {
-    for ($i = 0; $i -lt 20 -and $svc.Status -ne "Running"; $i++) { Start-Sleep 1; $svc.Refresh() }
-    Check "service en cours d'exécution" ($svc.Status -eq "Running") "$($svc.Status)"
+$winSvc = Get-Service -Name SolonService -ErrorAction SilentlyContinue
+Check "service SolonService présent" ($null -ne $winSvc) "$($winSvc.StartType)"
+if ($winSvc) {
+    for ($i = 0; $i -lt 20 -and $winSvc.Status -ne "Running"; $i++) { Start-Sleep 1; $winSvc.Refresh() }
+    Check "service en cours d'exécution" ($winSvc.Status -eq "Running") "$($winSvc.Status)"
 }
 Check "image installée" (Test-Path (Join-Path $inst "image\manifest.json")) "$inst\image"
 Check "solon-service.exe installé" (Test-Path $Svc) $Svc

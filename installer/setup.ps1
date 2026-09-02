@@ -1,4 +1,4 @@
-# Configuration système de Solon, exécutée élevée par l'installeur NSIS (voir hooks.nsh).
+﻿# Configuration système de Solon, exécutée élevée par l'installeur NSIS (voir hooks.nsh).
 # - active les composants Windows requis (Hyper-V, Plateforme de machine virtuelle) ;
 # - enregistre les identifiants de services HvSocket de Solon (réservé aux connexions invité → hôte) ;
 # - installe (ou retire) le service Windows SolonService.
