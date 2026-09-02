@@ -130,6 +130,7 @@ fn main() {
         memory_mb: args.mem,
         processors: args.cpus,
         disks: vec![],
+        shares: vec![],
         serial_pipe: Some(pipe.clone()),
     };
 

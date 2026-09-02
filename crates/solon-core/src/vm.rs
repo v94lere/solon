@@ -35,6 +35,9 @@ pub struct VmConfig {
     pub processors: u32,
     /// Disques attachés en SCSI, dans l'ordre des LUN.
     pub disks: Vec<DiskAttachment>,
+    /// Dossiers Windows exposés à l'invité (partages 9P) présents dès le démarrage.
+    #[serde(default)]
+    pub shares: Vec<HostShare>,
     /// Named pipe Windows recevant la console série (COM1), pour le diagnostic.
     pub serial_pipe: Option<String>,
 }
@@ -42,5 +45,17 @@ pub struct VmConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DiskAttachment {
     pub path: PathBuf,
+    pub read_only: bool,
+}
+
+/// Un dossier de l'hôte exposé à l'invité.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HostShare {
+    /// Nom du partage côté hyperviseur et `aname` utilisé au montage 9P.
+    pub name: String,
+    /// Chemin Windows du dossier.
+    pub host_path: PathBuf,
+    /// Port vsock sur lequel l'invité contacte le serveur 9P de l'hôte.
+    pub port: u32,
     pub read_only: bool,
 }

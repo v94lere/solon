@@ -195,6 +195,43 @@ pub struct Plan9Share {
     pub flags: u32,
 }
 
+impl Plan9Share {
+    /// Partage HCS à partir d'un dossier hôte : métadonnées Linux activées (permissions POSIX
+    /// stockées en attributs étendus NTFS), lecture seule si demandé.
+    pub fn from_host_share(share: &solon_core::vm::HostShare) -> Self {
+        let mut flags = plan9_flags::LINUX_METADATA;
+        if share.read_only {
+            flags |= plan9_flags::READ_ONLY;
+        }
+        Self {
+            name: share.name.clone(),
+            access_name: share.name.clone(),
+            path: share.host_path.to_string_lossy().into_owned(),
+            port: share.port,
+            flags,
+        }
+    }
+}
+
+/// Requête `HcsModifyComputeSystem` (ajout/retrait à chaud).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct ModifySettingRequest<T> {
+    pub resource_path: String,
+    pub request_type: RequestType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub settings: Option<T>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RequestType {
+    Add,
+    Remove,
+    Update,
+}
+
+pub const PLAN9_SHARES_RESOURCE_PATH: &str = "VirtualMachine/Devices/Plan9/Shares";
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct NetworkAdapter {
@@ -248,6 +285,10 @@ impl ComputeSystemDocument {
 
         if let Some(pipe) = &config.serial_pipe {
             devices.com_ports = Some(BTreeMap::from([("0".to_owned(), ComPort { named_pipe: pipe.clone() })]));
+        }
+
+        if !config.shares.is_empty() {
+            devices.plan9 = Some(Plan9 { shares: config.shares.iter().map(Plan9Share::from_host_share).collect() });
         }
 
         devices.hv_socket = Some(HvSocket {
@@ -305,8 +346,38 @@ mod tests {
                 DiskAttachment { path: PathBuf::from(r"C:\ProgramData\Solon\image\rootfs.vhdx"), read_only: true },
                 DiskAttachment { path: PathBuf::from(r"C:\ProgramData\Solon\data.vhdx"), read_only: false },
             ],
+            shares: vec![solon_core::vm::HostShare {
+                name: "c".into(),
+                host_path: PathBuf::from(r"C:\"),
+                port: 9000,
+                read_only: false,
+            }],
             serial_pipe: Some(r"\\.\pipe\solon-com1".into()),
         }
+    }
+
+    #[test]
+    fn partage_plan9_avec_metadonnees_linux() {
+        let json = serde_json::to_value(ComputeSystemDocument::from_config(&config())).unwrap();
+        let share = &json["VirtualMachine"]["Devices"]["Plan9"]["Shares"][0];
+        assert_eq!(share["Name"], "c");
+        assert_eq!(share["AccessName"], "c");
+        assert_eq!(share["Path"], r"C:\");
+        assert_eq!(share["Port"], 9000);
+        assert_eq!(share["Flags"], plan9_flags::LINUX_METADATA);
+    }
+
+    #[test]
+    fn requete_de_modification() {
+        let req = ModifySettingRequest {
+            resource_path: PLAN9_SHARES_RESOURCE_PATH.into(),
+            request_type: RequestType::Add,
+            settings: Some(Plan9Share { name: "x".into(), access_name: "x".into(), path: r"D:\".into(), port: 9001, flags: 4 }),
+        };
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["ResourcePath"], "VirtualMachine/Devices/Plan9/Shares");
+        assert_eq!(json["RequestType"], "Add");
+        assert_eq!(json["Settings"]["Port"], 9001);
     }
 
     #[test]

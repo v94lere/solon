@@ -38,6 +38,7 @@ fn config(kernel: &str, initrd: &str) -> VmConfig {
         memory_mb: 512,
         processors: 1,
         disks: vec![],
+        shares: vec![],
         serial_pipe: None,
     }
 }

@@ -19,8 +19,8 @@ pub mod schema;
 
 use std::time::Duration;
 
-use solon_core::vm::VmConfig;
-use solon_core::{ErrorCode, Result};
+use solon_core::vm::{HostShare, VmConfig};
+use solon_core::{ErrorCode, Result, SolonError};
 
 pub use hcs::{ComputeSystem, HcsEvent, HcsEventKind};
 pub use schema::{ComputeSystemDocument, ComputeSystemSummary};
@@ -78,6 +78,37 @@ impl HcsVm {
     /// Propriétés courantes (JSON brut HCS), utile au diagnostic.
     pub fn properties(&self) -> Result<String> {
         self.system.properties(Duration::from_secs(10))
+    }
+
+    /// Identifiant d'exécution de la machine : c'est **lui** (et non l'`Id`) qu'attend
+    /// `SOCKADDR_HV.VmId` pour ouvrir un socket Hyper-V vers l'invité.
+    pub fn runtime_id(&self) -> Result<String> {
+        let props: serde_json::Value = serde_json::from_str(&self.properties()?)?;
+        props
+            .get("RuntimeId")
+            .and_then(|v| v.as_str())
+            .map(str::to_owned)
+            .ok_or_else(|| SolonError::internal(format!("RuntimeId absent des propriétés HCS : {props}")))
+    }
+
+    /// Ajoute un partage 9P à chaud. L'invité doit ensuite le monter (RPC agent).
+    pub fn add_share(&self, share: &HostShare) -> Result<()> {
+        let req = schema::ModifySettingRequest {
+            resource_path: schema::PLAN9_SHARES_RESOURCE_PATH.into(),
+            request_type: schema::RequestType::Add,
+            settings: Some(schema::Plan9Share::from_host_share(share)),
+        };
+        self.system.modify(&serde_json::to_string(&req)?, Duration::from_secs(30)).map(|_| ())
+    }
+
+    /// Retire un partage 9P à chaud (l'invité doit l'avoir démonté avant).
+    pub fn remove_share(&self, share: &HostShare) -> Result<()> {
+        let req = schema::ModifySettingRequest {
+            resource_path: schema::PLAN9_SHARES_RESOURCE_PATH.into(),
+            request_type: schema::RequestType::Remove,
+            settings: Some(schema::Plan9Share::from_host_share(share)),
+        };
+        self.system.modify(&serde_json::to_string(&req)?, Duration::from_secs(30)).map(|_| ())
     }
 
     /// Liste les compute systems appartenant à Solon, quel que soit le processus créateur.

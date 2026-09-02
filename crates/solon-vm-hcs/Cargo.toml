@@ -24,3 +24,5 @@ windows = { workspace = true, features = [
 
 [dev-dependencies]
 tracing-subscriber = { workspace = true }
+solon-hvsock = { workspace = true }
+tokio = { workspace = true }
