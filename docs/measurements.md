@@ -130,7 +130,7 @@ en Administrateur. Image construite par `image/build.sh` : noyau `6.18.40.1-solo
 | `SOLON-INITRD-OK` (rootfs monté sous overlay, `switch_root`) | 688 ms |
 | Agent PID 1 prêt (systèmes de fichiers virtuels, `e2fsck -p` du disque de données, RPC et relais à l'écoute) | 757 ms |
 | **`SOLON-ENGINE-READY` : dockerd répond sur `/run/docker.sock`** | **1 158 ms** (réseau des conteneurs désactivé) ; **1 265 ms et 1 459 ms** sur deux cycles avec pont `docker0` et règles netfilter |
-| `docker version` depuis le CLI Windows via `\.\pipe\solon` | 47–125 ms |
+| `docker version` depuis le CLI Windows via `\\.\pipe\solon` | 47–125 ms |
 | `docker import` d'une image de 1 Mo | 78 ms |
 | `docker run --rm … echo` (création, exécution, suppression) | 491–514 ms (réseau pont) ; 620–640 ms sans réseau |
 | `docker run -d` | 298–308 ms |
