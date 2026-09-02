@@ -7,6 +7,7 @@ members = [
     "crates/solon-agent",
     "crates/solon-prereq",
     "crates/solon-service",
+    "apps/desktop/src-tauri",
 ]
 
 [workspace.package]

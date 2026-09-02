@@ -340,7 +340,7 @@ MVP : flux `bollard` `/containers/{id}/stats?stream=1` par conteneur en marche, 
 
 ## 9. Frontend (React + TypeScript + Tailwind)
 
-- Vite, React 19, TypeScript strict, Tailwind 4, `react-i18next` (`fr` par défaut, `en`), `@tanstack/react-query` pour les listes (invalidation par événements Docker, jamais de polling), `xterm.js` + addon fit pour le terminal, `@tauri-apps/api` Channels.
+- Vite, React 19, TypeScript strict, Tailwind 4, `react-i18next` (**`en` par défaut, `fr`** ; décision du 2 septembre 2026, inverse du brief initial), `@tanstack/react-query` pour les listes (invalidation par événements Docker, jamais de polling), `xterm.js` + addon fit pour le terminal, `@tauri-apps/api` Channels.
 - Direction Fluent/Windows 11 : police système (`Segoe UI Variable`), rayons 4–8 px, surfaces en couches, accent système via `--accent` lu à partir de Windows (Tauri), thème clair/sombre suivant `prefers-color-scheme`, contrastes WCAG AA vérifiés (outil dans la CI).
 - Vues : Conteneurs (table dense, filtre instantané, groupes Compose repliables, actions inline), Détail conteneur (onglets Logs / Terminal / Inspecter / Stats), Images, Volumes, Réseaux, Réglages, écran de première installation (progression par étapes, messages d'erreur avec action).
 - Accessibilité : navigation complète au clavier (`roving tabindex` dans les tables, raccourcis documentés), `aria-live` pour les changements d'état, confirmations destructives en dialogues modaux focalisés.

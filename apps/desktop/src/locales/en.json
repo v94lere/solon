@@ -1,0 +1,106 @@
+{
+  "app": { "name": "Solon" },
+  "nav": {
+    "containers": "Containers",
+    "images": "Images",
+    "volumes": "Volumes",
+    "networks": "Networks",
+    "settings": "Settings"
+  },
+  "engine": {
+    "state": {
+      "stopped": "Engine stopped",
+      "starting": "Starting engine…",
+      "ready": "Engine running",
+      "degraded": "Engine restarting",
+      "stopping": "Stopping engine…",
+      "failed": "Engine failed to start",
+      "service_unavailable": "Solon service is not running"
+    },
+    "step": {
+      "checking_prerequisites": "Checking your system",
+      "verifying_image": "Verifying the container engine files",
+      "preparing_data_disk": "Preparing storage",
+      "cleaning_orphans": "Cleaning up a previous session",
+      "creating_network": "Setting up networking",
+      "creating_machine": "Preparing the engine",
+      "booting": "Starting the engine",
+      "waiting_agent": "Waiting for the engine",
+      "configuring_network": "Configuring networking",
+      "waiting_engine": "Waiting for Docker to be ready",
+      "ready": "Ready"
+    },
+    "start": "Start engine",
+    "stop": "Stop engine",
+    "restart": "Restart engine",
+    "retry": "Try again",
+    "boot_time": "Started in {{seconds}} s",
+    "recovered": "The previous session ended unexpectedly; storage was checked and recovered.",
+    "service_hint": "The Solon background service must be running. Reinstalling Solon repairs it."
+  },
+  "error": {
+    "title": "Something needs your attention",
+    "VIRTUALIZATION_DISABLED_IN_FIRMWARE": "Hardware virtualization is disabled. Enable Intel VT-x or AMD-V in your BIOS/UEFI settings (usually under Advanced or CPU), then start Solon again.",
+    "UNSUPPORTED_WINDOWS_EDITION": "Solon requires Windows 11 Pro, Enterprise or Education. Windows Home does not include the components Solon needs.",
+    "WINDOWS_FEATURE_MISSING": "A Windows component is missing. Reinstall Solon to enable it; a restart may be required.",
+    "WINDOWS_FEATURE_BLOCKED_BY_POLICY": "Your organization restricts enabling Windows components. Ask your administrator to enable Hyper-V and Virtual Machine Platform.",
+    "HYPERVISOR_NOT_RUNNING": "The Windows virtualization engine is not running. Common causes: an older VirtualBox/VMware, virtualization disabled at boot, or running inside another virtual machine.",
+    "HOST_COMPUTE_SERVICE_UNAVAILABLE": "A Windows service Solon depends on (Host Compute Service) is stopped or missing. Restart Windows; if it persists, reinstall Solon.",
+    "BLOCKED_BY_SECURITY_SOFTWARE": "A security product is blocking Solon. Add the Solon folder to its exclusions.",
+    "INSUFFICIENT_PRIVILEGES": "Solon does not have the rights it needs. Reinstalling Solon repairs the background service.",
+    "VM_CONFIGURATION_REJECTED": "Windows rejected the engine configuration. Please report this with the log file.",
+    "VM_BOOT_TIMEOUT": "The engine did not start in time.",
+    "AGENT_UNREACHABLE": "The engine started but is not responding.",
+    "ENGINE_UNREACHABLE": "Docker did not become ready in time.",
+    "IMAGE_CORRUPTED": "The container engine files are missing or corrupted. Reinstall Solon.",
+    "DATA_DISK_ERROR": "The storage disk could not be created or opened.",
+    "HCS_ERROR": "The virtualization layer returned an error.",
+    "IO": "A file operation failed.",
+    "INTERNAL": "Unexpected internal error.",
+    "details": "Technical details",
+    "open_logs": "Open log folder"
+  },
+  "containers": {
+    "title": "Containers",
+    "empty": "No containers yet. Run one with the docker CLI or from an image.",
+    "search": "Filter by name, image or status",
+    "show_stopped": "Show stopped",
+    "columns": { "name": "Name", "image": "Image", "status": "Status", "ports": "Ports", "cpu": "CPU", "memory": "Memory" },
+    "actions": { "start": "Start", "stop": "Stop", "restart": "Restart", "remove": "Remove", "logs": "Logs", "terminal": "Terminal", "inspect": "Inspect" },
+    "state": { "running": "Running", "exited": "Exited", "created": "Created", "paused": "Paused", "restarting": "Restarting", "dead": "Dead", "removing": "Removing" },
+    "remove_confirm": { "title": "Remove container {{name}}?", "body": "The container and its writable layer will be deleted. Named volumes are kept.", "with_volumes": "Also remove anonymous volumes", "confirm": "Remove", "cancel": "Cancel" },
+    "compose": "Compose project",
+    "count": "{{count}} container",
+    "count_plural": "{{count}} containers"
+  },
+  "detail": {
+    "tabs": { "logs": "Logs", "terminal": "Terminal", "inspect": "Inspect" },
+    "back": "Back to containers",
+    "logs": { "follow": "Follow", "clear": "Clear", "timestamps": "Timestamps", "empty": "No output yet." },
+    "terminal": { "shell": "Shell", "connect": "Open terminal", "disconnected": "Session ended.", "stopped": "The container must be running to open a terminal." },
+    "inspect": { "copy": "Copy JSON" }
+  },
+  "common": {
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied",
+    "language": "Language",
+    "theme": "Theme",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "engine": "Engine resources",
+    "memory": "Memory (MB)",
+    "processors": "Processors",
+    "disk": "Storage limit (GB)",
+    "autostart": "Start the engine at sign-in",
+    "save": "Save",
+    "saved": "Saved. Changes apply at the next engine start.",
+    "about": "About"
+  }
+}
