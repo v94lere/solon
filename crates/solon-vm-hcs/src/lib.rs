@@ -13,6 +13,7 @@
 
 #![cfg(windows)]
 
+pub mod acl;
 pub mod hcs;
 pub mod hresult;
 pub mod schema;
@@ -36,8 +37,15 @@ pub struct HcsVm {
 }
 
 impl HcsVm {
-    /// Crée le compute system (sans le démarrer) à partir d'une configuration.
+    /// Crée le compute system (sans le démarrer) à partir d'une configuration. Les fichiers
+    /// (noyau, initrd, disques) sont d'abord rendus accessibles au processus de la machine.
     pub fn create(config: &VmConfig) -> Result<Self> {
+        acl::grant_vm_access(&config.kernel, acl::Access::Read)?;
+        acl::grant_vm_access(&config.initrd, acl::Access::Read)?;
+        for disk in &config.disks {
+            let access = if disk.read_only { acl::Access::Read } else { acl::Access::ReadWrite };
+            acl::grant_vm_access(&disk.path, access)?;
+        }
         let document = ComputeSystemDocument::from_config(config);
         let json = serde_json::to_string(&document)?;
         tracing::debug!(id = %config.id, "document HCS : {json}");
