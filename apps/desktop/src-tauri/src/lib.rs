@@ -28,7 +28,9 @@ async fn engine_start() -> Result<(), String> {
 
 #[tauri::command]
 async fn engine_stop(force: bool) -> Result<(), String> {
-    service::call(ServiceCommand::Stop { force }).await.map(|_| ())
+    service::call(ServiceCommand::Stop { force })
+        .await
+        .map(|_| ())
 }
 
 #[tauri::command]
@@ -54,7 +56,9 @@ async fn settings_get() -> Result<Settings, String> {
 
 #[tauri::command]
 async fn settings_set(settings: Settings) -> Result<(), String> {
-    service::call(ServiceCommand::SetSettings(settings)).await.map(|_| ())
+    service::call(ServiceCommand::SetSettings(settings))
+        .await
+        .map(|_| ())
 }
 
 /// Commande shell dans la machine (Compose, diagnostic).
@@ -65,12 +69,19 @@ async fn service_exec(command: String, timeout_s: Option<u64>) -> Result<Value, 
 
 #[tauri::command]
 fn paths_logs_dir() -> String {
-    let base = std::env::var_os("ProgramData").map(std::path::PathBuf::from).unwrap_or_else(|| std::path::PathBuf::from(r"C:\ProgramData"));
-    base.join("Solon").join("logs").to_string_lossy().into_owned()
+    let base = std::env::var_os("ProgramData")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from(r"C:\ProgramData"));
+    base.join("Solon")
+        .join("logs")
+        .to_string_lossy()
+        .into_owned()
 }
 
 pub fn run() {
-    tracing_subscriber::fmt().with_env_filter(std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into())).init();
+    tracing_subscriber::fmt()
+        .with_env_filter(std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()))
+        .init();
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(Arc::new(docker::DockerState::default()))

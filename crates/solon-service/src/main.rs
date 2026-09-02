@@ -240,9 +240,21 @@ fn uninstall() -> Result<(), String> {
 
 async fn control(command: ServiceCommand, watch: bool) -> Result<(), String> {
     use tokio::net::windows::named_pipe::ClientOptions;
-    let pipe = ClientOptions::new().open(CONTROL_PIPE).map_err(|e| {
-        format!("service injoignable sur {CONTROL_PIPE} : {e} (le service tourne-t-il ?)")
-    })?;
+    // ERROR_PIPE_BUSY (231) : toutes les instances sont prises un court instant ; on réessaie.
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    let pipe = loop {
+        match ClientOptions::new().open(CONTROL_PIPE) {
+            Ok(p) => break p,
+            Err(e) if e.raw_os_error() == Some(231) && std::time::Instant::now() < deadline => {
+                tokio::time::sleep(Duration::from_millis(30)).await;
+            }
+            Err(e) => {
+                return Err(format!(
+                    "service injoignable sur {CONTROL_PIPE} : {e} (le service tourne-t-il ?)"
+                ));
+            }
+        }
+    };
     let (read, mut write) = tokio::io::split(pipe);
     let mut reader = BufReader::new(read);
     let mut line = serde_json::to_string(&IpcRequest {

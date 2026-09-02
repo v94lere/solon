@@ -1,5 +1,7 @@
 {
-  "app": { "name": "Solon" },
+  "app": {
+    "name": "Solon"
+  },
   "nav": {
     "containers": "Conteneurs",
     "images": "Images",
@@ -65,20 +67,65 @@
     "empty": "Aucun conteneur. Lancez-en un avec le CLI docker ou depuis une image.",
     "search": "Filtrer par nom, image ou statut",
     "show_stopped": "Afficher les arrêtés",
-    "columns": { "name": "Nom", "image": "Image", "status": "Statut", "ports": "Ports", "cpu": "CPU", "memory": "Mémoire" },
-    "actions": { "start": "Démarrer", "stop": "Arrêter", "restart": "Redémarrer", "remove": "Supprimer", "logs": "Journaux", "terminal": "Terminal", "inspect": "Inspecter" },
-    "state": { "running": "En marche", "exited": "Arrêté", "created": "Créé", "paused": "En pause", "restarting": "Redémarrage", "dead": "Mort", "removing": "Suppression" },
-    "remove_confirm": { "title": "Supprimer le conteneur {{name}} ?", "body": "Le conteneur et sa couche d'écriture seront supprimés. Les volumes nommés sont conservés.", "with_volumes": "Supprimer aussi les volumes anonymes", "confirm": "Supprimer", "cancel": "Annuler" },
+    "columns": {
+      "name": "Nom",
+      "image": "Image",
+      "status": "Statut",
+      "ports": "Ports",
+      "cpu": "CPU",
+      "memory": "Mémoire"
+    },
+    "actions": {
+      "start": "Démarrer",
+      "stop": "Arrêter",
+      "restart": "Redémarrer",
+      "remove": "Supprimer",
+      "logs": "Journaux",
+      "terminal": "Terminal",
+      "inspect": "Inspecter"
+    },
+    "state": {
+      "running": "En marche",
+      "exited": "Arrêté",
+      "created": "Créé",
+      "paused": "En pause",
+      "restarting": "Redémarrage",
+      "dead": "Mort",
+      "removing": "Suppression"
+    },
+    "remove_confirm": {
+      "title": "Supprimer le conteneur {{name}} ?",
+      "body": "Le conteneur et sa couche d'écriture seront supprimés. Les volumes nommés sont conservés.",
+      "with_volumes": "Supprimer aussi les volumes anonymes",
+      "confirm": "Supprimer",
+      "cancel": "Annuler"
+    },
     "compose": "Projet Compose",
-    "count": "{{count}} conteneur",
-    "count_plural": "{{count}} conteneurs"
+    "count_one": "{{count}} conteneur",
+    "count_other": "{{count}} conteneurs"
   },
   "detail": {
-    "tabs": { "logs": "Journaux", "terminal": "Terminal", "inspect": "Inspecter" },
+    "tabs": {
+      "logs": "Journaux",
+      "terminal": "Terminal",
+      "inspect": "Inspecter"
+    },
     "back": "Retour aux conteneurs",
-    "logs": { "follow": "Suivre", "clear": "Effacer", "timestamps": "Horodatage", "empty": "Aucune sortie pour l'instant." },
-    "terminal": { "shell": "Shell", "connect": "Ouvrir un terminal", "disconnected": "Session terminée.", "stopped": "Le conteneur doit être en marche pour ouvrir un terminal." },
-    "inspect": { "copy": "Copier le JSON" }
+    "logs": {
+      "follow": "Suivre",
+      "clear": "Effacer",
+      "timestamps": "Horodatage",
+      "empty": "Aucune sortie pour l'instant."
+    },
+    "terminal": {
+      "shell": "Shell",
+      "connect": "Ouvrir un terminal",
+      "disconnected": "Session terminée.",
+      "stopped": "Le conteneur doit être en marche pour ouvrir un terminal."
+    },
+    "inspect": {
+      "copy": "Copier le JSON"
+    }
   },
   "common": {
     "loading": "Chargement…",

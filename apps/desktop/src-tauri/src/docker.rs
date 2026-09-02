@@ -10,10 +10,13 @@ use std::time::Duration;
 
 use base64::Engine as _;
 use bollard::exec::{ResizeExecOptions, StartExecOptions, StartExecResults};
-use bollard::models::{ContainerCreateBody, ExecConfig, HostConfig, NetworkCreateRequest, PortBinding, VolumeCreateRequest};
+use bollard::models::{
+    ContainerCreateBody, ExecConfig, HostConfig, NetworkCreateRequest, PortBinding,
+    VolumeCreateRequest,
+};
 use bollard::query_parameters::{
-    ListContainersOptionsBuilder, ListImagesOptionsBuilder, LogsOptionsBuilder, RemoveContainerOptionsBuilder, RemoveImageOptionsBuilder,
-    StatsOptionsBuilder,
+    ListContainersOptionsBuilder, ListImagesOptionsBuilder, LogsOptionsBuilder,
+    RemoveContainerOptionsBuilder, RemoveImageOptionsBuilder, StatsOptionsBuilder,
 };
 use bollard::{API_DEFAULT_VERSION, Docker};
 use futures_util::StreamExt;
@@ -46,7 +49,8 @@ impl DockerState {
         if let Some(d) = guard.as_ref() {
             return Ok(d.clone());
         }
-        let d = Docker::connect_with_named_pipe(DOCKER_PIPE, 120, API_DEFAULT_VERSION).map_err(|e| format!("connexion Docker : {e}"))?;
+        let d = Docker::connect_with_named_pipe(DOCKER_PIPE, 120, API_DEFAULT_VERSION)
+            .map_err(|e| format!("connexion Docker : {e}"))?;
         *guard = Some(d.clone());
         Ok(d)
     }
@@ -64,7 +68,10 @@ impl DockerState {
 
 fn err(e: bollard::errors::Error) -> String {
     match e {
-        bollard::errors::Error::DockerResponseServerError { status_code, message } => format!("{message} (HTTP {status_code})"),
+        bollard::errors::Error::DockerResponseServerError {
+            status_code,
+            message,
+        } => format!("{message} (HTTP {status_code})"),
         other => other.to_string(),
     }
 }
@@ -74,42 +81,91 @@ fn err(e: bollard::errors::Error) -> String {
 // ---------------------------------------------------------------------------------------------
 
 #[tauri::command]
-pub async fn containers_list(state: State<'_>, all: bool) -> Result<Vec<bollard::models::ContainerSummary>, String> {
+pub async fn containers_list(
+    state: State<'_>,
+    all: bool,
+) -> Result<Vec<bollard::models::ContainerSummary>, String> {
     let docker = state.docker().await?;
-    docker.list_containers(Some(ListContainersOptionsBuilder::default().all(all).build())).await.map_err(err)
+    docker
+        .list_containers(Some(
+            ListContainersOptionsBuilder::default().all(all).build(),
+        ))
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
-pub async fn container_inspect(state: State<'_>, id: String) -> Result<bollard::models::ContainerInspectResponse, String> {
-    state.docker().await?.inspect_container(&id, None).await.map_err(err)
+pub async fn container_inspect(
+    state: State<'_>,
+    id: String,
+) -> Result<bollard::models::ContainerInspectResponse, String> {
+    state
+        .docker()
+        .await?
+        .inspect_container(&id, None)
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
 pub async fn container_start(state: State<'_>, id: String) -> Result<(), String> {
-    state.docker().await?.start_container(&id, None).await.map_err(err)
+    state
+        .docker()
+        .await?
+        .start_container(&id, None)
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
 pub async fn container_stop(state: State<'_>, id: String) -> Result<(), String> {
-    state.docker().await?.stop_container(&id, None).await.map_err(err)
+    state
+        .docker()
+        .await?
+        .stop_container(&id, None)
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
 pub async fn container_restart(state: State<'_>, id: String) -> Result<(), String> {
-    state.docker().await?.restart_container(&id, None).await.map_err(err)
+    state
+        .docker()
+        .await?
+        .restart_container(&id, None)
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
 pub async fn container_kill(state: State<'_>, id: String) -> Result<(), String> {
-    state.docker().await?.kill_container(&id, None).await.map_err(err)
-}
-
-#[tauri::command]
-pub async fn container_remove(state: State<'_>, id: String, force: bool, volumes: bool) -> Result<(), String> {
     state
         .docker()
         .await?
-        .remove_container(&id, Some(RemoveContainerOptionsBuilder::default().force(force).v(volumes).build()))
+        .kill_container(&id, None)
+        .await
+        .map_err(err)
+}
+
+#[tauri::command]
+pub async fn container_remove(
+    state: State<'_>,
+    id: String,
+    force: bool,
+    volumes: bool,
+) -> Result<(), String> {
+    state
+        .docker()
+        .await?
+        .remove_container(
+            &id,
+            Some(
+                RemoveContainerOptionsBuilder::default()
+                    .force(force)
+                    .v(volumes)
+                    .build(),
+            ),
+        )
         .await
         .map_err(err)
 }
@@ -125,25 +181,48 @@ pub struct LogChunk {
 }
 
 #[tauri::command]
-pub async fn logs_open(state: State<'_>, id: String, tail: u32, timestamps: bool, channel: Channel<LogChunk>) -> Result<u64, String> {
+pub async fn logs_open(
+    state: State<'_>,
+    id: String,
+    tail: u32,
+    timestamps: bool,
+    channel: Channel<LogChunk>,
+) -> Result<u64, String> {
     let docker = state.docker().await?;
-    let options = LogsOptionsBuilder::default().follow(true).stdout(true).stderr(true).timestamps(timestamps).tail(&tail.to_string()).build();
+    let options = LogsOptionsBuilder::default()
+        .follow(true)
+        .stdout(true)
+        .stderr(true)
+        .timestamps(timestamps)
+        .tail(&tail.to_string())
+        .build();
     let task = tokio::spawn(async move {
         let mut stream = docker.logs(&id, Some(options));
         while let Some(item) = stream.next().await {
             let chunk = match item {
-                Ok(bollard::container::LogOutput::StdOut { message }) | Ok(bollard::container::LogOutput::Console { message }) => {
-                    LogChunk { stream: "stdout", text: String::from_utf8_lossy(&message).into_owned() }
-                }
-                Ok(bollard::container::LogOutput::StdErr { message }) => LogChunk { stream: "stderr", text: String::from_utf8_lossy(&message).into_owned() },
+                Ok(bollard::container::LogOutput::StdOut { message })
+                | Ok(bollard::container::LogOutput::Console { message }) => LogChunk {
+                    stream: "stdout",
+                    text: String::from_utf8_lossy(&message).into_owned(),
+                },
+                Ok(bollard::container::LogOutput::StdErr { message }) => LogChunk {
+                    stream: "stderr",
+                    text: String::from_utf8_lossy(&message).into_owned(),
+                },
                 Ok(_) => continue,
-                Err(e) => LogChunk { stream: "error", text: err(e) },
+                Err(e) => LogChunk {
+                    stream: "error",
+                    text: err(e),
+                },
             };
             if channel.send(chunk).is_err() {
                 return;
             }
         }
-        let _ = channel.send(LogChunk { stream: "end", text: String::new() });
+        let _ = channel.send(LogChunk {
+            stream: "end",
+            text: String::new(),
+        });
     });
     Ok(state.register(task.abort_handle()).await)
 }
@@ -176,7 +255,12 @@ pub async fn stats_open(state: State<'_>, channel: Channel<StatSample>) -> Resul
     let task = tokio::spawn(async move {
         let mut per_container: HashMap<String, AbortHandle> = HashMap::new();
         loop {
-            let running = match docker.list_containers(Some(ListContainersOptionsBuilder::default().all(false).build())).await {
+            let running = match docker
+                .list_containers(Some(
+                    ListContainersOptionsBuilder::default().all(false).build(),
+                ))
+                .await
+            {
                 Ok(list) => list.into_iter().filter_map(|c| c.id).collect::<Vec<_>>(),
                 Err(_) => Vec::new(),
             };
@@ -196,21 +280,32 @@ pub async fn stats_open(state: State<'_>, channel: Channel<StatSample>) -> Resul
                 let channel = channel.clone();
                 let cid = id.clone();
                 let handle = tokio::spawn(async move {
-                    let mut stream = docker.stats(&cid, Some(StatsOptionsBuilder::default().stream(true).build()));
+                    let mut stream = docker.stats(
+                        &cid,
+                        Some(StatsOptionsBuilder::default().stream(true).build()),
+                    );
                     let mut prev: Option<(u64, u64)> = None;
                     while let Some(Ok(s)) = stream.next().await {
                         let cpu = s.cpu_stats.as_ref();
-                        let total = cpu.and_then(|c| c.cpu_usage.as_ref()).and_then(|u| u.total_usage).unwrap_or(0);
+                        let total = cpu
+                            .and_then(|c| c.cpu_usage.as_ref())
+                            .and_then(|u| u.total_usage)
+                            .unwrap_or(0);
                         let system = cpu.and_then(|c| c.system_cpu_usage).unwrap_or(0);
                         let online = cpu.and_then(|c| c.online_cpus).unwrap_or(1).max(1) as f64;
                         let cpu_percent = match prev {
-                            Some((pt, ps)) if system > ps && total >= pt => (total - pt) as f64 / (system - ps) as f64 * online * 100.0,
+                            Some((pt, ps)) if system > ps && total >= pt => {
+                                (total - pt) as f64 / (system - ps) as f64 * online * 100.0
+                            }
                             _ => 0.0,
                         };
                         prev = Some((total, system));
                         let mem = s.memory_stats.as_ref();
                         let usage = mem.and_then(|m| m.usage).unwrap_or(0);
-                        let inactive = mem.and_then(|m| m.stats.as_ref()).and_then(|st| st.get("inactive_file").copied()).unwrap_or(0);
+                        let inactive = mem
+                            .and_then(|m| m.stats.as_ref())
+                            .and_then(|st| st.get("inactive_file").copied())
+                            .unwrap_or(0);
                         let (mut rx, mut tx) = (0u64, 0u64);
                         if let Some(nets) = &s.networks {
                             for n in nets.values() {
@@ -253,7 +348,14 @@ pub struct ExecOutput {
 }
 
 #[tauri::command]
-pub async fn exec_open(state: State<'_>, id: String, cmd: Vec<String>, cols: u16, rows: u16, channel: Channel<ExecOutput>) -> Result<u64, String> {
+pub async fn exec_open(
+    state: State<'_>,
+    id: String,
+    cmd: Vec<String>,
+    cols: u16,
+    rows: u16,
+    channel: Channel<ExecOutput>,
+) -> Result<u64, String> {
     let docker = state.docker().await?;
     let config = ExecConfig {
         attach_stdin: Some(true),
@@ -268,7 +370,14 @@ pub async fn exec_open(state: State<'_>, id: String, cmd: Vec<String>, cols: u16
     let created = docker.create_exec(&id, config).await.map_err(err)?;
     let exec_id = created.id;
     let started = docker
-        .start_exec(&exec_id, Some(StartExecOptions { detach: false, tty: true, output_capacity: Some(64 * 1024) }))
+        .start_exec(
+            &exec_id,
+            Some(StartExecOptions {
+                detach: false,
+                tty: true,
+                output_capacity: Some(64 * 1024),
+            }),
+        )
         .await
         .map_err(err)?;
     let (mut output, input) = match started {
@@ -279,16 +388,32 @@ pub async fn exec_open(state: State<'_>, id: String, cmd: Vec<String>, cols: u16
     let task = tokio::spawn(async move {
         while let Some(item) = output.next().await {
             let out = match item {
-                Ok(log) => ExecOutput { kind: "data", data: Some(base64::engine::general_purpose::STANDARD.encode(log.into_bytes())), message: None },
-                Err(e) => ExecOutput { kind: "error", data: None, message: Some(err(e)) },
+                Ok(log) => ExecOutput {
+                    kind: "data",
+                    data: Some(base64::engine::general_purpose::STANDARD.encode(log.into_bytes())),
+                    message: None,
+                },
+                Err(e) => ExecOutput {
+                    kind: "error",
+                    data: None,
+                    message: Some(err(e)),
+                },
             };
             if ch.send(out).is_err() {
                 return;
             }
         }
-        let _ = ch.send(ExecOutput { kind: "end", data: None, message: None });
+        let _ = ch.send(ExecOutput {
+            kind: "end",
+            data: None,
+            message: None,
+        });
     });
-    let session = Arc::new(ExecSession { exec_id, input: Mutex::new(input), task: task.abort_handle() });
+    let session = Arc::new(ExecSession {
+        exec_id,
+        input: Mutex::new(input),
+        task: task.abort_handle(),
+    });
     let id = state.next();
     state.execs.lock().await.insert(id, session);
     Ok(id)
@@ -296,17 +421,47 @@ pub async fn exec_open(state: State<'_>, id: String, cmd: Vec<String>, cols: u16
 
 #[tauri::command]
 pub async fn exec_input(state: State<'_>, exec_id: u64, data: String) -> Result<(), String> {
-    let session = state.execs.lock().await.get(&exec_id).cloned().ok_or("session terminal inconnue")?;
-    let bytes = base64::engine::general_purpose::STANDARD.decode(data).map_err(|e| e.to_string())?;
+    let session = state
+        .execs
+        .lock()
+        .await
+        .get(&exec_id)
+        .cloned()
+        .ok_or("session terminal inconnue")?;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(data)
+        .map_err(|e| e.to_string())?;
     let mut input = session.input.lock().await;
     input.write_all(&bytes).await.map_err(|e| e.to_string())?;
     input.flush().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn exec_resize(state: State<'_>, exec_id: u64, cols: u16, rows: u16) -> Result<(), String> {
-    let session = state.execs.lock().await.get(&exec_id).cloned().ok_or("session terminal inconnue")?;
-    state.docker().await?.resize_exec(&session.exec_id, ResizeExecOptions { height: rows, width: cols }).await.map_err(err)
+pub async fn exec_resize(
+    state: State<'_>,
+    exec_id: u64,
+    cols: u16,
+    rows: u16,
+) -> Result<(), String> {
+    let session = state
+        .execs
+        .lock()
+        .await
+        .get(&exec_id)
+        .cloned()
+        .ok_or("session terminal inconnue")?;
+    state
+        .docker()
+        .await?
+        .resize_exec(
+            &session.exec_id,
+            ResizeExecOptions {
+                height: rows,
+                width: cols,
+            },
+        )
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
@@ -333,7 +488,10 @@ pub struct DockerEvent {
 }
 
 #[tauri::command]
-pub async fn docker_events_open(state: State<'_>, channel: Channel<DockerEvent>) -> Result<u64, String> {
+pub async fn docker_events_open(
+    state: State<'_>,
+    channel: Channel<DockerEvent>,
+) -> Result<u64, String> {
     let docker = state.docker().await?;
     let task = tokio::spawn(async move {
         let mut stream = docker.events(None);
@@ -341,9 +499,15 @@ pub async fn docker_events_open(state: State<'_>, channel: Channel<DockerEvent>)
             let actor = ev.actor.as_ref();
             let event = DockerEvent {
                 action: ev.action.unwrap_or_default(),
-                kind: ev.typ.map(|t| format!("{t:?}").to_lowercase()).unwrap_or_default(),
+                kind: ev
+                    .typ
+                    .map(|t| format!("{t:?}").to_lowercase())
+                    .unwrap_or_default(),
                 id: actor.and_then(|a| a.id.clone()).unwrap_or_default(),
-                name: actor.and_then(|a| a.attributes.as_ref()).and_then(|a| a.get("name").cloned()).unwrap_or_default(),
+                name: actor
+                    .and_then(|a| a.attributes.as_ref())
+                    .and_then(|a| a.get("name").cloned())
+                    .unwrap_or_default(),
             };
             if channel.send(event).is_err() {
                 return;
@@ -359,17 +523,35 @@ pub async fn docker_events_open(state: State<'_>, channel: Channel<DockerEvent>)
 
 #[tauri::command]
 pub async fn images_list(state: State<'_>) -> Result<Vec<bollard::models::ImageSummary>, String> {
-    state.docker().await?.list_images(Some(ListImagesOptionsBuilder::default().all(false).build())).await.map_err(err)
+    state
+        .docker()
+        .await?
+        .list_images(Some(ListImagesOptionsBuilder::default().all(false).build()))
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
-pub async fn image_inspect(state: State<'_>, id: String) -> Result<bollard::models::ImageInspect, String> {
+pub async fn image_inspect(
+    state: State<'_>,
+    id: String,
+) -> Result<bollard::models::ImageInspect, String> {
     state.docker().await?.inspect_image(&id).await.map_err(err)
 }
 
 #[tauri::command]
 pub async fn image_remove(state: State<'_>, id: String, force: bool) -> Result<(), String> {
-    state.docker().await?.remove_image(&id, Some(RemoveImageOptionsBuilder::default().force(force).build()), None).await.map(|_| ()).map_err(err)
+    state
+        .docker()
+        .await?
+        .remove_image(
+            &id,
+            Some(RemoveImageOptionsBuilder::default().force(force).build()),
+            None,
+        )
+        .await
+        .map(|_| ())
+        .map_err(err)
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -408,33 +590,75 @@ pub async fn image_run(state: State<'_>, spec: RunSpec) -> Result<String, String
         if !exposed.contains(&key) {
             exposed.push(key.clone());
         }
-        bindings.entry(key).or_insert_with(|| Some(Vec::new())).get_or_insert_with(Vec::new).push(PortBinding {
-            host_ip: Some("0.0.0.0".into()),
-            host_port: Some(p.host.to_string()),
-        });
+        bindings
+            .entry(key)
+            .or_insert_with(|| Some(Vec::new()))
+            .get_or_insert_with(Vec::new)
+            .push(PortBinding {
+                host_ip: Some("0.0.0.0".into()),
+                host_port: Some(p.host.to_string()),
+            });
     }
     let body = ContainerCreateBody {
         image: Some(spec.image),
         cmd: spec.cmd,
-        env: if spec.env.is_empty() { None } else { Some(spec.env) },
-        exposed_ports: if exposed.is_empty() { None } else { Some(exposed) },
-        host_config: Some(HostConfig { port_bindings: if bindings.is_empty() { None } else { Some(bindings) }, ..Default::default() }),
+        env: if spec.env.is_empty() {
+            None
+        } else {
+            Some(spec.env)
+        },
+        exposed_ports: if exposed.is_empty() {
+            None
+        } else {
+            Some(exposed)
+        },
+        host_config: Some(HostConfig {
+            port_bindings: if bindings.is_empty() {
+                None
+            } else {
+                Some(bindings)
+            },
+            ..Default::default()
+        }),
         ..Default::default()
     };
-    let options = spec.name.map(|n| bollard::query_parameters::CreateContainerOptionsBuilder::default().name(&n).build());
+    let options = spec.name.map(|n| {
+        bollard::query_parameters::CreateContainerOptionsBuilder::default()
+            .name(&n)
+            .build()
+    });
     let created = docker.create_container(options, body).await.map_err(err)?;
-    docker.start_container(&created.id, None).await.map_err(err)?;
+    docker
+        .start_container(&created.id, None)
+        .await
+        .map_err(err)?;
     Ok(created.id)
 }
 
 #[tauri::command]
 pub async fn volumes_list(state: State<'_>) -> Result<bollard::models::VolumeListResponse, String> {
-    state.docker().await?.list_volumes(None::<bollard::query_parameters::ListVolumesOptions>).await.map_err(err)
+    state
+        .docker()
+        .await?
+        .list_volumes(None::<bollard::query_parameters::ListVolumesOptions>)
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
-pub async fn volume_create(state: State<'_>, name: String) -> Result<bollard::models::Volume, String> {
-    state.docker().await?.create_volume(VolumeCreateRequest { name: Some(name), ..Default::default() }).await.map_err(err)
+pub async fn volume_create(
+    state: State<'_>,
+    name: String,
+) -> Result<bollard::models::Volume, String> {
+    state
+        .docker()
+        .await?
+        .create_volume(VolumeCreateRequest {
+            name: Some(name),
+            ..Default::default()
+        })
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
@@ -442,14 +666,29 @@ pub async fn volume_remove(state: State<'_>, name: String, force: bool) -> Resul
     state
         .docker()
         .await?
-        .remove_volume(&name, Some(bollard::query_parameters::RemoveVolumeOptionsBuilder::default().force(force).build()))
+        .remove_volume(
+            &name,
+            Some(
+                bollard::query_parameters::RemoveVolumeOptionsBuilder::default()
+                    .force(force)
+                    .build(),
+            ),
+        )
         .await
         .map_err(err)
 }
 
 #[tauri::command]
-pub async fn volume_inspect(state: State<'_>, name: String) -> Result<bollard::models::Volume, String> {
-    state.docker().await?.inspect_volume(&name).await.map_err(err)
+pub async fn volume_inspect(
+    state: State<'_>,
+    name: String,
+) -> Result<bollard::models::Volume, String> {
+    state
+        .docker()
+        .await?
+        .inspect_volume(&name)
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
@@ -458,11 +697,19 @@ pub async fn networks_list(state: State<'_>) -> Result<Vec<bollard::models::Netw
 }
 
 #[tauri::command]
-pub async fn network_create(state: State<'_>, name: String, driver: Option<String>) -> Result<String, String> {
+pub async fn network_create(
+    state: State<'_>,
+    name: String,
+    driver: Option<String>,
+) -> Result<String, String> {
     let created = state
         .docker()
         .await?
-        .create_network(NetworkCreateRequest { name, driver: driver.or(Some("bridge".into())), ..Default::default() })
+        .create_network(NetworkCreateRequest {
+            name,
+            driver: driver.or(Some("bridge".into())),
+            ..Default::default()
+        })
         .await
         .map_err(err)?;
     Ok(created.id)
@@ -474,6 +721,14 @@ pub async fn network_remove(state: State<'_>, id: String) -> Result<(), String> 
 }
 
 #[tauri::command]
-pub async fn network_inspect(state: State<'_>, id: String) -> Result<bollard::models::NetworkInspect, String> {
-    state.docker().await?.inspect_network(&id, None).await.map_err(err)
+pub async fn network_inspect(
+    state: State<'_>,
+    id: String,
+) -> Result<bollard::models::NetworkInspect, String> {
+    state
+        .docker()
+        .await?
+        .inspect_network(&id, None)
+        .await
+        .map_err(err)
 }

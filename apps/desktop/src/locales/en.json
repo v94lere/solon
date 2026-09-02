@@ -1,5 +1,7 @@
 {
-  "app": { "name": "Solon" },
+  "app": {
+    "name": "Solon"
+  },
   "nav": {
     "containers": "Containers",
     "images": "Images",
@@ -65,20 +67,65 @@
     "empty": "No containers yet. Run one with the docker CLI or from an image.",
     "search": "Filter by name, image or status",
     "show_stopped": "Show stopped",
-    "columns": { "name": "Name", "image": "Image", "status": "Status", "ports": "Ports", "cpu": "CPU", "memory": "Memory" },
-    "actions": { "start": "Start", "stop": "Stop", "restart": "Restart", "remove": "Remove", "logs": "Logs", "terminal": "Terminal", "inspect": "Inspect" },
-    "state": { "running": "Running", "exited": "Exited", "created": "Created", "paused": "Paused", "restarting": "Restarting", "dead": "Dead", "removing": "Removing" },
-    "remove_confirm": { "title": "Remove container {{name}}?", "body": "The container and its writable layer will be deleted. Named volumes are kept.", "with_volumes": "Also remove anonymous volumes", "confirm": "Remove", "cancel": "Cancel" },
+    "columns": {
+      "name": "Name",
+      "image": "Image",
+      "status": "Status",
+      "ports": "Ports",
+      "cpu": "CPU",
+      "memory": "Memory"
+    },
+    "actions": {
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "remove": "Remove",
+      "logs": "Logs",
+      "terminal": "Terminal",
+      "inspect": "Inspect"
+    },
+    "state": {
+      "running": "Running",
+      "exited": "Exited",
+      "created": "Created",
+      "paused": "Paused",
+      "restarting": "Restarting",
+      "dead": "Dead",
+      "removing": "Removing"
+    },
+    "remove_confirm": {
+      "title": "Remove container {{name}}?",
+      "body": "The container and its writable layer will be deleted. Named volumes are kept.",
+      "with_volumes": "Also remove anonymous volumes",
+      "confirm": "Remove",
+      "cancel": "Cancel"
+    },
     "compose": "Compose project",
-    "count": "{{count}} container",
-    "count_plural": "{{count}} containers"
+    "count_one": "{{count}} container",
+    "count_other": "{{count}} containers"
   },
   "detail": {
-    "tabs": { "logs": "Logs", "terminal": "Terminal", "inspect": "Inspect" },
+    "tabs": {
+      "logs": "Logs",
+      "terminal": "Terminal",
+      "inspect": "Inspect"
+    },
     "back": "Back to containers",
-    "logs": { "follow": "Follow", "clear": "Clear", "timestamps": "Timestamps", "empty": "No output yet." },
-    "terminal": { "shell": "Shell", "connect": "Open terminal", "disconnected": "Session ended.", "stopped": "The container must be running to open a terminal." },
-    "inspect": { "copy": "Copy JSON" }
+    "logs": {
+      "follow": "Follow",
+      "clear": "Clear",
+      "timestamps": "Timestamps",
+      "empty": "No output yet."
+    },
+    "terminal": {
+      "shell": "Shell",
+      "connect": "Open terminal",
+      "disconnected": "Session ended.",
+      "stopped": "The container must be running to open a terminal."
+    },
+    "inspect": {
+      "copy": "Copy JSON"
+    }
   },
   "common": {
     "loading": "Loading…",

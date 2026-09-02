@@ -73,11 +73,9 @@ export function LogsPanel({ id }: { id: string }) {
       <div
         ref={boxRef}
         className="mono min-h-0 flex-1 overflow-auto p-3 text-xs leading-5 whitespace-pre-wrap"
-        onScroll={() => {
-          const el = boxRef.current;
-          if (!el) return;
-          const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 8;
-          if (!atBottom && follow) setFollow(false);
+        onWheel={(e) => {
+          // Seul un défilement volontaire vers le haut suspend le suivi (pas l'auto-défilement).
+          if (e.deltaY < 0 && follow) setFollow(false);
         }}
         aria-live="polite"
       >
