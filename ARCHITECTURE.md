@@ -1,6 +1,6 @@
 # Solon — Plan d'architecture
 
-> **Statut : brouillon v0.1 (2 septembre 2026), en attente de validation. Aucun code n'a été écrit.**
+> **Statut : v0.1 validée le 2 septembre 2026 (six décisions de la section 0 acceptées). Le document sera complété par les mesures au fil des blocs.**
 > Ce document deviendra la documentation technique de référence (`ARCHITECTURE.md`) une fois validé.
 
 Solon est un gestionnaire de conteneurs autonome pour Windows, dans l'esprit d'OrbStack : une VM Linux minuscule, invisible, entièrement gérée par nous, avec des chemins de communication optimisés. Ce plan fixe les choix de virtualisation, de construction de l'image Linux, de communication hôte↔VM, de partage de fichiers, et le découpage du code. Il liste aussi, sans les cacher, les points pour lesquels il n'existe pas aujourd'hui de solution mature sur Windows.
@@ -70,6 +70,16 @@ Conséquences : (a) tous les prérequis de la piste HCS sont déjà réunis ici,
 - **podman machine (Hyper-V)** : réseau via gvproxy en espace utilisateur sur HvSocket, partages 9P, enregistrement des GUID HvSocket dans le registre par `podman-system-hyperv-prep` (élévation requise). Prouve la viabilité du réseau sur HvSocket.
 - **OpenVMM (Microsoft, Rust, MIT)** : VMM modulaire, backends WHP (Windows), KVM/MSHV (Linux), Hypervisor.framework (macOS). Périphériques : virtio-fs (hôtes Linux **et Windows**), virtio-9p, virtio-vsock, virtio-net avec NAT « Consomme », disques VHD/VHDX, boot direct Linux, enlightenments Hyper-V/VMBus. Avertissement officiel : les interfaces de gestion « peuvent changer entre les versions ». C'est le seul chemin virtiofs sur Windows ; c'est un candidat sérieux pour une phase ultérieure, pas pour un MVP à livrer.
 
+### 1.3 Résultats du bloc 0a (spike VM, 2 septembre 2026)
+
+Détail et tableau complet dans `docs/measurements.md`. En résumé :
+
+- Une VM HCS en boot direct du noyau démarre depuis Rust (`solon-vm-hcs`, bindings `windows` 0.62) : création 51 ms, `HcsStartComputeSystem` 29 ms, **espace utilisateur atteint ~0,7 s** après l'ordre de démarrage, arrêt propre détecté par l'événement `HcsEventSystemExited` avec un document JSON (`ExitType`, `Initiator`) qui distingue arrêt propre et crash.
+- Les champs HCS retenus (`SchemaVersion 2.2`, `LinuxKernelDirect`, `ComPorts`, `HvSocket`, `AllowOvercommit`, `EnableDeferredCommit`, `ShouldTerminateOnLastHandleClosed=false`) sont acceptés sur Windows 11 26200.
+- Le pipe de console est servi par `vmwp` ; le client se connecte dès le retour de `HcsStartComputeSystem`.
+- Sans élévation : `HCS_E_ACCESS_DENIED` immédiat, message Windows explicite. **Le service Windows est confirmé.**
+- Le noyau WSL2 a en dur tout ce dont Solon a besoin (hv_sock, 9P, balloon, page reporting, squashfs, overlay) sauf `BRIDGE` et `EROFS` (modules) : notre configuration les passera en `=y`. Le noyau Alpine `linux-virt` démarre aussi mais ses pilotes Hyper-V sont en modules : plan B confirmé, pas mieux.
+
 ---
 
 ## 2. Virtualisation : choix et justification
@@ -118,7 +128,7 @@ L'agent est **PID 1** : il monte les systèmes de fichiers, lance `containerd` p
 
 ### 3.3 Noyau
 
-Recommandation : **`microsoft/WSL2-Linux-Kernel`** (GPL-2.0), compilé par nous à partir d'un tag épinglé, avec la configuration WSL comme base et un fragment `solon.config` qui retire ce qui est inutile (`dxgkrnl`, USB, son…) et garantit : `HYPERV` (VMBus, stockage `hv_storvsc`, réseau `hv_netvsc`), `HYPERV_VSOCKETS` (`hv_sock`), `HYPERV_UTILS` (horloge, arrêt), `HYPERV_BALLOON` + `PAGE_REPORTING` (reprise mémoire), `NET_9P` + `9P_FS` + `9P_FS_POSIX_ACL` + `9P_FS_SECURITY`, `EXT4_FS`, `OVERLAY_FS`, `CGROUPS` v2 complets, `NETFILTER`/`NF_TABLES`/`BRIDGE`/`VETH`/`IP_NF_*`, `VIRTIO_CONSOLE`. Tout en `=y` : pas de modules à charger, pas de `modprobe` dans l'initrd.
+Recommandation : **`microsoft/WSL2-Linux-Kernel`** (GPL-2.0), compilé par nous à partir d'un tag épinglé, avec la configuration WSL comme base et un fragment `solon.config` qui retire ce qui est inutile (`dxgkrnl`, USB, son…) et garantit : `HYPERV` (VMBus, stockage `hv_storvsc`, réseau `hv_netvsc`), `HYPERV_VSOCKETS` (`hv_sock`), `HYPERV_UTILS` (horloge, arrêt), `HYPERV_BALLOON` + `PAGE_REPORTING` (reprise mémoire), `NET_9P` + `9P_FS` + `9P_FS_POSIX_ACL` + `9P_FS_SECURITY`, `EXT4_FS`, `OVERLAY_FS`, `CGROUPS` v2 complets, `NETFILTER`/`NF_TABLES`/`BRIDGE`/`VETH`/`IP_NF_*`, `VIRTIO_CONSOLE`. Tout en `=y` : pas de modules à charger, pas de `modprobe` dans l'initrd. Vérifié au bloc 0a : la configuration WSL2 publiée a déjà tout cela en dur, à l'exception de `BRIDGE` et `EROFS_FS` (modules), que notre fragment force en `=y`.
 
 Pourquoi pas `linux-virt` d'Alpine : binaire prêt et petit, mais un problème réseau sous Hyper-V a été signalé sur 3.19 (`aports#16096`) et sa configuration n'est pas pilotée par nous. Il reste l'option de secours du spike si la compilation du noyau prend trop de temps.
 
