@@ -607,6 +607,33 @@ pub fn start_periodic_sync() {
     });
 }
 
+/// Au repos (charge < 0,2 sur 1 min), libère le cache de pages toutes les 2 min pour que l'hôte
+/// puisse récupérer la mémoire (hints HCS `EnableColdDiscardHint`). Coût : relecture du disque
+/// racine à la prochaine activité, quelques dizaines de ms.
+pub fn start_idle_cache_release() {
+    std::thread::spawn(|| {
+        loop {
+            std::thread::sleep(Duration::from_secs(120));
+            let load1 = fs::read_to_string("/proc/loadavg")
+                .ok()
+                .and_then(|s| {
+                    s.split_whitespace()
+                        .next()
+                        .and_then(|v| v.parse::<f64>().ok())
+                })
+                .unwrap_or(1.0);
+            if load1 < 0.2 {
+                unsafe { libc::sync() };
+                let _ = fs::write(
+                    "/proc/sys/vm/drop_caches",
+                    "1
+",
+                );
+            }
+        }
+    });
+}
+
 /// Récolte les zombies ré-attachés à PID 1, sans voler les enfants attendus par l'agent.
 pub fn start_reaper(state: Arc<State>) {
     std::thread::spawn(move || {

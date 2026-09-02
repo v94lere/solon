@@ -338,7 +338,10 @@ impl ComputeSystemDocument {
                         size_in_mb: config.memory_mb,
                         allow_overcommit: Some(true),
                         enable_deferred_commit: Some(true),
-                        ..Memory::default()
+                        // Comme WSL2 : l'hôte peut récupérer les pages froides et libérées de l'invité.
+                        enable_hot_hint: Some(true),
+                        enable_cold_hint: Some(true),
+                        enable_cold_discard_hint: Some(true),
                     },
                     processor: Processor {
                         count: config.processors,
@@ -435,11 +438,9 @@ mod tests {
         );
         assert_eq!(vm["ComputeTopology"]["Memory"]["SizeInMB"], 2048);
         assert_eq!(vm["ComputeTopology"]["Memory"]["AllowOvercommit"], true);
-        assert!(
-            vm["ComputeTopology"]["Memory"]
-                .get("EnableHotHint")
-                .is_none(),
-            "champ optionnel non émis"
+        assert_eq!(
+            vm["ComputeTopology"]["Memory"]["EnableColdDiscardHint"],
+            true
         );
         assert_eq!(vm["ComputeTopology"]["Processor"]["Count"], 2);
         let scsi = &vm["Devices"]["Scsi"]["0"]["Attachments"];

@@ -12,7 +12,7 @@ use crate::engine::Engine;
 use crate::settings;
 
 /// SYSTEM et Administrateurs en contrôle total, utilisateurs authentifiés en lecture/écriture.
-pub const CONTROL_PIPE_SDDL: &str = "D:(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;AU)";
+pub const CONTROL_PIPE_SDDL: &str = "D:(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;IU)";
 
 /// `quit` : canal vers la boucle principale pour arrêter le processus (None = interdit).
 pub type QuitSender = Option<tokio::sync::mpsc::Sender<()>>;

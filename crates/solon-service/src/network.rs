@@ -74,7 +74,8 @@ impl GuestNetwork {
             prefix_len: self.prefix_len,
             gateway: self.gateway.to_string(),
             dns: self.dns.clone(),
-            mtu: None,
+            // 1400 : marge pour les encapsulations VPN (IPsec/SSL) qui cassent les MTU à 1500.
+            mtu: Some(1400),
             search_domains: vec![],
         }
     }

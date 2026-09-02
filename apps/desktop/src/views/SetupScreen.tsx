@@ -1,8 +1,8 @@
 // Écran de première installation / démarrage : progression par étapes, erreurs actionnables.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
-import { engine, type ProvisionStep } from "../api";
+import { engine, type PrereqReport, type ProvisionStep } from "../api";
 import { useEngine } from "../engine";
 
 const STEPS: ProvisionStep[] = [
@@ -17,6 +17,44 @@ const STEPS: ProvisionStep[] = [
   "configuring_network",
   "waiting_engine",
 ];
+
+/** Rapport des prérequis système, item par item, avec le détail technique au survol. */
+function PrereqList() {
+  const { t } = useTranslation();
+  const [report, setReport] = useState<PrereqReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const load = () => {
+    setError(null);
+    engine
+      .prereq()
+      .then(setReport)
+      .catch((e: unknown) => setError(String(e)));
+  };
+  useEffect(load, []);
+  return (
+    <section className="card p-3" aria-label={t("prereq.title")}>
+      <div className="flex items-center">
+        <h2 className="font-semibold">{t("prereq.title")}</h2>
+        <div className="flex-1" />
+        <button type="button" className="btn btn-ghost btn-sm" onClick={load}>
+          {t("prereq.refresh")}
+        </button>
+      </div>
+      {error && <p style={{ color: "var(--bad)" }}>{error}</p>}
+      {report && (
+        <ul className="mt-2 grid gap-1">
+          {report.items.map((it) => (
+            <li key={it.id} className="flex items-center gap-3" title={it.detail}>
+              <span className={`pill ${it.ok ? "pill-ok" : it.blocking ? "pill-bad" : "pill-warn"}`}>{it.ok ? t("prereq.ok") : it.blocking ? t("prereq.failed") : t("prereq.warning")}</span>
+              <span>{t(`prereq.${it.id}`, { defaultValue: it.id })}</span>
+              {!it.ok && it.code && <span className="kbd-hint">— {t(`error.${it.code}`, { defaultValue: "" })}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 export function SetupScreen() {
   const { t } = useTranslation();
@@ -95,6 +133,8 @@ export function SetupScreen() {
           {snapshot?.recovered_from_crash && <span style={{ color: "var(--warn)" }}>{t("engine.recovered")}</span>}
         </div>
       )}
+
+      {serviceAvailable && (state === "stopped" || state === "failed") && <PrereqList />}
 
       <style>{`@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }`}</style>
     </div>

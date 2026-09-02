@@ -242,5 +242,18 @@
     "running": "Running…",
     "no_output": "(no output)",
     "exit": "exit code {{code}}, {{seconds}} s"
+  },
+  "prereq": {
+    "title": "System check",
+    "windows_edition": "Windows edition (Pro, Enterprise or Education)",
+    "virtualization_firmware": "Hardware virtualization (VT-x / AMD-V)",
+    "service_vmcompute": "Windows Host Compute Service",
+    "service_hns": "Windows Host Network Service",
+    "hcs_api": "Virtualization API available",
+    "memory": "At least 4 GB of memory",
+    "ok": "OK",
+    "failed": "Needs attention",
+    "warning": "Warning",
+    "refresh": "Check again"
   }
 }

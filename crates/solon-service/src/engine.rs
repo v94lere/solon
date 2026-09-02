@@ -157,6 +157,9 @@ impl Engine {
     async fn provision(&self) -> Result<Running> {
         let cfg = &self.inner.cfg;
         cfg.paths.ensure_dirs()?;
+        // Les réglages (mémoire, processeurs, disque) sont relus à chaque démarrage : « appliqués au
+        // prochain démarrage du moteur » comme l'annonce l'interface.
+        let settings = settings::load_settings(&cfg.paths.settings_file());
 
         self.step(ProvisionStep::CheckingPrerequisites);
         let prereq = tokio::task::spawn_blocking(solon_prereq::check)
@@ -225,7 +228,7 @@ impl Engine {
 
         self.step(ProvisionStep::PreparingDataDisk);
         let disk_path = cfg.paths.data_disk();
-        let gib = cfg.settings.data_disk_gib;
+        let gib = settings.data_disk_gib;
         tokio::task::spawn_blocking(move || crate::disk::ensure_data_disk(&disk_path, gib))
             .await
             .map_err(|e| SolonError::internal(e.to_string()))??;
@@ -252,8 +255,8 @@ impl Engine {
             kernel: image.kernel(),
             initrd: image.initrd(),
             cmdline: image.manifest.kernel_cmdline.clone(),
-            memory_mb: cfg.settings.memory_mb,
-            processors: cfg.settings.processors,
+            memory_mb: settings.memory_mb,
+            processors: settings.processors,
             disks: vec![
                 DiskAttachment {
                     path: image.rootfs(),

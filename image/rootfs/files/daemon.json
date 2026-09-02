@@ -2,6 +2,7 @@
   "hosts": ["unix:///run/docker.sock"],
   "data-root": "/var/lib/docker",
   "exec-root": "/run/docker",
+  "mtu": 1400,
   "storage-driver": "overlay2",
   "live-restore": false,
   "userland-proxy": false,

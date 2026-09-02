@@ -51,6 +51,29 @@ pub enum ErrorCode {
     Internal,
 }
 
+impl ErrorCode {
+    /// Tous les codes, pour vérifier la couverture des traductions et de la documentation.
+    pub const ALL: &'static [ErrorCode] = &[
+        ErrorCode::VirtualizationDisabledInFirmware,
+        ErrorCode::UnsupportedWindowsEdition,
+        ErrorCode::WindowsFeatureMissing,
+        ErrorCode::WindowsFeatureBlockedByPolicy,
+        ErrorCode::HypervisorNotRunning,
+        ErrorCode::HostComputeServiceUnavailable,
+        ErrorCode::BlockedBySecuritySoftware,
+        ErrorCode::InsufficientPrivileges,
+        ErrorCode::VmConfigurationRejected,
+        ErrorCode::VmBootTimeout,
+        ErrorCode::AgentUnreachable,
+        ErrorCode::EngineUnreachable,
+        ErrorCode::ImageCorrupted,
+        ErrorCode::DataDiskError,
+        ErrorCode::HcsError,
+        ErrorCode::Io,
+        ErrorCode::Internal,
+    ];
+}
+
 /// Erreur principale de Solon.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize, Deserialize)]
 #[error("[{code:?}] {message}")]

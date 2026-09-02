@@ -12,9 +12,9 @@ use tokio::net::windows::named_pipe::{NamedPipeServer, ServerOptions};
 use windows::core::GUID;
 
 /// Descripteur de sécurité par défaut du pipe Docker : SYSTEM et Administrateurs en contrôle
-/// total, utilisateurs authentifiés en lecture/écriture (nécessaire pour que l'application et le
-/// CLI `docker`, non élevés, puissent s'y connecter).
-pub const DOCKER_PIPE_SDDL: &str = "D:(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;AU)";
+/// total, utilisateurs **interactifs** (session ouverte) en lecture/écriture : l'application et le
+/// CLI `docker`, non élevés, s'y connectent ; les comptes de service n'y ont pas accès.
+pub const DOCKER_PIPE_SDDL: &str = "D:(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;IU)";
 
 /// Crée une instance de serveur de pipe avec un descripteur de sécurité SDDL.
 pub fn create_server(

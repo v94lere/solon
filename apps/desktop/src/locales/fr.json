@@ -242,5 +242,18 @@
     "running": "En cours…",
     "no_output": "(aucune sortie)",
     "exit": "code de sortie {{code}}, {{seconds}} s"
+  },
+  "prereq": {
+    "title": "Vérification du système",
+    "windows_edition": "Édition Windows (Pro, Entreprise ou Éducation)",
+    "virtualization_firmware": "Virtualisation matérielle (VT-x / AMD-V)",
+    "service_vmcompute": "Service Windows Host Compute",
+    "service_hns": "Service Windows Host Network",
+    "hcs_api": "API de virtualisation disponible",
+    "memory": "Au moins 4 Go de mémoire",
+    "ok": "OK",
+    "failed": "Action nécessaire",
+    "warning": "Avertissement",
+    "refresh": "Vérifier à nouveau"
   }
 }
