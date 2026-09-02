@@ -1,0 +1,13 @@
+{
+  "hosts": ["unix:///run/docker.sock"],
+  "data-root": "/var/lib/docker",
+  "exec-root": "/run/docker",
+  "storage-driver": "overlay2",
+  "live-restore": false,
+  "userland-proxy": false,
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "10m", "max-file": "3" },
+  "default-address-pools": [
+    { "base": "10.90.0.0/16", "size": 24 }
+  ]
+}

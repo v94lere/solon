@@ -1,0 +1,49 @@
+#!/bin/busybox sh
+# Initramfs de Solon : monte le disque racine (lecture seule) sous une surcouche en RAM,
+# puis passe la main à l'agent (PID 1) du système racine.
+#
+# Disques (contrôleur SCSI 0) : LUN 0 = rootfs.vhd (lecture seule), LUN 1 = data.vhdx (données).
+# Le système racine est immuable : toute écriture hors des points de montage persistants finit dans
+# la surcouche tmpfs et disparaît à l'arrêt. C'est voulu : un arrêt brutal ne peut pas le corrompre.
+
+/bin/busybox --install -s /bin 2>/dev/null
+mkdir -p /proc /sys /dev /run /newroot
+mount -t proc -o nosuid,noexec,nodev proc /proc
+mount -t sysfs -o nosuid,noexec,nodev sysfs /sys
+mount -t devtmpfs -o mode=0755,nosuid devtmpfs /dev
+mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run
+
+echo "SOLON-INITRD-START"
+
+fail() {
+    echo "SOLON-INITRD-FAILED $1"
+    echo "Console de secours (busybox). Tapez 'poweroff -f' pour arrêter."
+    exec /bin/busybox sh
+}
+
+# Attend l'apparition du disque racine (hv_storvsc est en dur, mais l'énumération est asynchrone).
+i=0
+while [ ! -b /dev/sda ]; do
+    i=$((i + 1))
+    [ "$i" -gt 100 ] && fail "disque racine /dev/sda absent"
+    sleep 0.05
+done
+
+mkdir -p /run/solon/lower /run/solon/upper
+mount -t ext4 -o ro,noatime /dev/sda /run/solon/lower || fail "montage du disque racine"
+mount -t tmpfs -o size=20%,mode=0755 tmpfs /run/solon/upper || fail "tmpfs de surcouche"
+mkdir -p /run/solon/upper/u /run/solon/upper/w
+mount -t overlay overlay \
+    -o lowerdir=/run/solon/lower,upperdir=/run/solon/upper/u,workdir=/run/solon/upper/w \
+    /newroot || fail "surcouche overlay"
+
+[ -x /newroot/sbin/solon-agent ] || fail "/sbin/solon-agent absent du système racine"
+
+mkdir -p /newroot/proc /newroot/sys /newroot/dev /newroot/run
+mount --move /dev /newroot/dev
+mount --move /run /newroot/run
+umount /proc
+umount /sys
+
+echo "SOLON-INITRD-OK"
+exec /bin/busybox switch_root /newroot /sbin/solon-agent
