@@ -1,6 +1,5 @@
 ﻿# Configuration système de Solon, exécutée élevée par l'installeur NSIS (voir hooks.nsh).
 # - active les composants Windows requis (Hyper-V, Plateforme de machine virtuelle) ;
-# - enregistre les identifiants de services HvSocket de Solon (réservé aux connexions invité → hôte) ;
 # - installe (ou retire) le service Windows SolonService.
 # Codes de retour : 0 OK, 3010 redémarrage requis, autre = erreur. Journal : %ProgramData%\Solon\logs\setup.log
 param(
@@ -8,6 +7,8 @@ param(
     [switch]$Uninstall
 )
 $ErrorActionPreference = "Continue"
+# Les binaires Rust écrivent en UTF-8 : lire leur sortie correctement dans le journal.
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $logDir = Join-Path $env:ProgramData "Solon\logs"
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $log = Join-Path $logDir "setup.log"
@@ -43,17 +44,7 @@ foreach ($feature in @("Microsoft-Hyper-V", "VirtualMachinePlatform")) {
     }
 }
 
-# 2. Services HvSocket (identifiants réservés à Solon, ports vsock 5000-5003 et 9000-9199).
-$base = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Virtualization\GuestCommunicationServices"
-foreach ($port in (5000..5003) + (9000..9199)) {
-    $guid = ("{0:x8}-facb-11e6-bd58-64006a7986d3" -f $port)
-    $key = Join-Path $base $guid
-    if (-not (Test-Path $key)) {
-        New-Item -Path $key -Force | Out-Null
-        Set-ItemProperty -Path $key -Name "ElementName" -Value "Solon vsock $port"
-    }
-}
-Log "services HvSocket enregistrés"
+# 2. (Aucun enregistrement HvSocket n'est nécessaire : toutes les connexions sont ouvertes par l'hôte.)
 
 # 3. Service Windows : (ré)installation puis démarrage.
 & $svc uninstall 2>&1 | Out-Null
