@@ -18,3 +18,5 @@ utilise le gestionnaire d'identifiants Windows et peut envoyer des identifiants 
 (« unauthorized ») : les scripts tirent leurs images depuis `public.ecr.aws` pour rester indépendants.
 
 Résultats et chiffres : `docs/measurements.md`, section « Bloc 2 ».
+
+- `install-test.ps1` : installe Solon en silence depuis l'installeur NSIS (une fenêtre UAC), vérifie le service Windows réel, démarre le moteur puis enchaîne `e2e.ps1`. Ne désinstalle pas.
