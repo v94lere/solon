@@ -1,22 +1,28 @@
-//! Icône de la barre des tâches : état du moteur, nombre de conteneurs en marche, démarrer/arrêter,
-//! ouvrir la fenêtre, quitter. Fermer la fenêtre principale la cache (l'application reste dans la
-//! barre des tâches) ; « Quitter » ferme vraiment. Les libellés suivent la langue de l'interface
-//! (mêmes fichiers `locales/*.json` que le frontend, section `tray`).
+//! Icône de la barre des tâches. Un clic (gauche ou droit) ouvre un menu natif : état du moteur, la
+//! liste des conteneurs avec Démarrer / Redémarrer / Arrêter pour chacun, ouvrir la fenêtre,
+//! démarrer/arrêter le moteur, quitter. Fermer la fenêtre principale la cache (l'application reste
+//! dans la barre des tâches) ; « Quitter » ferme vraiment. Les libellés suivent la langue de
+//! l'interface (mêmes fichiers `locales/*.json` que le frontend, section `tray`).
+//!
+//! Le menu est reconstruit entièrement à chaque changement (état du moteur, liste des conteneurs,
+//! langue) : c'est simple et les menus natifs sont peu coûteux.
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use serde_json::Value;
 use solon_core::ipc::ServiceCommand;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager, Runtime};
 
-use crate::docker::DockerState;
+use crate::docker::{DockerState, TrayContainer};
 use crate::service;
 
 const LOCALE_EN: &str = include_str!("../../src/locales/en.json");
 const LOCALE_FR: &str = include_str!("../../src/locales/fr.json");
+/// Au-delà, le menu indique « … et N autres » et renvoie vers la fenêtre.
+const MAX_LISTED: usize = 12;
 
 /// Langue courante de la barre des tâches, changée par le frontend (`set_language`).
 pub struct TrayLanguage(pub tokio::sync::watch::Sender<String>);
@@ -64,64 +70,152 @@ fn containers_label(l: &Value, count: u64) -> String {
     }
 }
 
-pub struct TrayItems<R: Runtime> {
-    pub status: MenuItem<R>,
-    pub containers: MenuItem<R>,
-    pub open: MenuItem<R>,
-    pub start: MenuItem<R>,
-    pub stop: MenuItem<R>,
-    pub quit: MenuItem<R>,
+/// Construit le menu complet pour un état donné.
+fn build_menu<R: Runtime>(
+    app: &AppHandle<R>,
+    l: &Value,
+    state: &str,
+    containers: Option<&[TrayContainer]>,
+) -> tauri::Result<Menu<R>> {
+    let menu = Menu::new(app)?;
+    menu.append(&MenuItem::with_id(
+        app,
+        "status",
+        engine_label(l, state),
+        false,
+        None::<&str>,
+    )?)?;
+    if state == "ready" {
+        menu.append(&PredefinedMenuItem::separator(app)?)?;
+        match containers {
+            Some(list) if !list.is_empty() => {
+                let running = list.iter().filter(|c| c.running).count() as u64;
+                menu.append(&MenuItem::with_id(
+                    app,
+                    "count",
+                    containers_label(l, running),
+                    false,
+                    None::<&str>,
+                )?)?;
+                for c in list.iter().take(MAX_LISTED) {
+                    let title = format!("{} {}", if c.running { "●" } else { "○" }, c.name);
+                    let sub = Submenu::with_id(app, format!("c|{}", c.id), title, true)?;
+                    sub.append(&MenuItem::with_id(
+                        app,
+                        format!("c|start|{}", c.id),
+                        label(l, "container_start"),
+                        !c.running,
+                        None::<&str>,
+                    )?)?;
+                    sub.append(&MenuItem::with_id(
+                        app,
+                        format!("c|restart|{}", c.id),
+                        label(l, "container_restart"),
+                        c.running,
+                        None::<&str>,
+                    )?)?;
+                    sub.append(&MenuItem::with_id(
+                        app,
+                        format!("c|stop|{}", c.id),
+                        label(l, "container_stop"),
+                        c.running,
+                        None::<&str>,
+                    )?)?;
+                    menu.append(&sub)?;
+                }
+                if list.len() > MAX_LISTED {
+                    let more = label(l, "containers_more")
+                        .replace("{{count}}", &(list.len() - MAX_LISTED).to_string());
+                    menu.append(&MenuItem::with_id(app, "open", more, true, None::<&str>)?)?;
+                }
+            }
+            Some(_) => {
+                menu.append(&MenuItem::with_id(
+                    app,
+                    "count",
+                    containers_label(l, 0),
+                    false,
+                    None::<&str>,
+                )?)?;
+            }
+            None => {}
+        }
+    }
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&MenuItem::with_id(
+        app,
+        "open",
+        label(l, "open"),
+        true,
+        None::<&str>,
+    )?)?;
+    menu.append(&MenuItem::with_id(
+        app,
+        "start",
+        label(l, "start"),
+        matches!(state, "stopped" | "failed"),
+        None::<&str>,
+    )?)?;
+    menu.append(&MenuItem::with_id(
+        app,
+        "stop",
+        label(l, "stop"),
+        matches!(state, "ready" | "degraded"),
+        None::<&str>,
+    )?)?;
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&MenuItem::with_id(
+        app,
+        "quit",
+        label(l, "quit"),
+        true,
+        None::<&str>,
+    )?)?;
+    Ok(menu)
 }
 
 pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let (lang_tx, lang_rx) = tokio::sync::watch::channel(String::from("en"));
     app.manage(TrayLanguage(lang_tx));
-    let l = labels("en");
-    let status = MenuItem::with_id(
-        app,
-        "status",
-        engine_label(&l, "unknown"),
-        false,
-        None::<&str>,
-    )?;
-    let containers = MenuItem::with_id(app, "containers", "", false, None::<&str>)?;
-    let open = MenuItem::with_id(app, "open", label(&l, "open"), true, None::<&str>)?;
-    let start = MenuItem::with_id(app, "start", label(&l, "start"), true, None::<&str>)?;
-    let stop = MenuItem::with_id(app, "stop", label(&l, "stop"), true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", label(&l, "quit"), true, None::<&str>)?;
-    let menu = Menu::with_items(
-        app,
-        &[
-            &status,
-            &containers,
-            &PredefinedMenuItem::separator(app)?,
-            &open,
-            &start,
-            &stop,
-            &PredefinedMenuItem::separator(app)?,
-            &quit,
-        ],
-    )?;
+    let menu = build_menu(app, &labels("en"), "unknown", None)?;
 
     let tray = TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().cloned().expect("icône"))
         .tooltip("Solon")
         .menu(&menu)
-        .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| match event.id().as_ref() {
-            "open" => show_main(app),
-            "start" => {
-                tauri::async_runtime::spawn(async {
-                    let _ = service::call(ServiceCommand::Start).await;
-                });
+        .show_menu_on_left_click(true)
+        .on_menu_event(|app, event| {
+            let id = event.id().as_ref();
+            match id {
+                "open" => show_main(app),
+                "start" => {
+                    tauri::async_runtime::spawn(async {
+                        let _ = service::call(ServiceCommand::Start).await;
+                    });
+                }
+                "stop" => {
+                    tauri::async_runtime::spawn(async {
+                        let _ = service::call(ServiceCommand::Stop { force: false }).await;
+                    });
+                }
+                "quit" => app.exit(0),
+                _ => {
+                    // `c|<action>|<id>` : action sur un conteneur.
+                    let mut parts = id.splitn(3, '|');
+                    if let (Some("c"), Some(action), Some(cid)) =
+                        (parts.next(), parts.next(), parts.next())
+                    {
+                        let docker: Arc<DockerState> =
+                            app.state::<Arc<DockerState>>().inner().clone();
+                        let (action, cid) = (action.to_owned(), cid.to_owned());
+                        tauri::async_runtime::spawn(async move {
+                            if let Err(e) = docker.tray_action(&action, &cid).await {
+                                tracing::warn!("barre des tâches : {action} {cid} : {e}");
+                            }
+                        });
+                    }
+                }
             }
-            "stop" => {
-                tauri::async_runtime::spawn(async {
-                    let _ = service::call(ServiceCommand::Stop { force: false }).await;
-                });
-            }
-            "quit" => app.exit(0),
-            _ => {}
         })
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::DoubleClick { .. } = event {
@@ -130,17 +224,9 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         })
         .build(app)?;
 
-    let items = Arc::new(TrayItems {
-        status,
-        containers,
-        open,
-        start,
-        stop,
-        quit,
-    });
     let app_handle = app.clone();
     tauri::async_runtime::spawn(async move {
-        follow_state(app_handle, tray, items, lang_rx).await;
+        follow_state(app_handle, tray, lang_rx).await;
     });
     Ok(())
 }
@@ -153,11 +239,11 @@ pub fn show_main<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-/// Suit l'état du service (reconnexion automatique) et la langue, et met à jour le menu.
+/// Suit l'état du service (reconnexion automatique), la liste des conteneurs et la langue ;
+/// reconstruit le menu quand l'un d'eux change.
 async fn follow_state<R: Runtime>(
     app: AppHandle<R>,
     tray: tauri::tray::TrayIcon<R>,
-    items: Arc<TrayItems<R>>,
     mut lang_rx: tokio::sync::watch::Receiver<String>,
 ) {
     let docker: Arc<DockerState> = app.state::<Arc<DockerState>>().inner().clone();
@@ -175,47 +261,49 @@ async fn follow_state<R: Runtime>(
 
     let mut l = labels(&lang_rx.borrow().clone());
     let mut state = String::from("unknown");
-    let mut count: Option<u64> = None;
-    let mut ticker = tokio::time::interval(Duration::from_secs(5));
+    let mut containers: Option<Vec<TrayContainer>> = None;
+    let mut ticker = tokio::time::interval(Duration::from_secs(3));
     loop {
-        tokio::select! {
+        let changed = tokio::select! {
             Some(ev) = rx.recv() => {
-                match ev.get("event").and_then(|e| e.as_str()) {
-                    Some("state") => {
-                        state = ev.get("state").and_then(|s| s.as_str()).unwrap_or("unknown").to_owned();
-                    }
-                    Some("service_unavailable") => state = "service_unavailable".into(),
+                let new_state = match ev.get("event").and_then(|e| e.as_str()) {
+                    Some("state") => ev.get("state").and_then(|s| s.as_str()).unwrap_or("unknown").to_owned(),
+                    Some("service_unavailable") => "service_unavailable".to_owned(),
                     _ => continue,
-                }
+                };
+                let changed = new_state != state;
+                state = new_state;
                 if state != "ready" {
-                    count = None;
+                    containers = None;
                 }
+                changed
             }
             Ok(()) = lang_rx.changed() => {
                 l = labels(&lang_rx.borrow().clone());
-                let _ = items.open.set_text(label(&l, "open"));
-                let _ = items.start.set_text(label(&l, "start"));
-                let _ = items.stop.set_text(label(&l, "stop"));
-                let _ = items.quit.set_text(label(&l, "quit"));
+                true
             }
             _ = ticker.tick() => {
                 if state == "ready" {
-                    count = docker.running_count().await.map(|c| c as u64);
+                    let fresh = docker.tray_containers().await;
+                    let changed = fresh != containers;
+                    containers = fresh;
+                    changed
+                } else {
+                    false
                 }
             }
+        };
+        if !changed {
+            continue;
         }
         let status = engine_label(&l, &state);
-        let _ = items.status.set_text(&status);
-        let _ = items
-            .start
-            .set_enabled(matches!(state.as_str(), "stopped" | "failed"));
-        let _ = items
-            .stop
-            .set_enabled(matches!(state.as_str(), "ready" | "degraded"));
         let _ = tray.set_tooltip(Some(format!("Solon — {status}")));
-        let _ = items
-            .containers
-            .set_text(count.map(|c| containers_label(&l, c)).unwrap_or_default());
+        match build_menu(&app, &l, &state, containers.as_deref()) {
+            Ok(menu) => {
+                let _ = tray.set_menu(Some(menu));
+            }
+            Err(e) => tracing::warn!("menu de la barre des tâches : {e}"),
+        }
     }
 }
 
@@ -230,7 +318,15 @@ mod tests {
             assert!(!engine_label(&l, "ready").contains("{{"));
             assert!(!engine_label(&l, "bizarre").contains("state_"));
             assert!(containers_label(&l, 3).contains('3'));
-            assert_ne!(label(&l, "quit"), "quit");
+            for key in [
+                "quit",
+                "container_start",
+                "container_restart",
+                "container_stop",
+                "containers_more",
+            ] {
+                assert_ne!(label(&l, key), key, "clé tray.{key} absente en {lang}");
+            }
         }
     }
 }

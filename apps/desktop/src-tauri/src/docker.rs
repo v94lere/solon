@@ -43,6 +43,14 @@ pub struct DockerState {
 
 pub type State<'a> = tauri::State<'a, Arc<DockerState>>;
 
+/// Résumé d'un conteneur pour le menu de la barre des tâches.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TrayContainer {
+    pub id: String,
+    pub name: String,
+    pub running: bool,
+}
+
 impl DockerState {
     async fn docker(&self) -> Result<Docker, String> {
         let mut guard = self.client.lock().await;
@@ -65,6 +73,44 @@ impl DockerState {
             .await
             .ok()
             .map(|l| l.len())
+    }
+
+    /// Tous les conteneurs, en marche d'abord puis par nom (menu de la barre des tâches) ;
+    /// `None` si Docker ne répond pas.
+    pub async fn tray_containers(&self) -> Option<Vec<TrayContainer>> {
+        use bollard::models::ContainerSummaryStateEnum as S;
+        let docker = self.docker().await.ok()?;
+        let list = docker
+            .list_containers(Some(
+                ListContainersOptionsBuilder::default().all(true).build(),
+            ))
+            .await
+            .ok()?;
+        let mut v: Vec<TrayContainer> = list
+            .into_iter()
+            .map(|c| TrayContainer {
+                id: c.id.unwrap_or_default(),
+                name: c
+                    .names
+                    .and_then(|n| n.first().cloned())
+                    .map(|n| n.trim_start_matches('/').to_owned())
+                    .unwrap_or_default(),
+                running: matches!(c.state, Some(S::RUNNING | S::RESTARTING | S::PAUSED)),
+            })
+            .collect();
+        v.sort_by(|a, b| b.running.cmp(&a.running).then_with(|| a.name.cmp(&b.name)));
+        Some(v)
+    }
+
+    /// Action simple sur un conteneur depuis la barre des tâches.
+    pub async fn tray_action(&self, action: &str, id: &str) -> Result<(), String> {
+        let docker = self.docker().await?;
+        match action {
+            "start" => docker.start_container(id, None).await.map_err(err),
+            "restart" => docker.restart_container(id, None).await.map_err(err),
+            "stop" => docker.stop_container(id, None).await.map_err(err),
+            other => Err(format!("action inconnue : {other}")),
+        }
     }
 
     fn next(&self) -> u64 {

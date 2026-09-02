@@ -130,7 +130,7 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 ### 1.10 Résultats du bloc 6 (livraison, 3 septembre 2026)
 
 - Livrables : `README.md` (prérequis, installation, dépannage par code), `CONTRIBUTING.md`, `LICENSE` (Apache-2.0), ce document, `docs/measurements.md`, installeur NSIS `Solon_0.1.0_x64-setup.exe` (80 Mo) construit et testé (§1.9), chaîne de signature prête mais non exercée (pas de certificat).
-- Barre des tâches traduite (anglais/français, suit la langue de l'interface, libellés lus dans les mêmes fichiers de langue que le frontend) ; icône définitive (colonne, référence au législateur athénien) générée pour toutes les tailles.
+- Barre des tâches traduite (anglais/français, suit la langue de l'interface, libellés lus dans les mêmes fichiers de langue que le frontend) ; à la demande de l'utilisateur, un clic sur l'icône ouvre un menu natif listant les conteneurs (en marche d'abord, 12 au plus) avec Démarrer / Redémarrer / Arrêter par conteneur, menu reconstruit toutes les 3 s si la liste change ; icône définitive (colonne, référence au législateur athénien) générée pour toutes les tailles.
 - Limites connues consignées dans le README : sortie Compose non diffusée en flux, UDP non relayé, une machine par hôte, Windows Famille exclu, identifiants Docker Hub du CLI hérités de Docker Desktop.
 
 ---

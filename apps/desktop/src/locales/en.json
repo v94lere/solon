@@ -272,6 +272,10 @@
     "open": "Open Solon",
     "start": "Start engine",
     "stop": "Stop engine",
-    "quit": "Quit Solon"
+    "quit": "Quit Solon",
+    "container_start": "Start",
+    "container_restart": "Restart",
+    "container_stop": "Stop",
+    "containers_more": "… and {{count}} more (open Solon)"
   }
 }

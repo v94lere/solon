@@ -84,8 +84,9 @@ cd apps\desktop; npm run tauri dev
 - **Images, Volumes, Réseaux** : liste, création, inspection, suppression (toujours avec confirmation).
 - **Réglages** : langue (anglais par défaut, français), mémoire et processeurs du moteur, limite de
   stockage, démarrage à l'ouverture de session.
-- **Barre des tâches** : état, nombre de conteneurs en marche, démarrer/arrêter, ouvrir, quitter, dans la
-  langue de l'interface. Fermer la fenêtre laisse Solon actif dans la barre des tâches.
+- **Barre des tâches** : un clic sur l'icône ouvre le menu : état du moteur, nombre de conteneurs en
+  marche, **chaque conteneur avec Démarrer / Redémarrer / Arrêter**, ouvrir Solon, démarrer ou arrêter le
+  moteur, quitter. Dans la langue de l'interface. Fermer la fenêtre laisse Solon actif dans la barre des tâches.
 
 CLI `docker` existant :
 
