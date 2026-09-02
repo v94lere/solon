@@ -127,6 +127,12 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 - Mesure honnête : le plancher mémoire au repos reste **426 Mo** malgré les hints (ballon et signalement de pages libres actifs dans l'invité) ; voir `docs/measurements.md` pour l'analyse et les pistes.
 - Reste fragile : pas encore testé sur une machine où Hyper-V est **désactivé** (chemin « activation + redémarrage » de `setup.ps1`) ni sur Windows Famille ; installeur non signé (SmartScreen).
 
+### 1.10 Résultats du bloc 6 (livraison, 3 septembre 2026)
+
+- Livrables : `README.md` (prérequis, installation, dépannage par code), `CONTRIBUTING.md`, `LICENSE` (Apache-2.0), ce document, `docs/measurements.md`, installeur NSIS `Solon_0.1.0_x64-setup.exe` (80 Mo) construit et testé (§1.9), chaîne de signature prête mais non exercée (pas de certificat).
+- Barre des tâches traduite (anglais/français, suit la langue de l'interface, libellés lus dans les mêmes fichiers de langue que le frontend) ; icône définitive (colonne, référence au législateur athénien) générée pour toutes les tailles.
+- Limites connues consignées dans le README : sortie Compose non diffusée en flux, UDP non relayé, une machine par hôte, Windows Famille exclu, identifiants Docker Hub du CLI hérités de Docker Desktop.
+
 ---
 
 ## 2. Virtualisation : choix et justification
@@ -384,9 +390,9 @@ MVP : flux `bollard` `/containers/{id}/stats?stream=1` par conteneur en marche, 
 
 ## 11. Packaging et signature
 
-- **NSIS** via le bundler Tauri (`installMode: perMachine`, donc élevé), hooks `installer/hooks.nsh` → `installer/setup.ps1` : vérification et activation des fonctionnalités (`Microsoft-Hyper-V`, `VirtualMachinePlatform`) avec drapeau « redémarrage requis » (code 3010 → `SetRebootFlag`) ; enregistrement des GUID HvSocket (5000–5003, 9000–9199) ; installation et démarrage de `SolonService` (Automatique). L'image (`vmlinuz`, `initrd.img`, `rootfs.vhd`, `manifest.json`) et `solon-service.exe` sont installés **dans le dossier d'installation** ; le service cherche `image\` à côté de son exécutable avant `%ProgramData%\Solon\image`. Les données (`data.vhdx`, `state.json`, `settings.json`, journaux) restent dans `%ProgramData%\Solon`. Désinstallation : arrêt et suppression du service (qui arrête la machine et détache le réseau), **question explicite** avant de supprimer `%ProgramData%\Solon`.
-- Taille : image ~324 Mo décompressée (rootfs 307 Mo, très compressible), installeur attendu ~100 Mo. Embarquée : un seul fichier, aucun téléchargement, cohérent avec « zéro requête sortante ».
-- **Signature** : `bundle.windows.signCommand` dans `tauri.conf.json` vers `signtool` (certificat OV/EV en HSM ou Azure Trusted Signing). Sans certificat, SmartScreen avertira ; la réputation ne se construit qu'avec un certificat stable.
+- **NSIS** via le bundler Tauri (`installMode: perMachine`, donc élevé), hooks `installer/hooks.nsh` → `installer/setup.ps1` : vérification et activation des fonctionnalités (`Microsoft-Hyper-V`, `VirtualMachinePlatform`) avec drapeau « redémarrage requis » (code 3010 → `SetRebootFlag`) ; installation et démarrage de `SolonService` (Automatique). Aucun enregistrement HvSocket dans le registre : toutes les connexions sont ouvertes par l'hôte. L'image (`vmlinuz`, `initrd.img`, `rootfs.vhd`, `manifest.json`) et `solon-service.exe` sont installés **dans le dossier d'installation** ; le service cherche `image\` à côté de son exécutable avant `%ProgramData%\Solon\image`. Les données (`data.vhdx`, `state.json`, `settings.json`, journaux) restent dans `%ProgramData%\Solon`. Désinstallation : arrêt et suppression du service (qui arrête la machine et détache le réseau), **question explicite** avant de supprimer `%ProgramData%\Solon` (réponse par défaut : conserver, y compris en mode silencieux).
+- Taille mesurée : **80 Mo** d'installeur pour 324 Mo décompressés (rootfs 307 Mo). Embarquée : un seul fichier, aucun téléchargement, cohérent avec « zéro requête sortante ».
+- **Signature** : configuration séparée `apps/desktop/src-tauri/tauri.signed.conf.json` (`bundle.windows.signCommand` → `installer/sign.ps1`, `signtool` avec certificat OV/EV du magasin ou Azure Trusted Signing, horodatage RFC 3161) ; construire avec `npm run tauri build -- --config src-tauri/tauri.signed.conf.json`. Tauri signe alors `solon.exe`, l'installeur et le désinstalleur ; `solon-service.exe` étant une ressource, `sign.ps1` doit aussi lui être appliqué avant la construction (`installer/sign.ps1 -Path target\release\solon-service.exe`). Sans certificat, SmartScreen avertira ; la réputation ne se construit qu'avec un certificat stable.
 - **Mises à jour** : hors MVP (impliquerait une requête réseau). Une nouvelle version se distribue par un nouvel installeur qui conserve `data.vhdx`.
 
 ---
@@ -404,6 +410,8 @@ MVP : flux `bollard` `/containers/{id}/stats?stream=1` par conteneur en marche, 
 | **5 — Durcissement** | Catalogue d'erreurs, VPN/MTU, antivirus, entreprise, accessibilité, revue sécurité (ACL pipe, entrées RPC) | Chaque code d'erreur a un test et un texte |
 | **6 — Livraison** | README, ARCHITECTURE (ce document mis à jour avec les mesures), CONTRIBUTING, LICENSE Apache-2.0, NSIS, signature | Installation propre sur une machine Windows Pro vierge |
 
+État au 3 septembre 2026 : blocs 0a à 6 livrés et validés sur la machine de test (voir §1.3 à §1.10). Le critère « machine Windows Pro vierge » n'a pu être vérifié que partiellement : la machine de test avait déjà Hyper-V activé (le chemin « activation + redémarrage » de `setup.ps1` reste à éprouver ailleurs).
+
 Git : dépôt déjà initialisé (`main`), commits atomiques par bloc et par crate, messages en français au format `type(portée): résumé` (ex. `feat(vm-hcs): création du compute system`).
 
 ---
@@ -414,10 +422,10 @@ Git : dépôt déjà initialisé (`main`), commits atomiques par bloc et par cra
 |---|---|---|---|---|
 | R1 | Performance 9P insuffisante pour les cas d'usage Node/PHP/Python volumineux | Élevée | Perception « plus lent que Docker Desktop WSL2 » sur les montages | Mesurer au bloc 0b ; volumes nommés mis en avant ; interface remplaçable ; chantier post-MVP (sync ou 9P/FUSE maison) |
 | R2 | Windows Home exclu | Certaine pour le MVP | Part de marché grand public | Message clair ; phase 2 : serveur de fichiers maison sur HvSocket (VM HCS seule semble démarrer sur Home : à vérifier en VM imbriquée) ou OpenVMM/WHP |
-| R3 | HvSocket incompatible avec Tokio/mio | Faible | Code de relais plus lourd | Repli : threads bloquants dédiés au relais |
-| R4 | Champs HCS (`LinuxKernelDirect`, hints mémoire, `Plan9`) rejetés par certaines builds Windows | Faible à moyenne | Provisionnement qui échoue sur certaines versions | Matrice de versions testée ; document HCS adaptatif selon `SchemaVersion` supportée ; Windows 10 22H2 vérifié en VM imbriquée |
+| R3 | HvSocket incompatible avec Tokio/mio | **Levé** (bloc 0b) | — | `TcpStream::from_raw_socket` + `tokio::net::TcpStream::from_std` fonctionnent ; RTT ~450 µs |
+| R4 | Champs HCS (`LinuxKernelDirect`, hints mémoire, `Plan9`) rejetés par certaines builds Windows | Faible à moyenne (validé sur Windows 11 Pro 26200 seulement) | Provisionnement qui échoue sur certaines versions | Matrice de versions testée ; document HCS adaptatif selon `SchemaVersion` supportée ; Windows 10 22H2 vérifié en VM imbriquée |
 | R5 | Conflits réseau HNS (VPN, Docker Desktop, plages IP) | Moyenne | `docker pull` échoue | Plage dynamique, MTU, diagnostic ; pile utilisateur post-MVP |
-| R6 | Budget RAM < 500 Mo non atteint | Moyenne | Exigence non fonctionnelle ratée | Rootfs en VHDX (pas en RAM), ballon, `drop_caches`, mesure honnête et ajustement de la cible |
+| R6 | Budget RAM < 500 Mo non atteint | **Mesuré** : plancher 426 Mo au repos, 514 Mo juste après activité | Exigence tenue de justesse | Ballon et hints actifs sans gain sur le plancher ; pistes : 1 Go par défaut, compactage mémoire invité (§1.9, `docs/measurements.md`) |
 | R7 | Antivirus/EDR qui bloque le service, les VHDX ou HvSocket | Moyenne en entreprise | Échec silencieux | Détection par HRESULT, messages d'exclusion, signature du binaire |
 | R8 | Compilation du noyau trop longue en CI | Faible | Cadence de sécurité ralentie | Cache `ccache`, image de build épinglée, repli `linux-virt` |
 | R9 | Certificat de signature indisponible | Dépend de toi | Alertes SmartScreen | Chaîne prête ; certificat à acquérir |

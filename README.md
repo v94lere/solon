@@ -7,8 +7,8 @@ en quelques secondes dans une machine minuscule et invisible, gérée entièreme
 Solon **n'est pas** une interface pour un Docker Desktop déjà installé. Il remplace Docker Desktop :
 moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une icône dans la barre des tâches.
 
-> État du projet (septembre 2026) : **MVP fonctionnel en développement**. Les sept fonctionnalités du MVP
-> sont opérationnelles sur la machine de test ; l'installeur signé est en cours (voir « Installation »).
+> État du projet (3 septembre 2026) : **MVP 0.1.0**. Les sept fonctionnalités sont opérationnelles et
+> l'installeur a été testé sur la machine de développement (Windows 11 Pro). Non signé pour l'instant.
 
 ## Ce que Solon fait
 
@@ -36,12 +36,19 @@ contexte `docker` par défaut.
 
 ## Installation
 
-### Installeur (cible de la version 0.1)
+### Installeur
 
-Un installeur **NSIS** (`Solon-0.1.0-setup.exe`) qui : active les composants Windows nécessaires
-(redémarrage si besoin), installe le service `SolonService`, copie l'image Linux embarquée, et crée le
-raccourci de l'application. Voir `ARCHITECTURE.md` §11. Tant que le binaire n'est pas signé, Windows
-SmartScreen affichera un avertissement au premier lancement.
+`Solon_0.1.0_x64-setup.exe` (80 Mo, produit par `npm run tauri build` dans `apps/desktop`, sorti dans
+`target/release/bundle/nsis/`). Il demande l'élévation une fois, puis : active les composants Windows
+nécessaires (un redémarrage peut être demandé), installe le service `SolonService`, copie l'image Linux et
+crée le raccourci. Installation silencieuse : `Solon_0.1.0_x64-setup.exe /S`.
+
+La version de développement **n'est pas signée** : Windows SmartScreen affichera « Windows a protégé votre
+ordinateur » ; cliquez « Informations complémentaires » puis « Exécuter quand même ». La chaîne de signature
+est prête (`installer/sign.ps1`, `tauri.signed.conf.json`) et s'active dès qu'un certificat est disponible.
+
+Désinstallation : Paramètres → Applications → Solon. Le désinstalleur arrête le moteur, retire le service et
+**demande** avant de supprimer vos images et volumes (`%ProgramData%\Solon`) ; par défaut ils sont conservés.
 
 ### Depuis les sources (développeurs)
 
@@ -77,8 +84,8 @@ cd apps\desktop; npm run tauri dev
 - **Images, Volumes, Réseaux** : liste, création, inspection, suppression (toujours avec confirmation).
 - **Réglages** : langue (anglais par défaut, français), mémoire et processeurs du moteur, limite de
   stockage, démarrage à l'ouverture de session.
-- **Barre des tâches** : état, nombre de conteneurs en marche, démarrer/arrêter, ouvrir, quitter.
-  Fermer la fenêtre laisse Solon actif dans la barre des tâches.
+- **Barre des tâches** : état, nombre de conteneurs en marche, démarrer/arrêter, ouvrir, quitter, dans la
+  langue de l'interface. Fermer la fenêtre laisse Solon actif dans la barre des tâches.
 
 CLI `docker` existant :
 
@@ -123,6 +130,22 @@ Les messages de l'interface portent un **code stable** ; les journaux sont dans
 Coupure de courant ou arrêt brutal : au démarrage suivant, Solon vérifie et répare le disque de données
 (`fsck`), puis redémarre le moteur. Les écritures non synchronisées des deux dernières secondes peuvent être
 perdues, comme sur toute machine Linux.
+
+## Limites connues (version 0.1)
+
+- **Windows Famille** n'est pas pris en charge (composant Hyper-V absent).
+- **Sortie de Compose** affichée à la fin de la commande, pas en flux ; un `docker compose up` long paraît figé
+  jusqu'à la fin. Utilisez le CLI `docker compose` dans un terminal si vous voulez suivre en direct.
+- **Ports UDP** publiés non relayés vers `localhost` (TCP seulement).
+- **Un seul moteur par machine**, pas de profils multiples.
+- **Montages de dossiers Windows** : métadonnées lentes (voir plus haut) ; les chemins `C:\...` passés à
+  `docker run -v` depuis le CLI ne sont pas encore traduits automatiquement, utilisez l'interface ou le chemin
+  `/mnt/host/c/...`.
+- **Docker Hub** : le CLI `docker` de Windows peut réutiliser des identifiants périmés stockés par Docker
+  Desktop (voir « Utilisation »).
+- **Installeur non signé** (avertissement SmartScreen) ; le chemin « activation de Hyper-V puis redémarrage »
+  n'a pas encore été éprouvé sur une machine vierge.
+- Pas de mise à jour automatique (aucune requête réseau) : installer la nouvelle version par-dessus.
 
 ## Documentation
 
