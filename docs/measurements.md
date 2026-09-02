@@ -311,3 +311,24 @@ des blocs de 2 Mo signalables. Non fait au MVP : 426–516 Mo reste le budget an
   message dans les deux langues, sinon `cargo test -p solon` échoue.
 - Le registre ECR public limite les tirages anonymes (`toomanyrequests`) : les tests de bout en bout doivent
   tolérer cet échec ou utiliser une image déjà présente.
+
+## Bloc 6 — livraison (3 septembre 2026)
+
+### Installeur final `Solon_0.1.0_x64-setup.exe` (80 Mo), mise à jour par-dessus l'installation du bloc 5
+
+| Étape | Résultat |
+|---|---|
+| Installation silencieuse `/S` par-dessus une version installée (service en marche) | **16 s**, code 0 ; hook pré-installation arrête le service, `setup.ps1` le réinstalle et le redémarre ; données de `%ProgramData%\Solon` conservées (image busybox déjà présente au test suivant) |
+| Moteur prêt (service Windows réel, rattachement du disque existant) | 3 435 ms |
+| Scénario `e2e.ps1` complet (prérequis, `docker` non élevé, pull, port 8080, retrait du port, arrêt propre) | **9/9 OK** ; pull 960 ms ; première réponse HTTP 2,3 s ; arrêt propre 634 ms |
+| Mémoire au repos 60 s après activité | 494 Mo (vmmem) + 16 Mo (service) = 510 Mo |
+
+### Faits établis par le bloc 6
+
+- **Une mise à jour doit arrêter le service avant la copie des fichiers** : le bundler NSIS de Tauri ferme
+  l'application mais ignore le service, qui tient `solon-service.exe` ouvert. Hook `NSIS_HOOK_PREINSTALL` ajouté.
+- Le menu de la barre des tâches lit ses libellés dans les mêmes fichiers `locales/*.json` que le frontend
+  (`include_str!`) : une seule source de traduction, couverte par le test de parité des clés.
+- `tauri icon` accepte un SVG et régénère toutes les tailles (Windows, macOS, mobiles) ; les jeux Android/iOS
+  ont été retirés du dépôt (hors périmètre).
+
