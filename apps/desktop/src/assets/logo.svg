@@ -1,13 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Solon">
   <defs>
     <radialGradient id="orb" cx="50%" cy="42%" r="60%">
       <stop offset="0" stop-color="#5b9dff"/>
       <stop offset="0.55" stop-color="#3b7cf6"/>
       <stop offset="1" stop-color="#2f6be6"/>
-    </radialGradient>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0.86" stop-color="#3b82f6" stop-opacity="0.55"/>
-      <stop offset="1" stop-color="#3b82f6" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="topL" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#a9d0ff"/>
@@ -34,21 +30,14 @@
       <stop offset="1" stop-color="#173586"/>
     </linearGradient>
   </defs>
-  <!-- halo doux puis orbe -->
-  <circle cx="512" cy="512" r="500" fill="url(#glow)"/>
-  <circle cx="512" cy="512" r="430" fill="url(#orb)"/>
-  <!-- cube isométrique : sommet T, gauche L, droite R, centre C, bas B, coins bas LB / RB -->
+  <circle cx="512" cy="512" r="500" fill="url(#orb)"/>
   <g stroke-linejoin="round">
-    <!-- face du dessus, deux facettes -->
     <polygon points="512,200 236,352 512,504" fill="url(#topL)"/>
     <polygon points="512,200 788,352 512,504" fill="url(#topR)"/>
-    <!-- face gauche -->
     <polygon points="236,352 512,504 512,808" fill="url(#leftA)"/>
     <polygon points="236,352 236,656 512,808" fill="url(#leftB)"/>
-    <!-- face droite -->
     <polygon points="512,504 788,352 512,808" fill="url(#rightA)"/>
     <polygon points="788,352 788,656 512,808" fill="url(#rightB)"/>
-    <!-- arête lumineuse du dessus -->
     <polyline points="236,352 512,200 788,352" fill="none" stroke="#dbeafe" stroke-opacity="0.9" stroke-width="12" stroke-linecap="round"/>
   </g>
 </svg>

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* Solon — direction Fluent / Windows 11 : densité élevée, surfaces en couches, pas d'ornement.
-   Thème clair par défaut, sombre selon la préférence système ou le réglage. */
+/* Solon — direction OrbStack : accent bleu tiré du logo, surfaces claires très légèrement teintées,
+   coins arrondis doux, barre latérale calme. Thème clair par défaut, sombre selon le système ou le réglage. */
 
 @theme {
   --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
@@ -10,71 +10,76 @@
 
 :root {
   color-scheme: light dark;
-  --bg: #f3f3f3;
+  --bg: #f5f6fa;
   --surface: #ffffff;
-  --surface-2: #f9f9f9;
-  --surface-3: #ebebeb;
-  --ink: #1b1b1b;
-  --ink-2: #5f5f5f;
-  --ink-3: #6b6b6b;
-  --line: #e0e0e0;
-  --line-strong: #c9c9c9;
-  --accent: #0b6b7a;
-  --accent-ink: #0b6b7a;
-  --accent-soft: #dfeff1;
-  --ok: #2e7d32;
-  --ok-soft: #e4f2e5;
+  --surface-2: #f7f8fc;
+  --surface-3: #eceef5;
+  --sidebar: #eef1f8;
+  --ink: #17181c;
+  --ink-2: #5c606b;
+  --ink-3: #6b7080;
+  --line: #e3e6ee;
+  --line-strong: #cfd4e0;
+  --accent: #2f6ff0;
+  --accent-ink: #1f5ad8;
+  --accent-soft: #e4ecfd;
+  --ok: #1f8f43;
+  --ok-soft: #e1f5e7;
   --warn: #9a6700;
   --warn-soft: #fbf1d3;
-  --bad: #b3261e;
-  --bad-soft: #fbe3e1;
-  --focus: #0b6b7a;
+  --bad: #c62828;
+  --bad-soft: #fde5e3;
+  --focus: #2f6ff0;
+  --radius: 8px;
+  --radius-lg: 12px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #202020;
-    --surface: #2b2b2b;
-    --surface-2: #323232;
-    --surface-3: #3a3a3a;
-    --ink: #f0f0f0;
-    --ink-2: #b8b8b8;
-    --ink-3: #8f8f8f;
-    --line: #3d3d3d;
-    --line-strong: #505050;
-    --accent: #5cc6d3;
-    --accent-ink: #7ed4de;
-    --accent-soft: #163a40;
-    --ok: #8ccb97;
-    --ok-soft: #1d3320;
+    --bg: #17181d;
+    --surface: #1f2128;
+    --surface-2: #23262e;
+    --surface-3: #2b2f39;
+    --sidebar: #1b1d24;
+    --ink: #eef0f5;
+    --ink-2: #aab0be;
+    --ink-3: #868d9c;
+    --line: #2d313c;
+    --line-strong: #3b404d;
+    --accent: #5b8dff;
+    --accent-ink: #8db1ff;
+    --accent-soft: #1f2c4d;
+    --ok: #6fd18a;
+    --ok-soft: #173424;
     --warn: #e0b060;
     --warn-soft: #3a2f12;
     --bad: #f08a80;
     --bad-soft: #3d1f1c;
-    --focus: #7ed4de;
+    --focus: #8db1ff;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #202020;
-  --surface: #2b2b2b;
-  --surface-2: #323232;
-  --surface-3: #3a3a3a;
-  --ink: #f0f0f0;
-  --ink-2: #b8b8b8;
-  --ink-3: #8f8f8f;
-  --line: #3d3d3d;
-  --line-strong: #505050;
-  --accent: #5cc6d3;
-  --accent-ink: #7ed4de;
-  --accent-soft: #163a40;
-  --ok: #8ccb97;
-  --ok-soft: #1d3320;
+  --bg: #17181d;
+  --surface: #1f2128;
+  --surface-2: #23262e;
+  --surface-3: #2b2f39;
+  --sidebar: #1b1d24;
+  --ink: #eef0f5;
+  --ink-2: #aab0be;
+  --ink-3: #868d9c;
+  --line: #2d313c;
+  --line-strong: #3b404d;
+  --accent: #5b8dff;
+  --accent-ink: #8db1ff;
+  --accent-soft: #1f2c4d;
+  --ok: #6fd18a;
+  --ok-soft: #173424;
   --warn: #e0b060;
   --warn-soft: #3a2f12;
   --bad: #f08a80;
   --bad-soft: #3d1f1c;
-  --focus: #7ed4de;
+  --focus: #8db1ff;
 }
 
 html,
@@ -103,8 +108,8 @@ select {
 
 :focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: 1px;
-  border-radius: 4px;
+  outline-offset: 2px;
+  border-radius: var(--radius);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -123,17 +128,19 @@ select {
   gap: 6px;
   height: 30px;
   padding: 0 12px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   border: 1px solid var(--line-strong);
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
+  font-weight: 500;
+  transition: background 120ms, border-color 120ms;
   white-space: nowrap;
 }
 .btn:hover { background: var(--surface-2); }
 .btn:disabled { opacity: 0.5; cursor: default; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn-primary:hover { filter: brightness(1.08); background: var(--accent); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(47, 111, 240, 0.25); }
+.btn-primary:hover { filter: brightness(1.06); background: var(--accent); }
 .btn-danger { color: var(--bad); border-color: var(--bad); }
 .btn-ghost { border-color: transparent; background: transparent; }
 .btn-ghost:hover { background: var(--surface-3); }
@@ -142,30 +149,31 @@ select {
 .input {
   height: 30px;
   padding: 0 10px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   border: 1px solid var(--line-strong);
   background: var(--surface);
   color: var(--ink);
   user-select: text;
 }
-.input:focus { border-color: var(--accent); }
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); outline: none; }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 2px rgba(20, 30, 60, 0.04);
 }
 
 .pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 20px;
-  padding: 0 8px;
-  border-radius: 10px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
   font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
 }
 .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .pill-ok { color: var(--ok); background: var(--ok-soft); }
@@ -198,3 +206,35 @@ select {
 /* xterm */
 .xterm { padding: 6px; }
 .xterm-viewport { background: transparent !important; }
+
+/* Barre latérale façon OrbStack */
+.sidebar {
+  background: var(--sidebar);
+  border-right: 1px solid var(--line);
+}
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 14px;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.sidebar-brand img { width: 28px; height: 28px; filter: drop-shadow(0 2px 6px rgba(47, 111, 240, 0.35)); }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  font-weight: 500;
+  text-align: left;
+  transition: background 120ms, color 120ms;
+}
+.nav-item:hover { background: var(--surface-3); color: var(--ink); }
+.nav-item[aria-current="page"] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.nav-item svg { width: 17px; height: 17px; flex: none; }
+.sidebar-foot { margin-top: auto; padding: 8px 10px; color: var(--ink-3); font-size: 11.5px; }

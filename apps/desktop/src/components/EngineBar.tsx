@@ -22,7 +22,7 @@ export function EngineBar() {
   }
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-3 border-b px-3" style={{ borderColor: "var(--line)", background: "var(--surface)" }} role="banner">
+    <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4" style={{ borderColor: "var(--line)", background: "var(--surface)" }} role="banner">
       <span className={`pill ${pill}`} aria-live="polite">
         {t(`engine.state.${state}`)}
       </span>
