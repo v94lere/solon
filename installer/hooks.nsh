@@ -20,7 +20,7 @@
   DetailPrint "Arrêt et suppression du service Solon…"
   nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\installer\setup.ps1" -InstallDir "$INSTDIR" -Uninstall'
   Pop $0
-  MessageBox MB_YESNO|MB_ICONQUESTION "Supprimer aussi les données des conteneurs (images, volumes) de Solon ?$\r$\nDossier : %ProgramData%\Solon" IDNO keep_data
+  MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 "Supprimer aussi les données des conteneurs (images, volumes) de Solon ?$\r$\nDossier : %ProgramData%\Solon" /SD IDNO IDNO keep_data
     nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "Remove-Item -Recurse -Force \"$$env:ProgramData\Solon\" -ErrorAction SilentlyContinue"'
   keep_data:
 !macroend

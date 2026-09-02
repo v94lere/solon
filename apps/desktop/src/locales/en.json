@@ -255,5 +255,23 @@
     "failed": "Needs attention",
     "warning": "Warning",
     "refresh": "Check again"
+  },
+  "tray": {
+    "engine": "Engine: {{state}}",
+    "state_ready": "running",
+    "state_starting": "starting…",
+    "state_stopping": "stopping…",
+    "state_degraded": "restarting",
+    "state_failed": "failed",
+    "state_stopped": "stopped",
+    "state_unknown": "unknown",
+    "service_unavailable": "Solon service not running",
+    "containers_zero": "No containers running",
+    "containers_one": "1 container running",
+    "containers_other": "{{count}} containers running",
+    "open": "Open Solon",
+    "start": "Start engine",
+    "stop": "Stop engine",
+    "quit": "Quit Solon"
   }
 }

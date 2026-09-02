@@ -255,5 +255,23 @@
     "failed": "Action nécessaire",
     "warning": "Avertissement",
     "refresh": "Vérifier à nouveau"
+  },
+  "tray": {
+    "engine": "Moteur : {{state}}",
+    "state_ready": "en marche",
+    "state_starting": "démarrage…",
+    "state_stopping": "arrêt…",
+    "state_degraded": "redémarrage",
+    "state_failed": "en échec",
+    "state_stopped": "arrêté",
+    "state_unknown": "inconnu",
+    "service_unavailable": "Le service Solon n'est pas en cours d'exécution",
+    "containers_zero": "Aucun conteneur en marche",
+    "containers_one": "1 conteneur en marche",
+    "containers_other": "{{count}} conteneurs en marche",
+    "open": "Ouvrir Solon",
+    "start": "Démarrer le moteur",
+    "stop": "Arrêter le moteur",
+    "quit": "Quitter Solon"
   }
 }

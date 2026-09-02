@@ -69,6 +69,14 @@ async fn service_exec(command: String, timeout_s: Option<u64>) -> Result<Value, 
     service::call(ServiceCommand::Exec { command, timeout_s }).await
 }
 
+/// Langue de l'interface, relayée à la barre des tâches.
+#[tauri::command]
+fn set_language(app: tauri::AppHandle, lang: String) {
+    if let Some(t) = tauri::Manager::try_state::<tray::TrayLanguage>(&app) {
+        let _ = t.0.send(lang);
+    }
+}
+
 #[tauri::command]
 fn paths_logs_dir() -> String {
     let base = std::env::var_os("ProgramData")
@@ -112,6 +120,7 @@ pub fn run() {
             settings_set,
             service_exec,
             paths_logs_dir,
+            set_language,
             docker::containers_list,
             docker::container_inspect,
             docker::container_start,
