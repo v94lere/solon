@@ -80,6 +80,13 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 - Sans élévation : `HCS_E_ACCESS_DENIED` immédiat, message Windows explicite. **Le service Windows est confirmé.**
 - Le noyau WSL2 a en dur tout ce dont Solon a besoin (hv_sock, 9P, balloon, page reporting, squashfs, overlay) sauf `BRIDGE` et `EROFS` (modules) : notre configuration les passera en `=y`. Le noyau Alpine `linux-virt` démarre aussi mais ses pilotes Hyper-V sont en modules : plan B confirmé, pas mieux.
 
+### 1.4 Résultats du bloc 0b (canal HvSocket et partage 9P, 2 septembre 2026)
+
+- **HvSocket** : connexion en 1 ms, aller-retour RPC ~450 µs (p99 < 900 µs), débit 2,3–2,7 Gio/s invité→hôte et 3,5–5 Gio/s hôte→invité. `tokio::net::TcpStream::from_std` accepte le socket : le service sera entièrement asynchrone. **Go** pour HvSocket et Tokio.
+- **9P (Plan9 HCS)** : débit séquentiel 280–450 Mio/s ; **métadonnées ~1,2–1,9 ms par opération** (`stat`, `create`, `open`), soit la classe de performance de `/mnt/c` sous WSL2. `msize` plus grand n'apporte rien ; `cache=loose` divise le coût des métadonnées par ~2,5 mais casse la cohérence. **Go conditionnel** : 9P pour le MVP comme prévu, avec le risque R1 confirmé par la mesure et l'UI qui oriente vers les volumes pour les dépendances et bases de données.
+- Un partage n'accepte **qu'une session 9P** (second montage : `EFAULT`) ; ajout/retrait à chaud de partages validés ; `ReadOnly` et `LinuxMetadata` (chmod conservé) validés ; écritures visibles instantanément des deux côtés.
+- L'agent invité (Rust, musl statique) se compile croisé depuis Windows avec `rust-lld`, sans chaîne C.
+
 ---
 
 ## 2. Virtualisation : choix et justification
@@ -187,7 +194,7 @@ Le service ouvre `\\.\pipe\solon` (ACL : SYSTEM + utilisateur interactif) et rel
 
 ### 5.2 Décision MVP et interface
 
-- MVP : **Plan9 HCS**, ajouté et retiré à chaud par `HcsModifyComputeSystem` (`ResourcePath=VirtualMachine/Devices/Plan9/Shares`), un partage **par lecteur** (`C:`, `D:`…) monté à la demande sous `/mnt/host/<lettre>` avec le drapeau `LinuxMetadata` (permissions POSIX stockées en attributs étendus NTFS). `AllowedFiles` et `RestrictFileAccess` sont évalués pour restreindre l'exposition aux dossiers réellement montés (à mesurer : coût d'un partage par dossier vs par lecteur).
+- MVP : **Plan9 HCS**, ajouté et retiré à chaud par `HcsModifyComputeSystem` (`ResourcePath=VirtualMachine/Devices/Plan9/Shares`), un partage **par lecteur** (`C:`, `D:`…) monté à la demande sous `/mnt/host/<lettre>` avec le drapeau `LinuxMetadata` (permissions POSIX stockées en attributs étendus NTFS). Contrainte mesurée au bloc 0b : **une seule session 9P par partage** (le second montage échoue avec `EFAULT`), donc exactement un montage par lecteur ; `msize=65536` (les tailles supérieures n'apportent rien) ; pas de `cache=loose` par défaut (incohérence avec les modifications faites côté Windows). `AllowedFiles` et `RestrictFileAccess` sont évalués pour restreindre l'exposition aux dossiers réellement montés (à mesurer : coût d'un partage par dossier vs par lecteur).
 - Interface Rust `HostShareProvider { fn expose(&self, host_path) -> Result<GuestPath>; fn release(...); fn stats(...) }` implémentée par `Plan9ShareProvider`. Les implémentations futures (`SyncShareProvider`, `SolonFsProvider`) ne changent ni l'agent ni l'UI.
 - **Mesures publiées dans le README** dès le bloc 0 : débit séquentiel, `stat` massif, `npm install` d'un projet type, `git status` sur un dépôt de 50 k fichiers, comparés à WSL2 `/mnt/c` et à un volume nommé.
 - Message honnête dans l'UI (sans mentionner de VM) : « Les fichiers Windows montés sont plus lents que les volumes Solon. Pour les dépendances et les bases de données, préférez un volume. »
