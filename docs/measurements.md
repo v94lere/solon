@@ -215,3 +215,31 @@ Sans le `sync()` périodique, la première exécution avait perdu **toutes** les
 secondes (compteur revenu à 0, conteneur en état « Created » car l'état de dockerd lui-même n'avait pas
 atteint le disque) : c'est le comportement ext4 `data=ordered` standard (validation toutes les 5 s). Le
 `sync()` toutes les 2 s dans l'agent ramène la fenêtre à ~2 s pour un coût négligeable au repos.
+
+## Bloc 3 — application de bureau (2 septembre 2026)
+
+Application Tauri v2 (React 19, TypeScript, Tailwind 4, i18n anglais/français) testée contre le service en
+mode console (build release) : captures dans la conversation de développement, pas de chiffres de
+performance spécifiques à ce bloc.
+
+### Validé à l'écran
+
+- Barre d'état du moteur alimentée par l'abonnement au service (aucun polling) ; boutons démarrer / redémarrer / arrêter.
+- Vue conteneurs : liste temps réel (invalidée par les événements Docker), filtre, groupe « projet Compose » via le
+  label `com.docker.compose.project`, statut, ports publiés, CPU et mémoire en direct (flux de statistiques agrégé
+  sur un seul canal), actions Démarrer / Arrêter / Redémarrer / Journaux / Supprimer.
+- Suppression avec boîte de confirmation accessible (`<dialog>`, Échap annule, option « volumes anonymes »).
+- Détail : journaux en flux avec suivi et horodatage, terminal `xterm.js` sur un exec hijacké bidirectionnel avec
+  redimensionnement du TTY, inspection JSON copiable.
+- Écran de première installation : étapes de provisionnement en direct, erreurs traduites par code stable avec
+  détails techniques et accès au dossier des journaux ; message dédié quand le service est absent.
+- Thème sombre suivant Windows, interface en anglais par défaut, français disponible dans les réglages.
+
+### Faits établis par le bloc 3
+
+- **`ERROR_PIPE_BUSY` (231)** : un named pipe serveur n'a qu'une instance libre à la fois entre deux connexions ;
+  une application qui ouvre plusieurs connexions en rafale doit réessayer (5 s, pas de 30 ms). Corrigé dans le
+  client de l'application et dans le CLI du service.
+- Les Channels Tauri v2 transportent sans difficulté les flux de journaux, de statistiques et le terminal
+  (octets en base64) ; chaque flux a un identifiant et une fermeture explicite au démontage de la vue.
+- `i18next` v26 attend les clés de pluriel `count_one` / `count_other` (plus `count_plural`).

@@ -141,31 +141,60 @@ export const containers = {
   logsOpen: (id: string, tail: number, timestamps: boolean, onChunk: (c: LogChunk) => void) => {
     const channel = new Channel<LogChunk>();
     channel.onmessage = onChunk;
-    return invoke<number>("logs_open", { id, tail, timestamps, channel });
+    return invoke<number>("logs_open", { id, tail, timestamps, channel }).then(trackStream);
   },
   statsOpen: (onSample: (s: StatSample) => void) => {
     const channel = new Channel<StatSample>();
     channel.onmessage = onSample;
-    return invoke<number>("stats_open", { channel });
+    return invoke<number>("stats_open", { channel }).then(trackStream);
   },
-  streamClose: (streamId: number) => invoke<void>("stream_close", { streamId }),
+  streamClose: (streamId: number) => {
+    untrackStream(streamId);
+    return invoke<void>("stream_close", { streamId });
+  },
   execOpen: (id: string, cmd: string[], cols: number, rows: number, onOutput: (o: ExecOutput) => void) => {
     const channel = new Channel<ExecOutput>();
     channel.onmessage = onOutput;
-    return invoke<number>("exec_open", { id, cmd, cols, rows, channel });
+    return invoke<number>("exec_open", { id, cmd, cols, rows, channel }).then(trackExec);
   },
   execInput: (execId: number, data: string) => invoke<void>("exec_input", { execId, data }),
   execResize: (execId: number, cols: number, rows: number) => invoke<void>("exec_resize", { execId, cols, rows }),
-  execClose: (execId: number) => invoke<void>("exec_close", { execId }),
+  execClose: (execId: number) => {
+    untrackExec(execId);
+    return invoke<void>("exec_close", { execId });
+  },
 };
 
 export const dockerEvents = {
   subscribe: (onEvent: (e: { action: string; type: string; id: string; name: string }) => void) => {
     const channel = new Channel<{ action: string; type: string; id: string; name: string }>();
     channel.onmessage = onEvent;
-    return invoke<number>("docker_events_open", { channel });
+    return invoke<number>("docker_events_open", { channel }).then(trackStream);
   },
 };
+
+// Flux ouverts côté Rust : fermés si la page se recharge (sinon les tâches continueraient à
+// envoyer vers des callbacks disparus).
+const openStreams = new Set<number>();
+const openExecs = new Set<number>();
+export function trackStream(id: number) {
+  openStreams.add(id);
+  return id;
+}
+export function untrackStream(id: number) {
+  openStreams.delete(id);
+}
+export function trackExec(id: number) {
+  openExecs.add(id);
+  return id;
+}
+export function untrackExec(id: number) {
+  openExecs.delete(id);
+}
+window.addEventListener("beforeunload", () => {
+  for (const id of openStreams) void invoke("stream_close", { streamId: id });
+  for (const id of openExecs) void invoke("exec_close", { execId: id });
+});
 
 export function bytesToBase64(bytes: Uint8Array): string {
   let bin = "";

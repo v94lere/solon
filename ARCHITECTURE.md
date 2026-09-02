@@ -103,6 +103,12 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 - **Temps de démarrage mesuré (build release) : 2,5–2,6 s** de l'ordre de démarrage au moteur Docker prêt, tout compris (prérequis, SHA-256 de l'image, réseau HNS, machine, agent, dockerd).
 - Trois découvertes documentées dans `docs/measurements.md` : `connect()` HvSocket bloqué 30 s sans `HVSOCKET_CONNECT_TIMEOUT` ; le CLI `docker events` ne vide pas sa sortie redirigée (lecture directe de `GET /events`) ; le CLI `docker` de Windows envoie des identifiants du gestionnaire d'identifiants Windows quand Docker Desktop est installé.
 
+### 1.7 Résultats du bloc 3 (application de bureau, 2 septembre 2026)
+
+- **Application Tauri v2 fonctionnelle** contre le vrai service : barre d'état alimentée par l'abonnement au service, écran de première installation avec les étapes en direct et les erreurs traduites par code, vue conteneurs temps réel (filtre, groupes Compose, CPU/RAM en flux), actions avec confirmation, journaux en flux, terminal `xterm.js` bidirectionnel avec redimensionnement, inspection, réglages, thème sombre/clair, **anglais par défaut et français**.
+- Aucune élévation dans l'application : tout passe par les deux named pipes du service ; le client réessaie sur `ERROR_PIPE_BUSY` (découverte du bloc).
+- Fonctionnalités MVP couvertes à ce stade : 1 (provisionnement), 2 (vue conteneurs), 3 (actions, logs, terminal). Restent 4, 5, 6, 7 pour le bloc 4.
+
 ---
 
 ## 2. Virtualisation : choix et justification

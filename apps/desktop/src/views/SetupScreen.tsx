@@ -40,7 +40,7 @@ export function SetupScreen() {
         </div>
       )}
 
-      {serviceAvailable && (state === "starting" || state === "stopping") && (
+      {serviceAvailable && state === "starting" && (
         <ol className="card divide-y p-2" style={{ borderColor: "var(--line)" }} aria-label={t("engine.state.starting")}>
           {STEPS.map((step, i) => {
             const done = i < currentIndex;
