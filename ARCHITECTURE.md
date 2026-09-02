@@ -123,7 +123,9 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 - **Réglages** appliqués au prochain démarrage du moteur sans redémarrer le service.
 - **Interface** : écran de démarrage avec le détail des prérequis (état, explication, action) ; contraste AA du texte secondaire relevé ; test `locales.rs` garantissant qu'aucun code d'erreur ni prérequis n'est sans traduction et que `en.json`/`fr.json` ont les mêmes clés.
 - **Installeur** : image et service installés à côté de l'exécutable (`<install>\image`, `<install>\solon-service.exe`), le service la trouve sans copie ; `installer/setup.ps1` (élevé) active les composants Windows, enregistre les GUID HvSocket et installe `SolonService` ; désinstallation avec question avant de supprimer `%ProgramData%\Solon`.
-- Reste fragile / à vérifier sur machine : démarrage en **vrai service Windows** (LocalSystem, session 0) et non en mode console — même code, mais l'environnement diffère (pas de `%USERPROFILE%`, ACL héritées) ; test de l'installeur bout en bout.
+- **Installeur testé de bout en bout** (`tests/e2e/install-test.ps1`) : installation silencieuse en 40 s, service Windows réel (LocalSystem, session 0) qui démarre le moteur en 4 s au premier lancement, `docker` accessible sans élévation, port publié relayé, arrêt propre.
+- Mesure honnête : le plancher mémoire au repos reste **426 Mo** malgré les hints (ballon et signalement de pages libres actifs dans l'invité) ; voir `docs/measurements.md` pour l'analyse et les pistes.
+- Reste fragile : pas encore testé sur une machine où Hyper-V est **désactivé** (chemin « activation + redémarrage » de `setup.ps1`) ni sur Windows Famille ; installeur non signé (SmartScreen).
 
 ---
 

@@ -18,6 +18,9 @@ $svc = Join-Path $InstallDir "solon-service.exe"
 if ($Uninstall) {
     Log "désinstallation : arrêt et suppression du service"
     & $svc uninstall 2>&1 | ForEach-Object { Log $_ }
+    # Nettoyage des enregistrements HvSocket créés par une ancienne version de ce script.
+    $base = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Virtualization\GuestCommunicationServices"
+    Get-ChildItem $base -ErrorAction SilentlyContinue | Where-Object { ($_ | Get-ItemProperty).ElementName -like "Solon vsock *" } | Remove-Item -Force
     exit 0
 }
 

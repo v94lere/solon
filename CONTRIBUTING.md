@@ -59,6 +59,7 @@ Toute modification du provisionnement, du réseau ou de l'agent doit passer `tes
 
 - **Langue** : code et identifiants en anglais ; commentaires, commits, documentation en français ;
   interface en anglais par défaut avec traduction française complète (le test `locales.rs` vérifie la parité).
+- **Scripts PowerShell** : toujours enregistrés en UTF-8 **avec BOM** (PowerShell 5.1 lit sinon les accents dans la page de codes ANSI et échoue à l'analyse) ; ne pas nommer une variable `$svc` ou `$root` à côté de `common.ps1` (casse ignorée).
 - **Commits atomiques**, format `type(portée): résumé` (`feat(service): …`, `fix(app): …`, `docs: …`).
 - **Codes d'erreur** : tout nouvel échec visible par l'utilisateur ajoute une variante à `ErrorCode`,
   un message dans `en.json` et `fr.json`, et une ligne dans le tableau de dépannage du README.

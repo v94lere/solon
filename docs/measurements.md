@@ -269,17 +269,45 @@ performance spécifiques à ce bloc.
 
 ## Bloc 5 — durcissement (2 septembre 2026)
 
-### Changements mesurables
+### Installeur NSIS et vrai service Windows (`tests/e2e/install-test.ps1`, release, image 0.1.0-dev.3)
 
-| Changement | Avant | Après | Statut |
-|---|---|---|---|
-| Hints mémoire HCS (`EnableColdDiscardHint`…) + `drop_caches` au repos | 426–516 Mo au repos (2 Go alloués) | à mesurer (`tests/e2e/e2e.ps1`) | démarrage à vérifier |
-| MTU 1400 (invité + conteneurs) | 1500 | 1400 | appliqué dans l'image 0.1.0-dev.3 |
-| SDDL des pipes | `AU` (tout utilisateur authentifié) | `IU` (session interactive) + SY + BA | accès `docker` non élevé à revérifier |
+| Étape | Résultat |
+|---|---|
+| Installation silencieuse `/S` (une fenêtre UAC) | 40 s, code 0 ; `C:\Program Files\Solon\{solon.exe, solon-service.exe, image\, installer\}` ; 80 Mo d'installeur (324 Mo décompressés) |
+| `setup.ps1` (élevé) | Hyper-V et Plateforme de machine virtuelle détectés « déjà activés » ; `SolonService` installé (Automatique) et démarré |
+| Premier démarrage du moteur par le **service Windows réel** (LocalSystem, session 0, disque de données créé et formaté) | prêt en **3 974 ms** (canal de contrôle) ; démarrages suivants : 1 144 ms (rattachement) |
+| `docker version` depuis un utilisateur non élevé (ACL `IU`) | OK (29.5.3) |
+| Port publié 8080 → conteneur, retrait à la suppression | OK (2,4 s jusqu'à la première réponse HTTP, image absente au départ) |
+| Arrêt propre | 673 ms |
+| `docker pull public.ecr.aws/…/busybox` | **échec `toomanyrequests: Rate exceeded`** : quota anonyme du registre ECR public, pas Solon (le `docker run` suivant a bien tiré l'image) |
+
+### Mémoire au repos (2 Go alloués, moteur sans conteneur, machine hôte au repos)
+
+| Instant | `vmmem` (working set) |
+|---|---|
+| +1 min après démarrage | 454 Mo |
+| +2 à +5 min | **426 Mo** (plancher stable) ; `solon-service` 16 Mo |
+
+Dans l'invité au même moment : `used` 105 Mo, `buff/cache` 97 Mo, `available` 1 737 Mo. `dmesg` confirme que le
+mécanisme est actif : `hv_balloon: Dynamic Memory protocol version 2.0`, `Free page reporting enabled`,
+`Cold memory discard hint enabled with order 9` (blocs de 2 Mo). **Les hints HCS n'ont pas abaissé le plancher**
+(426 Mo était déjà le minimum observé au bloc 2) : ~220 Mo restent tenus par l'hôte (pages fragmentées non
+signalables par blocs de 2 Mo, tables de pages, tampons de vmwp). Pistes si l'on veut descendre : allouer moins
+par défaut (1 Go), `drop_caches` plus agressif suivi d'un compactage (`/proc/sys/vm/compact_memory`) pour former
+des blocs de 2 Mo signalables. Non fait au MVP : 426–516 Mo reste le budget annoncé.
 
 ### Faits établis par le bloc 5
 
-- Les tests unitaires couvrent désormais le **catalogue d'erreurs** : chaque variante de `ErrorCode` doit avoir un message dans les deux langues, sinon `cargo test -p solon` échoue.
-- L'agent en PID 1 peut libérer le cache de pages sans effet visible sur les conteneurs quand la charge (loadavg 1 min) est inférieure à 0,2 ; la mémoire ne revient à l'hôte que si HCS a les hints activés (c'est le mécanisme de WSL2).
-- Les mesures restantes (mémoire au repos après hints, service Windows réel) sont bloquées par une fenêtre UAC et seront consignées ici.
-
+- **Le vrai service Windows fonctionne comme le mode console** : même provisionnement, mêmes pipes, moteur prêt en
+  moins de 4 s au premier démarrage (création + formatage du disque compris).
+- **PowerShell 5.1 exige un BOM UTF-8** pour tout script contenant des accents ; sans lui, `setup.ps1` échouait
+  en silence dans l'installeur (aucun journal, service absent). Règle notée dans `CONTRIBUTING.md`.
+- Les variables PowerShell sont insensibles à la casse : `$svc` a écrasé `$Svc` de `common.ps1`.
+- **Aucun enregistrement HvSocket dans le registre n'est nécessaire** : toutes les connexions sont ouvertes par
+  l'hôte, et les tests passent sans (la première version de `setup.ps1` en créait 204 en 26 s ; retirés).
+- Le ballon Hyper-V (`CONFIG_HYPERV_BALLOON=y`) et le signalement de pages libres sont actifs avec les hints
+  `EnableColdDiscardHint`/`EnableHotHint`/`EnableColdHint` ; ils n'apportent rien de mesurable sur le plancher.
+- Les tests unitaires couvrent désormais le **catalogue d'erreurs** : chaque variante de `ErrorCode` doit avoir un
+  message dans les deux langues, sinon `cargo test -p solon` échoue.
+- Le registre ECR public limite les tirages anonymes (`toomanyrequests`) : les tests de bout en bout doivent
+  tolérer cet échec ou utiliser une image déjà présente.
