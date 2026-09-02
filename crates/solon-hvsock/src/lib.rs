@@ -10,6 +10,8 @@
 
 #![cfg(windows)]
 
+pub mod relay;
+
 use std::io;
 use std::net::TcpStream;
 use std::os::windows::io::FromRawSocket;

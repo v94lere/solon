@@ -9,12 +9,10 @@ rust-version.workspace = true
 
 [dependencies]
 tracing = { workspace = true }
+tokio = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 windows = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Networking_WinSock",
 ] }
-
-[dev-dependencies]
-tokio = { workspace = true }
