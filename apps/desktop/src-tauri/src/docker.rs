@@ -55,6 +55,18 @@ impl DockerState {
         Ok(d)
     }
 
+    /// Nombre de conteneurs en marche (barre des tâches) ; `None` si Docker ne répond pas.
+    pub async fn running_count(&self) -> Option<usize> {
+        let docker = self.docker().await.ok()?;
+        docker
+            .list_containers(Some(
+                ListContainersOptionsBuilder::default().all(false).build(),
+            ))
+            .await
+            .ok()
+            .map(|l| l.len())
+    }
+
     fn next(&self) -> u64 {
         self.next_id.fetch_add(1, Ordering::Relaxed) + 1
     }

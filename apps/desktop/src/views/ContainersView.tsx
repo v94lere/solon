@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { containers, formatBytes, type ContainerSummary, type StatSample } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ComposePanel } from "../components/ComposePanel";
 
 const COMPOSE_LABEL = "com.docker.compose.project";
 
@@ -102,6 +103,7 @@ export function ContainersView({ onOpen }: { onOpen: (id: string) => void }) {
         </label>
         <input type="search" className="input w-72" placeholder={t("containers.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("containers.search")} />
       </div>
+      <ComposePanel />
       {error && (
         <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>
           {error}

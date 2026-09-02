@@ -149,5 +149,98 @@
     "save": "Enregistrer",
     "saved": "Enregistré. Les changements s'appliquent au prochain démarrage du moteur.",
     "about": "À propos"
+  },
+  "images": {
+    "title": "Images",
+    "empty": "Aucune image. Tirez-en une avec le CLI docker.",
+    "search": "Filtrer par tag ou identifiant",
+    "count_one": "{{count}} image",
+    "count_other": "{{count}} images",
+    "columns": {
+      "tag": "Tag",
+      "id": "Identifiant",
+      "size": "Taille",
+      "created": "Créée"
+    },
+    "actions": {
+      "run": "Lancer",
+      "inspect": "Inspecter",
+      "remove": "Supprimer"
+    },
+    "remove_confirm": {
+      "title": "Supprimer l'image {{name}} ?",
+      "body": "Les conteneurs qui l'utilisent continueront de fonctionner jusqu'à leur suppression ; l'image est effacée du stockage local.",
+      "confirm": "Supprimer"
+    },
+    "run": {
+      "title": "Lancer un conteneur depuis {{image}}",
+      "name": "Nom du conteneur (facultatif)",
+      "ports": "Ports publiés (hôte:conteneur)",
+      "env": "Variables d'environnement (une par ligne)",
+      "cmd": "Commande (facultatif)",
+      "cmd_hint": "vide = commande par défaut de l'image",
+      "start": "Démarrer",
+      "bad_port": "Publication de port invalide : {{value}}"
+    }
+  },
+  "volumes": {
+    "title": "Volumes",
+    "empty": "Aucun volume.",
+    "search": "Filtrer par nom",
+    "count_one": "{{count}} volume",
+    "count_other": "{{count}} volumes",
+    "new_name": "Nom du nouveau volume",
+    "create": "Créer",
+    "columns": {
+      "name": "Nom",
+      "driver": "Pilote",
+      "created": "Créé",
+      "mountpoint": "Point de montage"
+    },
+    "actions": {
+      "inspect": "Inspecter",
+      "remove": "Supprimer"
+    },
+    "remove_confirm": {
+      "title": "Supprimer le volume {{name}} ?",
+      "body": "Toutes les données de ce volume seront définitivement effacées. Cette action est irréversible.",
+      "confirm": "Supprimer"
+    }
+  },
+  "networks": {
+    "title": "Réseaux",
+    "count_one": "{{count}} réseau",
+    "count_other": "{{count}} réseaux",
+    "search": "Filtrer par nom ou pilote",
+    "new_name": "Nom du nouveau réseau",
+    "create": "Créer",
+    "columns": {
+      "name": "Nom",
+      "driver": "Pilote",
+      "subnet": "Sous-réseau",
+      "id": "Identifiant"
+    },
+    "actions": {
+      "inspect": "Inspecter",
+      "remove": "Supprimer"
+    },
+    "remove_confirm": {
+      "title": "Supprimer le réseau {{name}} ?",
+      "body": "Les conteneurs attachés à ce réseau doivent d'abord en être détachés.",
+      "confirm": "Supprimer"
+    }
+  },
+  "compose": {
+    "title": "Compose",
+    "open": "Ouvrir un projet…",
+    "pick": "Choisir un dossier contenant compose.yaml",
+    "recent": "Projets récents",
+    "not_found": "Aucun compose.yaml dans {{dir}}",
+    "up": "Démarrer (up)",
+    "down": "Arrêter (down)",
+    "ps": "État",
+    "running": "En cours…",
+    "no_output": "(aucune sortie)",
+    "exit": "code de sortie {{code}}, {{seconds}} s"
   }
 }

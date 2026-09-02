@@ -52,6 +52,63 @@ pub enum ServiceCommand {
         #[serde(default)]
         timeout_s: Option<u64>,
     },
+    /// Rend un chemin Windows visible dans la machine (partage 9P du lecteur, monté à la demande)
+    /// et renvoie le chemin correspondant côté invité.
+    EnsureShare {
+        host_path: String,
+    },
+    /// Lecteurs actuellement partagés.
+    ListShares,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShareInfo {
+    /// Lettre du lecteur en minuscule (`c`).
+    pub drive: String,
+    pub host_root: String,
+    /// Point de montage côté invité (`/mnt/host/c`).
+    pub guest_root: String,
+    /// Chemin demandé, traduit côté invité.
+    pub guest_path: String,
+    pub mounted_now: bool,
+}
+
+/// Traduit un chemin Windows en chemin invité sous `/mnt/host/<lettre>/`.
+pub fn guest_path_for(host_path: &str) -> Option<(String, String)> {
+    let trimmed = host_path.trim().trim_start_matches(r"\\?\");
+    let mut chars = trimmed.chars();
+    let letter = chars.next()?.to_ascii_lowercase();
+    if !letter.is_ascii_alphabetic() || chars.next()? != ':' {
+        return None;
+    }
+    let rest: String = chars.collect::<String>().replace('\\', "/");
+    let rest = rest.trim_start_matches('/');
+    let guest = if rest.is_empty() {
+        format!("/mnt/host/{letter}")
+    } else {
+        format!("/mnt/host/{letter}/{rest}")
+    };
+    Some((letter.to_string(), guest))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn traduction_des_chemins_windows() {
+        assert_eq!(
+            guest_path_for(r"C:\Users\v\proj").unwrap(),
+            ("c".into(), "/mnt/host/c/Users/v/proj".into())
+        );
+        assert_eq!(
+            guest_path_for(r"D:\").unwrap(),
+            ("d".into(), "/mnt/host/d".into())
+        );
+        assert_eq!(guest_path_for(r"\\?\C:\x").unwrap().1, "/mnt/host/c/x");
+        assert!(guest_path_for(r"\\server\share").is_none());
+        assert!(guest_path_for("relative").is_none());
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

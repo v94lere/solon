@@ -39,6 +39,8 @@ struct Running {
     network: GuestNetwork,
     tasks: Vec<JoinHandle<()>>,
     ports: PortRelays,
+    /// Lecteurs Windows partagés vers la machine, par lettre.
+    shares: std::collections::HashMap<String, solon_core::vm::HostShare>,
 }
 
 struct Inner {
@@ -407,6 +409,7 @@ impl Engine {
             },
             tasks,
             ports,
+            shares: std::collections::HashMap::new(),
         })
     }
 
@@ -592,6 +595,78 @@ impl Engine {
                 Duration::from_secs(timeout_s + 5),
             )
             .await
+    }
+
+    /// Partage le lecteur d'un chemin Windows vers la machine (une fois par lecteur) et renvoie
+    /// le chemin traduit côté invité.
+    pub async fn ensure_share(&self, host_path: &str) -> Result<solon_core::ipc::ShareInfo> {
+        let (drive, guest_path) = solon_core::ipc::guest_path_for(host_path).ok_or_else(|| {
+            SolonError::new(
+                ErrorCode::Io,
+                format!("chemin non partageable : {host_path}"),
+            )
+        })?;
+        let host_root = format!("{}:\\", drive.to_ascii_uppercase());
+        if !std::path::Path::new(&host_root).exists() {
+            return Err(SolonError::new(
+                ErrorCode::Io,
+                format!("lecteur introuvable : {host_root}"),
+            ));
+        }
+        let guest_root = format!("/mnt/host/{drive}");
+        let mut guard = self.inner.running.lock().await;
+        let running = guard.as_mut().ok_or_else(|| {
+            SolonError::new(ErrorCode::EngineUnreachable, "le moteur n'est pas démarré")
+        })?;
+        let mounted_now = if running.shares.contains_key(&drive) {
+            false
+        } else {
+            let port = 9100 + running.shares.len() as u32;
+            let share = solon_core::vm::HostShare {
+                name: drive.clone(),
+                host_path: host_root.clone().into(),
+                port,
+                read_only: false,
+            };
+            let vm = running.vm.clone();
+            let s = share.clone();
+            tokio::task::spawn_blocking(move || vm.add_share(&s))
+                .await
+                .map_err(|e| SolonError::internal(e.to_string()))??;
+            running
+                .agent
+                .call(
+                    Command::MountShare(solon_core::protocol::MountShareRequest {
+                        name: drive.clone(),
+                        port,
+                        target: guest_root.clone(),
+                        read_only: false,
+                        extra_options: String::new(),
+                    }),
+                    Duration::from_secs(30),
+                )
+                .await?;
+            running.shares.insert(drive.clone(), share);
+            tracing::info!(drive, port, "lecteur partagé vers la machine");
+            true
+        };
+        Ok(solon_core::ipc::ShareInfo {
+            drive,
+            host_root,
+            guest_root,
+            guest_path,
+            mounted_now,
+        })
+    }
+
+    pub async fn list_shares(&self) -> Vec<solon_core::vm::HostShare> {
+        self.inner
+            .running
+            .lock()
+            .await
+            .as_ref()
+            .map(|r| r.shares.values().cloned().collect())
+            .unwrap_or_default()
     }
 
     /// Santé rapportée par l'agent (None si le moteur ne tourne pas).

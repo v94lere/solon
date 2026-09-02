@@ -3,8 +3,10 @@
 //! - [`service`] : canal de contrôle du service Windows (état du moteur, démarrage/arrêt, réglages) ;
 //! - [`docker`] : API Docker via `bollard` sur le pipe exposé par le service ; flux par `Channel`.
 
+mod compose;
 mod docker;
 mod service;
+mod tray;
 
 use std::sync::Arc;
 
@@ -84,8 +86,22 @@ pub fn run() {
         .init();
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(Arc::new(docker::DockerState::default()))
+        .setup(|app| {
+            tray::setup(app.handle())?;
+            Ok(())
+        })
+        // Fermer la fenêtre la cache ; l'application vit dans la barre des tâches.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let _ = window.hide();
+                api.prevent_close();
+            }
+        })
         .invoke_handler(tauri::generate_handler![
+            compose::compose_detect,
+            compose::compose_run,
             engine_status,
             engine_start,
             engine_stop,

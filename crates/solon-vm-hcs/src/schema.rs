@@ -292,15 +292,15 @@ impl ComputeSystemDocument {
             )]));
         }
 
-        if !config.shares.is_empty() {
-            devices.plan9 = Some(Plan9 {
-                shares: config
-                    .shares
-                    .iter()
-                    .map(Plan9Share::from_host_share)
-                    .collect(),
-            });
-        }
+        // Toujours déclarer le périphérique Plan9, même sans partage : sans lui, l'ajout d'un partage
+        // à chaud échoue avec ERROR_NOT_FOUND (0x80070490) (constaté au bloc 4).
+        devices.plan9 = Some(Plan9 {
+            shares: config
+                .shares
+                .iter()
+                .map(Plan9Share::from_host_share)
+                .collect(),
+        });
 
         if let Some(nic) = &config.network_adapter {
             devices.network_adapters = Some(BTreeMap::from([(

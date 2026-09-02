@@ -79,6 +79,13 @@ async fn handle(
                     Err(e) => Response::err(id, e.to_string()),
                 }
             }
+            ServiceCommand::EnsureShare { host_path } => {
+                match engine.ensure_share(&host_path).await {
+                    Ok(info) => Response::ok(id, info),
+                    Err(e) => Response::err(id, e.to_string()),
+                }
+            }
+            ServiceCommand::ListShares => Response::ok(id, engine.list_shares().await),
             ServiceCommand::Quit => match &quit {
                 Some(q) => {
                     let _ = q.send(()).await;

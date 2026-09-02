@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Fenêtre principale : commandes Solon, ouverture de liens/dossiers.",
   "windows": ["main"],
-  "permissions": ["core:default", "opener:default"]
+  "permissions": ["core:default", "opener:default", "dialog:default", "core:window:allow-show", "core:window:allow-hide", "core:window:allow-set-focus"]
 }

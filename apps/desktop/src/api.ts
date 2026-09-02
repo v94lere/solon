@@ -173,6 +173,73 @@ export const dockerEvents = {
   },
 };
 
+// ---- images, volumes, réseaux ----
+export interface ImageSummary {
+  Id: string;
+  RepoTags: string[] | null;
+  Created: number;
+  Size: number;
+  Containers: number;
+}
+export interface RunSpec {
+  image: string;
+  name: string | null;
+  cmd: string[] | null;
+  env: string[];
+  ports: { host: number; container: number; proto: string }[];
+}
+export const images = {
+  list: () => invoke<ImageSummary[]>("images_list"),
+  inspect: (id: string) => invoke<unknown>("image_inspect", { id }),
+  remove: (id: string, force: boolean) => invoke<void>("image_remove", { id, force }),
+  run: (spec: RunSpec) => invoke<string>("image_run", { spec }),
+};
+
+export interface Volume {
+  Name: string;
+  Driver: string;
+  Mountpoint: string;
+  CreatedAt?: string;
+  Labels?: Record<string, string> | null;
+}
+export const volumes = {
+  list: () => invoke<{ Volumes: Volume[] | null }>("volumes_list"),
+  create: (name: string) => invoke<Volume>("volume_create", { name }),
+  remove: (name: string, force: boolean) => invoke<void>("volume_remove", { name, force }),
+  inspect: (name: string) => invoke<unknown>("volume_inspect", { name }),
+};
+
+export interface Network {
+  Id: string;
+  Name: string;
+  Driver?: string;
+  Scope?: string;
+  IPAM?: { Config?: { Subnet?: string; Gateway?: string }[] | null } | null;
+}
+export const networks = {
+  list: () => invoke<Network[]>("networks_list"),
+  create: (name: string, driver?: string) => invoke<string>("network_create", { name, driver: driver ?? null }),
+  remove: (id: string) => invoke<void>("network_remove", { id }),
+  inspect: (id: string) => invoke<unknown>("network_inspect", { id }),
+};
+
+// ---- Compose ----
+export interface ComposeProject {
+  dir: string;
+  file: string;
+  name: string;
+}
+export interface ComposeResult {
+  code: number | null;
+  output: string;
+  ms: number;
+  guest_dir: string;
+}
+export const compose = {
+  detect: (dir: string) => invoke<ComposeProject | null>("compose_detect", { dir }),
+  run: (dir: string, args: string[], timeoutS?: number) => invoke<ComposeResult>("compose_run", { dir, args, timeoutS: timeoutS ?? null }),
+};
+
 // Flux ouverts côté Rust : fermés si la page se recharge (sinon les tâches continueraient à
 // envoyer vers des callbacks disparus).
 const openStreams = new Set<number>();

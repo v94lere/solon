@@ -149,5 +149,98 @@
     "save": "Save",
     "saved": "Saved. Changes apply at the next engine start.",
     "about": "About"
+  },
+  "images": {
+    "title": "Images",
+    "empty": "No images yet. Pull one with the docker CLI.",
+    "search": "Filter by tag or ID",
+    "count_one": "{{count}} image",
+    "count_other": "{{count}} images",
+    "columns": {
+      "tag": "Tag",
+      "id": "ID",
+      "size": "Size",
+      "created": "Created"
+    },
+    "actions": {
+      "run": "Run",
+      "inspect": "Inspect",
+      "remove": "Remove"
+    },
+    "remove_confirm": {
+      "title": "Remove image {{name}}?",
+      "body": "Containers using this image will keep working until they are removed; the image is deleted from local storage.",
+      "confirm": "Remove"
+    },
+    "run": {
+      "title": "Run a container from {{image}}",
+      "name": "Container name (optional)",
+      "ports": "Published ports (host:container)",
+      "env": "Environment variables (one per line)",
+      "cmd": "Command (optional)",
+      "cmd_hint": "leave empty for the image default",
+      "start": "Start",
+      "bad_port": "Invalid port mapping: {{value}}"
+    }
+  },
+  "volumes": {
+    "title": "Volumes",
+    "empty": "No volumes.",
+    "search": "Filter by name",
+    "count_one": "{{count}} volume",
+    "count_other": "{{count}} volumes",
+    "new_name": "New volume name",
+    "create": "Create",
+    "columns": {
+      "name": "Name",
+      "driver": "Driver",
+      "created": "Created",
+      "mountpoint": "Mount point"
+    },
+    "actions": {
+      "inspect": "Inspect",
+      "remove": "Remove"
+    },
+    "remove_confirm": {
+      "title": "Remove volume {{name}}?",
+      "body": "All data stored in this volume will be permanently deleted. This cannot be undone.",
+      "confirm": "Remove"
+    }
+  },
+  "networks": {
+    "title": "Networks",
+    "count_one": "{{count}} network",
+    "count_other": "{{count}} networks",
+    "search": "Filter by name or driver",
+    "new_name": "New network name",
+    "create": "Create",
+    "columns": {
+      "name": "Name",
+      "driver": "Driver",
+      "subnet": "Subnet",
+      "id": "ID"
+    },
+    "actions": {
+      "inspect": "Inspect",
+      "remove": "Remove"
+    },
+    "remove_confirm": {
+      "title": "Remove network {{name}}?",
+      "body": "Containers attached to this network must be disconnected first.",
+      "confirm": "Remove"
+    }
+  },
+  "compose": {
+    "title": "Compose",
+    "open": "Open a project…",
+    "pick": "Choose a folder containing compose.yaml",
+    "recent": "Recent projects",
+    "not_found": "No compose.yaml found in {{dir}}",
+    "up": "Up",
+    "down": "Down",
+    "ps": "Status",
+    "running": "Running…",
+    "no_output": "(no output)",
+    "exit": "exit code {{code}}, {{seconds}} s"
   }
 }

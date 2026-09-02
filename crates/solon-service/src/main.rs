@@ -344,6 +344,11 @@ fn main() {
             println!("solon-service {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
+        "share" => {
+            let rt = tokio::runtime::Runtime::new().expect("runtime");
+            let host_path = args.get(1).cloned().unwrap_or_default();
+            rt.block_on(control(ServiceCommand::EnsureShare { host_path }, false))
+        }
         "exec" => {
             let rt = tokio::runtime::Runtime::new().expect("runtime");
             let command = args[1..].join(" ");

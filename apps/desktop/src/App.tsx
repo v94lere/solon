@@ -5,8 +5,10 @@ import { EngineBar } from "./components/EngineBar";
 import { SetupScreen } from "./views/SetupScreen";
 import { ContainersView } from "./views/ContainersView";
 import { ContainerDetail } from "./views/ContainerDetail";
+import { ImagesView } from "./views/ImagesView";
+import { VolumesView } from "./views/VolumesView";
+import { NetworksView } from "./views/NetworksView";
 import { SettingsView } from "./views/SettingsView";
-import { Placeholder } from "./views/Placeholder";
 
 export type Section = "containers" | "images" | "volumes" | "networks" | "settings";
 
@@ -31,11 +33,7 @@ function Nav({ section, onSelect }: { section: Section; onSelect: (s: Section) =
             aria-current={active ? "page" : undefined}
             onClick={() => onSelect(it.id)}
             className="rounded px-2 py-1.5 text-left"
-            style={{
-              background: active ? "var(--accent-soft)" : "transparent",
-              color: active ? "var(--accent-ink)" : "var(--ink)",
-              fontWeight: active ? 600 : 400,
-            }}
+            style={{ background: active ? "var(--accent-soft)" : "transparent", color: active ? "var(--accent-ink)" : "var(--ink)", fontWeight: active ? 600 : 400 }}
           >
             {it.label}
           </button>
@@ -50,10 +48,17 @@ function Shell() {
   const [section, setSection] = useState<Section>("containers");
   const [selected, setSelected] = useState<string | null>(null);
 
-  // Une vue de détail se ferme si le moteur s'arrête.
   useEffect(() => {
     if (!ready) setSelected(null);
   }, [ready]);
+
+  let content;
+  if (section === "settings") content = <SettingsView />;
+  else if (!ready) content = <SetupScreen />;
+  else if (section === "containers") content = selected ? <ContainerDetail id={selected} onBack={() => setSelected(null)} /> : <ContainersView onOpen={setSelected} />;
+  else if (section === "images") content = <ImagesView />;
+  else if (section === "volumes") content = <VolumesView />;
+  else content = <NetworksView />;
 
   return (
     <div className="flex h-full flex-col">
@@ -67,19 +72,7 @@ function Shell() {
           }}
         />
         <main className="min-w-0 flex-1 overflow-hidden" style={{ background: "var(--bg)" }}>
-          {section === "settings" ? (
-            <SettingsView />
-          ) : !ready ? (
-            <SetupScreen />
-          ) : section === "containers" ? (
-            selected ? (
-              <ContainerDetail id={selected} onBack={() => setSelected(null)} />
-            ) : (
-              <ContainersView onOpen={setSelected} />
-            )
-          ) : (
-            <Placeholder section={section} />
-          )}
+          {content}
         </main>
       </div>
     </div>
