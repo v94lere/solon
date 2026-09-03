@@ -373,3 +373,22 @@ Faits établis : une machine créée à chaud n'a que les partages ajoutés pend
 **persisté côté service** (`state.json`) et redéclaré à la création suivante, sinon les montages `-v` des conteneurs
 pointent sur des dossiers vides. Le port vsock d'un partage est `9100 + index d'ajout`, identique à chaud et au boot.
 
+### Complément du 3 septembre 2026 (soir) — après passage à 22 processeurs
+
+| Mesure | Docker Desktop | Solon (22 cœurs) | Solon (4 cœurs, plus haut) |
+|---|---|---|---|
+| Création d'une base Odoo avec démo | 13,6 s | **17,9 s** | 16,4–17,7 s |
+| `compose down` + `up -d` | 7,1 s | 8,3 s | 10,3 s |
+| Odoo répond après `up` | 1,5 s | 1,4 s | 3 s |
+| Page de connexion (moyenne de 5) | 27–46 ms | 64 ms | 34 ms |
+| Mémoire avec la pile, après repos | 5 146 Mo | **1 196 Mo** | 1 892 Mo |
+| `pg_test_fsync` fdatasync (écritures synchrones, volume Docker) | 154 ops/s (6,5 ms) | **290 ops/s (3,4 ms)** | — |
+| `pg_test_fsync` fsync | 79 ops/s | **137 ops/s** | — |
+
+Lecture : le nombre de cœurs **n'était pas** la cause de l'écart sur la création de base (tâche essentiellement
+mono-thread : Python d'Odoo + une connexion PostgreSQL). Le disque n'est pas en cause non plus : les écritures
+synchrones sont ~2× plus rapides sur Solon. Suspects restants, à tester isolément : le `sync()` global toutes les
+2 s de l'agent (peut bloquer les écrivains pendant un import massif), et la vitesse par cœur perçue dans la machine
+(ordonnancement HCS avec 22 vCPU pour 24 cœurs logiques). Le redémarrage de pile et la mise en route d'Odoo sont
+désormais au niveau de Docker Desktop ; la mémoire est passée sous 1,2 Go avec la pile.
+
