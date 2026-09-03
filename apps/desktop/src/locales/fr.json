@@ -148,7 +148,11 @@
     "autostart": "Démarrer le moteur à l'ouverture de session",
     "save": "Enregistrer",
     "saved": "Enregistré. Les changements s'appliquent au prochain démarrage du moteur.",
-    "about": "À propos"
+    "about": "À propos",
+    "theme": "Apparence",
+    "theme_light": "Clair",
+    "theme_dark": "Sombre",
+    "theme_system": "Suivre Windows"
   },
   "images": {
     "title": "Images",

@@ -69,10 +69,10 @@ export function ComposePanel() {
   return (
     <div className="card mx-4 mb-3 p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-semibold">{t("compose.title")}</span>
-        <button type="button" className="btn btn-sm" onClick={() => void pick()}>{t("compose.open")}</button>
+        <span className="chip">{t("compose.title")}</span>
+        <button type="button" className="btn btn-primary" onClick={() => void pick()}>{t("compose.open")}</button>
         {recent.length > 0 && (
-          <select className="input h-[26px] max-w-72 text-xs" value="" onChange={(e) => { if (e.target.value) void pick(e.target.value); }} aria-label={t("compose.recent")}>
+          <select className="input max-w-72" value="" onChange={(e) => { if (e.target.value) void pick(e.target.value); }} aria-label={t("compose.recent")}>
             <option value="">{t("compose.recent")}</option>
             {recent.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>

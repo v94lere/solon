@@ -10,21 +10,21 @@
 
 :root {
   color-scheme: light dark;
-  --bg: #f5f6fa;
+  --bg: #f7f8fa;
   --surface: #ffffff;
-  --surface-2: #f7f8fc;
-  --surface-3: #eceef5;
-  --sidebar: #eef1f8;
+  --surface-2: #f6f7f9;
+  --surface-3: #eceef2;
+  --sidebar: #f3f4f7;
   --ink: #17181c;
   --ink-2: #5c606b;
   --ink-3: #6b7080;
-  --line: #e3e6ee;
-  --line-strong: #cfd4e0;
-  --accent: #2f6ff0;
-  --accent-ink: #1f5ad8;
-  --accent-soft: #e4ecfd;
-  --ok: #1f8f43;
-  --ok-soft: #e1f5e7;
+  --line: #e4e6ea;
+  --line-strong: #d0d4db;
+  --accent: #2b7bf5;
+  --accent-ink: #1d63d8;
+  --accent-soft: #e1ecff;
+  --ok: #1f9d4b;
+  --ok-soft: #e3f6ea;
   --warn: #9a6700;
   --warn-soft: #fbf1d3;
   --bad: #c62828;
@@ -239,3 +239,29 @@ select {
 .nav-item[aria-current="page"] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 .nav-item svg { width: 17px; height: 17px; flex: none; }
 .sidebar-foot { margin-top: auto; padding: 8px 10px; color: var(--ink-3); font-size: 11.5px; }
+
+/* Pastille « point seul » (statut dans les tableaux) : le texte est en infobulle et en aria-label */
+.pill-dot { width: 26px; height: 24px; padding: 0; justify-content: center; border-radius: 8px; }
+.pill-dot::before { width: 9px; height: 9px; }
+
+/* Boutons icône des actions de ligne */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+.icon-btn:hover { background: var(--surface-3); color: var(--ink); }
+.icon-btn:disabled { opacity: 0.4; cursor: default; }
+.icon-btn-danger { color: var(--bad); }
+.icon-btn-danger:hover { background: var(--bad-soft); color: var(--bad); }
+
+/* Étiquette neutre (ex. « Compose ») */
+.chip { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: var(--radius); background: var(--surface-3); color: var(--ink); font-weight: 600; }

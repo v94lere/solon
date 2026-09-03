@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./i18n";
+import "./theme";
 import "./styles.css";
 import { App } from "./App";
 

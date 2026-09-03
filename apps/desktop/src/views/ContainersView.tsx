@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { IconLogs, IconPlay, IconRestart, IconStop, IconTrash } from "../components/Icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { containers, formatBytes, type ContainerSummary, type StatSample } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -232,34 +233,37 @@ function GroupRows({
               {shortImage(c.Image)}
             </td>
             <td>
-              <span className={`pill ${stateClass(c.State)}`} title={c.Status}>
-                {t(`containers.state.${c.State}`, { defaultValue: c.State })}
-              </span>
+              <span
+                className={`pill pill-dot ${stateClass(c.State)}`}
+                role="img"
+                title={`${t(`containers.state.${c.State}`, { defaultValue: c.State })} — ${c.Status ?? ""}`}
+                aria-label={t(`containers.state.${c.State}`, { defaultValue: c.State })}
+              />
             </td>
             <td className="mono">{portsText(c)}</td>
             <td className="mono text-right whitespace-nowrap">{running && s ? `${s.cpu_percent.toFixed(1)} %` : "—"}</td>
             <td className="mono text-right whitespace-nowrap">{running && s ? formatBytes(s.mem_usage) : "—"}</td>
             <td>
-              <div className="flex justify-end gap-1">
+              <div className="flex justify-end gap-0.5">
                 {running ? (
                   <>
-                    <button type="button" className="btn btn-ghost btn-sm" disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.stop(c.Id))}>
-                      {t("containers.actions.stop")}
+                    <button type="button" className="icon-btn" title={t("containers.actions.stop")} aria-label={t("containers.actions.stop")} disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.stop(c.Id))}>
+                      <IconStop />
                     </button>
-                    <button type="button" className="btn btn-ghost btn-sm" disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.restart(c.Id))}>
-                      {t("containers.actions.restart")}
+                    <button type="button" className="icon-btn" title={t("containers.actions.restart")} aria-label={t("containers.actions.restart")} disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.restart(c.Id))}>
+                      <IconRestart />
                     </button>
                   </>
                 ) : (
-                  <button type="button" className="btn btn-ghost btn-sm" disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.start(c.Id))}>
-                    {t("containers.actions.start")}
+                  <button type="button" className="icon-btn" title={t("containers.actions.start")} aria-label={t("containers.actions.start")} disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.start(c.Id))}>
+                    <IconPlay />
                   </button>
                 )}
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => onOpen(c.Id)}>
-                  {t("containers.actions.logs")}
+                <button type="button" className="icon-btn" title={t("containers.actions.logs")} aria-label={t("containers.actions.logs")} onClick={() => onOpen(c.Id)}>
+                  <IconLogs />
                 </button>
-                <button type="button" className="btn btn-ghost btn-sm" style={{ color: "var(--bad)" }} disabled={busy === c.Id} onClick={() => onRemove(c)}>
-                  {t("containers.actions.remove")}
+                <button type="button" className="icon-btn icon-btn-danger" title={t("containers.actions.remove")} aria-label={t("containers.actions.remove")} disabled={busy === c.Id} onClick={() => onRemove(c)}>
+                  <IconTrash />
                 </button>
               </div>
             </td>

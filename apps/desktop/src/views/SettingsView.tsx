@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { applyTheme, loadTheme, type Theme } from "../theme";
 import { engine, type Settings } from "../api";
 import { setLanguage } from "../i18n";
 
 export function SettingsView() {
+  const [theme, setTheme] = useState<Theme>(loadTheme());
   const { t, i18n } = useTranslation();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [saved, setSaved] = useState(false);
@@ -40,6 +42,14 @@ export function SettingsView() {
         </select>
       </section>
 
+      <section className="card mt-4 p-4">
+        <h2 className="font-semibold">{t("settings.theme")}</h2>
+        <select className="input mt-2" value={theme} onChange={(e) => { const v = e.target.value as Theme; setTheme(v); applyTheme(v); }} aria-label={t("settings.theme")}>
+          <option value="light">{t("settings.theme_light")}</option>
+          <option value="dark">{t("settings.theme_dark")}</option>
+          <option value="system">{t("settings.theme_system")}</option>
+        </select>
+      </section>
       <section className="card mt-4 p-4">
         <h2 className="font-semibold">{t("settings.engine")}</h2>
         {settings ? (

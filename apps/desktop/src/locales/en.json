@@ -148,7 +148,11 @@
     "autostart": "Start the engine at sign-in",
     "save": "Save",
     "saved": "Saved. Changes apply at the next engine start.",
-    "about": "About"
+    "about": "About",
+    "theme": "Appearance",
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "theme_system": "Follow Windows"
   },
   "images": {
     "title": "Images",
