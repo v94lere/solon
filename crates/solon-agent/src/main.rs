@@ -74,6 +74,7 @@ fn main() {
                 "AVERTISSEMENT disque de données : {e} — repli sur tmpfs (données non persistantes)"
             )),
         }
+        system::mount_boot_shares();
         system::start_engine(&state);
         system::start_periodic_sync();
         system::start_idle_cache_release();

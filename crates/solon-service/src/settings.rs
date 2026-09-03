@@ -47,6 +47,11 @@ pub struct PersistedState {
     pub guest_address: Option<String>,
     #[serde(default)]
     pub image_version: Option<String>,
+    /// Lecteurs Windows partagés avec la machine (lettres en minuscules, dans l'ordre d'ajout : le port
+    /// vsock de chaque partage est `9100 + index`). Remontés au démarrage suivant, avant dockerd, pour que
+    /// les conteneurs qui montent `/mnt/host/<lettre>/…` retrouvent leurs dossiers.
+    #[serde(default)]
+    pub shares: Vec<String>,
     /// `true` dès que la machine est arrêtée proprement par le service.
     pub clean_shutdown: bool,
     pub updated_unix_ms: u64,

@@ -255,6 +255,57 @@ pub fn prepare_data_disk(state: &State) -> Result<DataDiskReport, String> {
     Ok(report)
 }
 
+/// Remonte, avant dockerd, les lecteurs partagés annoncés par le service dans la ligne de commande du
+/// noyau (`solon.shares=c:9100,d:9101`), pour que les conteneurs qui montent `/mnt/host/<lettre>/…`
+/// retrouvent leurs dossiers dès le démarrage.
+pub fn mount_boot_shares() {
+    let cmdline = fs::read_to_string("/proc/cmdline").unwrap_or_default();
+    let Some(spec) = cmdline
+        .split_whitespace()
+        .find_map(|kv| kv.strip_prefix("solon.shares="))
+    else {
+        return;
+    };
+    for entry in spec.split(',').filter(|e| !e.is_empty()) {
+        let Some((drive, port)) = entry.split_once(':') else {
+            continue;
+        };
+        let Ok(port) = port.parse::<u32>() else {
+            continue;
+        };
+        let req = MountShareRequest {
+            name: drive.to_owned(),
+            port,
+            target: format!("/mnt/host/{drive}"),
+            read_only: false,
+            extra_options: String::new(),
+        };
+        // Le serveur 9P de l'hôte démarre avec la machine : deux essais suffisent.
+        let mut last = String::new();
+        for attempt in 0..3 {
+            match mount_plan9(&req) {
+                Ok(r) => {
+                    log(&format!(
+                        "partage {drive} remonté sur {} (vsock {port}, {} ms)",
+                        req.target, r.mount_ms
+                    ));
+                    last.clear();
+                    break;
+                }
+                Err(e) => {
+                    last = e;
+                    std::thread::sleep(std::time::Duration::from_millis(200 * (attempt + 1)));
+                }
+            }
+        }
+        if !last.is_empty() {
+            log(&format!(
+                "AVERTISSEMENT partage {drive} non remonté : {last}"
+            ));
+        }
+    }
+}
+
 /// Monte un partage Plan9 HCS : connexion vsock vers l'hôte puis `mount -t 9p -o trans=fd`.
 pub fn mount_plan9(req: &MountShareRequest) -> Result<MountResult, String> {
     fs::create_dir_all(&req.target).map_err(|e| format!("mkdir {} : {e}", req.target))?;

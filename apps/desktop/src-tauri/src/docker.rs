@@ -63,18 +63,6 @@ impl DockerState {
         Ok(d)
     }
 
-    /// Nombre de conteneurs en marche (barre des tâches) ; `None` si Docker ne répond pas.
-    pub async fn running_count(&self) -> Option<usize> {
-        let docker = self.docker().await.ok()?;
-        docker
-            .list_containers(Some(
-                ListContainersOptionsBuilder::default().all(false).build(),
-            ))
-            .await
-            .ok()
-            .map(|l| l.len())
-    }
-
     /// Tous les conteneurs, en marche d'abord puis par nom (menu de la barre des tâches) ;
     /// `None` si Docker ne répond pas.
     pub async fn tray_containers(&self) -> Option<Vec<TrayContainer>> {

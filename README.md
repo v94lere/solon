@@ -77,18 +77,37 @@ cd apps\desktop; npm run tauri dev
 
 ## Utilisation
 
-- **Barre d'état** : état du moteur, démarrer / redémarrer / arrêter.
-- **Conteneurs** : liste temps réel avec CPU et mémoire, filtre, groupes Compose, actions, journaux en
-  flux, terminal, inspection.
-- **Compose** : « Open a project… », choisissez le dossier contenant `compose.yaml`, puis Up / Down / Status.
+- **Conteneurs** : liste temps réel avec CPU et mémoire, filtre, groupes Compose (cliquables), actions en
+  icônes, journaux en flux, terminal, inspection. Un **port publié est un lien** vers `http://localhost:<port>`.
+- **Projets** : chaque projet Compose a son écran : services et leur état, **journaux de tous les services
+  mêlés**, Up / Down / Reconstruire, ouverture du dossier dans l'**Explorateur** ou dans **VS Code**. « Ouvrir un
+  projet… » choisit un dossier contenant `compose.yaml` ; les projets déjà lancés sont détectés automatiquement.
 - **Images, Volumes, Réseaux** : liste, création, inspection, suppression (toujours avec confirmation).
-- **Réglages** : langue (anglais par défaut, français), mémoire et processeurs du moteur, limite de
-  stockage, démarrage à l'ouverture de session.
+- **Terminal de la machine** (icône en bas de la barre latérale, ou `Ctrl+\``) : un shell root dans le moteur
+  Linux lui-même, pour `docker`, `ps`, `df`, `dmesg`…
+- **Recherche globale `Ctrl+K`** : conteneurs, images, volumes, réseaux, projets, actions du moteur, sections.
+  `Ctrl+1` à `Ctrl+6` changent de section.
+- **Réglages** : langue (anglais par défaut, français), apparence, mémoire et processeurs du moteur (par défaut
+  tous les cœurs moins deux), limite de stockage, démarrage à l'ouverture de session.
 - **Barre des tâches** : un clic sur l'icône ouvre le menu : état du moteur, nombre de conteneurs en
   marche, **chaque conteneur avec Démarrer / Redémarrer / Arrêter**, ouvrir Solon, démarrer ou arrêter le
   moteur, quitter. Dans la langue de l'interface. Fermer la fenêtre laisse Solon actif dans la barre des tâches.
 
-CLI `docker` existant :
+### CLI `docker` et `docker compose` intégrés
+
+L'installeur place `C:\Program Files\Solon\bin` en tête du PATH. Il contient le **CLI Docker officiel** et le
+**plugin Compose** (Apache-2.0, versions dans `bin\NOTICE-third-party.txt`), derrière un petit lanceur `docker.exe`
+qui les dirige vers le moteur Solon. Dans un **nouveau** terminal :
+
+```powershell
+docker version
+docker compose -f examples\odoo18\compose.yaml up -d
+```
+
+Le lanceur respecte vos choix : `-H`, `--context`, `DOCKER_HOST` ou `DOCKER_CONTEXT` l'emportent, donc Docker
+Desktop reste joignable si vous le gardez (`docker context use desktop-linux`).
+
+Avec un CLI `docker` déjà installé (Docker Desktop, winget) :
 
 ```powershell
 docker context create solon --docker host=npipe:////./pipe/solon

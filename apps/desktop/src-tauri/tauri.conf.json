@@ -52,14 +52,14 @@
     "resources": {
       "../../../target/release/solon-service.exe": "solon-service.exe",
       "../../../installer/setup.ps1": "installer/setup.ps1",
-      "../../../image/out/0.1.0-dev.4/vmlinuz": "image/vmlinuz",
-      "../../../image/out/0.1.0-dev.4/initrd.img": "image/initrd.img",
-      "../../../image/out/0.1.0-dev.4/rootfs.vhd": "image/rootfs.vhd",
-      "../../../image/out/0.1.0-dev.4/manifest.json": "image/manifest.json",
       "../../../target/release/docker.exe": "bin/docker.exe",
       "../../../installer/vendor/docker-cli.exe": "bin/docker-cli.exe",
       "../../../installer/vendor/cli-plugins/docker-compose.exe": "bin/cli-plugins/docker-compose.exe",
-      "../../../installer/vendor/NOTICE-third-party.txt": "bin/NOTICE-third-party.txt"
+      "../../../installer/vendor/NOTICE-third-party.txt": "bin/NOTICE-third-party.txt",
+      "../../../image/out/0.1.0-dev.5/vmlinuz": "image/vmlinuz",
+      "../../../image/out/0.1.0-dev.5/initrd.img": "image/initrd.img",
+      "../../../image/out/0.1.0-dev.5/rootfs.vhd": "image/rootfs.vhd",
+      "../../../image/out/0.1.0-dev.5/manifest.json": "image/manifest.json"
     },
     "licenseFile": "../../../LICENSE",
     "publisher": "Solon"

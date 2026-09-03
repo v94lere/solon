@@ -192,7 +192,13 @@ impl Engine {
                                     "rattachement à une machine encore en marche"
                                 );
                                 let mut running = self
-                                    .attach(Arc::new(vm), guid, agent, previous.endpoint_id.clone())
+                                    .attach(
+                                        Arc::new(vm),
+                                        guid,
+                                        agent,
+                                        previous.endpoint_id.clone(),
+                                        boot_shares(&previous.shares),
+                                    )
                                     .await?;
                                 if let Some(addr) = previous
                                     .guest_address
@@ -249,12 +255,23 @@ impl Engine {
                 .map_err(|e| SolonError::internal(e.to_string()))??;
 
         self.step(ProvisionStep::CreatingMachine);
+        // Lecteurs partagés lors des sessions précédentes : déclarés dès la création (le périphérique Plan9
+        // n'accepte des ajouts à chaud que s'il existe) et remontés par l'agent avant dockerd.
+        let shares = boot_shares(&previous.shares);
+        let mut cmdline = image.manifest.kernel_cmdline.clone();
+        if !shares.is_empty() {
+            let list: Vec<String> = shares
+                .iter()
+                .map(|sh| format!("{}:{}", sh.name, sh.port))
+                .collect();
+            cmdline.push_str(&format!(" solon.shares={}", list.join(",")));
+        }
         let vm_config = VmConfig {
             id: vm_id.clone(),
             name: "solon".into(),
             kernel: image.kernel(),
             initrd: image.initrd(),
-            cmdline: image.manifest.kernel_cmdline.clone(),
+            cmdline,
             memory_mb: settings.memory_mb,
             processors: settings.processors,
             disks: vec![
@@ -267,7 +284,7 @@ impl Engine {
                     read_only: false,
                 },
             ],
-            shares: vec![],
+            shares: shares.clone(),
             serial_pipe: Some(CONSOLE_PIPE.into()),
             network_adapter: Some(NetworkAdapterConfig {
                 endpoint_id: guest_net.endpoint_id.clone(),
@@ -290,6 +307,7 @@ impl Engine {
                 endpoint_id: Some(guest_net.endpoint_id.clone()),
                 guest_address: Some(guest_net.address.to_string()),
                 image_version: Some(image.manifest.version.clone()),
+                shares: shares.iter().map(|sh| sh.name.clone()).collect(),
                 clean_shutdown: false,
                 updated_unix_ms: settings::now_unix_ms(),
             },
@@ -332,7 +350,7 @@ impl Engine {
             .await?;
 
         let mut running = self
-            .attach(vm, guid, agent, Some(guest_net.endpoint_id.clone()))
+            .attach(vm, guid, agent, Some(guest_net.endpoint_id.clone()), shares)
             .await?;
         running.network = guest_net;
         running.tasks.push(console_task);
@@ -347,6 +365,7 @@ impl Engine {
         guid: GUID,
         agent: Arc<AgentClient>,
         endpoint_id: Option<String>,
+        shares: Vec<solon_core::vm::HostShare>,
     ) -> Result<Running> {
         self.step(ProvisionStep::WaitingEngine);
         let mut events = AgentEvents::connect(&guid, Duration::from_secs(10)).await?;
@@ -424,7 +443,7 @@ impl Engine {
             },
             tasks,
             ports,
-            shares: std::collections::HashMap::new(),
+            shares: shares.into_iter().map(|sh| (sh.name.clone(), sh)).collect(),
         })
     }
 
@@ -663,6 +682,15 @@ impl Engine {
                 .await?;
             running.shares.insert(drive.clone(), share);
             tracing::info!(drive, port, "lecteur partagé vers la machine");
+            let state_path = self.inner.cfg.paths.state_file();
+            let mut st = settings::load_state(&state_path);
+            if !st.shares.contains(&drive) {
+                st.shares.push(drive.clone());
+                st.updated_unix_ms = settings::now_unix_ms();
+                if let Err(e) = settings::save_state(&state_path, &st) {
+                    tracing::warn!("état des partages non enregistré : {e}");
+                }
+            }
             true
         };
         Ok(solon_core::ipc::ShareInfo {
@@ -752,4 +780,26 @@ fn spawn_console_logger() -> JoinHandle<()> {
             }
         }
     })
+}
+
+/// Partages à rétablir au démarrage : les lecteurs mémorisés qui existent encore, dans l'ordre d'ajout
+/// (le port vsock de chacun est `9100 + index`, comme lors de l'ajout à chaud).
+fn boot_shares(drives: &[String]) -> Vec<solon_core::vm::HostShare> {
+    drives
+        .iter()
+        .enumerate()
+        .filter_map(|(i, drive)| {
+            let host_root = format!("{}:\\", drive.to_ascii_uppercase());
+            if !std::path::Path::new(&host_root).exists() {
+                tracing::warn!(drive, "lecteur partagé absent, ignoré");
+                return None;
+            }
+            Some(solon_core::vm::HostShare {
+                name: drive.clone(),
+                host_path: host_root.into(),
+                port: 9100 + i as u32,
+                read_only: false,
+            })
+        })
+        .collect()
 }
