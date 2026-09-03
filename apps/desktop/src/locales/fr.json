@@ -102,7 +102,8 @@
     },
     "compose": "Projet Compose",
     "count_one": "{{count}} conteneur",
-    "count_other": "{{count}} conteneurs"
+    "count_other": "{{count}} conteneurs",
+    "open_port": "Ouvrir {{url}} dans le navigateur"
   },
   "detail": {
     "tabs": {

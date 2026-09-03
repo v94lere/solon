@@ -1,18 +1,20 @@
-//! Icône de la barre des tâches. Un clic (gauche ou droit) ouvre un menu natif : état du moteur, la
-//! liste des conteneurs avec Démarrer / Redémarrer / Arrêter pour chacun, ouvrir la fenêtre,
+//! Icône de la barre des tâches. Un clic (gauche ou droit) ouvre un menu natif avec icônes : état du
+//! moteur, la liste des conteneurs avec Démarrer / Redémarrer / Arrêter pour chacun, ouvrir la fenêtre,
 //! démarrer/arrêter le moteur, quitter. Fermer la fenêtre principale la cache (l'application reste
 //! dans la barre des tâches) ; « Quitter » ferme vraiment. Les libellés suivent la langue de
 //! l'interface (mêmes fichiers `locales/*.json` que le frontend, section `tray`).
 //!
 //! Le menu est reconstruit entièrement à chaque changement (état du moteur, liste des conteneurs,
-//! langue) : c'est simple et les menus natifs sont peu coûteux.
+//! langue) : c'est simple et les menus natifs sont peu coûteux. Les icônes PNG 32×32 viennent de
+//! `icons/tray/` (générées par `make.py`).
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use serde_json::Value;
 use solon_core::ipc::ServiceCommand;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::image::Image;
+use tauri::menu::{IconMenuItem, Menu, PredefinedMenuItem, Submenu};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager, Runtime};
 
@@ -23,6 +25,16 @@ const LOCALE_EN: &str = include_str!("../../src/locales/en.json");
 const LOCALE_FR: &str = include_str!("../../src/locales/fr.json");
 /// Au-delà, le menu indique « … et N autres » et renvoie vers la fenêtre.
 const MAX_LISTED: usize = 12;
+
+macro_rules! png {
+    ($name:literal) => {
+        include_bytes!(concat!("../icons/tray/", $name, ".png"))
+    };
+}
+
+fn icon(bytes: &'static [u8]) -> Option<Image<'static>> {
+    Image::from_bytes(bytes).ok()
+}
 
 /// Langue courante de la barre des tâches, changée par le frontend (`set_language`).
 pub struct TrayLanguage(pub tokio::sync::watch::Sender<String>);
@@ -62,12 +74,32 @@ fn engine_label(l: &Value, state: &str) -> String {
     label(l, "engine").replace("{{state}}", &label(l, &key))
 }
 
+/// Point de couleur selon l'état du moteur.
+fn engine_dot(state: &str) -> &'static [u8] {
+    match state {
+        "ready" => png!("dot-green"),
+        "starting" | "stopping" | "degraded" => png!("dot-orange"),
+        "failed" | "service_unavailable" => png!("dot-red"),
+        _ => png!("dot-grey"),
+    }
+}
+
 fn containers_label(l: &Value, count: u64) -> String {
     match count {
         0 => label(l, "containers_zero"),
         1 => label(l, "containers_one"),
         n => label(l, "containers_other").replace("{{count}}", &n.to_string()),
     }
+}
+
+fn item<R: Runtime>(
+    app: &AppHandle<R>,
+    id: impl Into<tauri::menu::MenuId>,
+    text: impl AsRef<str>,
+    enabled: bool,
+    png: &'static [u8],
+) -> tauri::Result<IconMenuItem<R>> {
+    IconMenuItem::with_id(app, id, text, enabled, icon(png), None::<&str>)
 }
 
 /// Construit le menu complet pour un état donné.
@@ -78,99 +110,88 @@ fn build_menu<R: Runtime>(
     containers: Option<&[TrayContainer]>,
 ) -> tauri::Result<Menu<R>> {
     let menu = Menu::new(app)?;
-    menu.append(&MenuItem::with_id(
+    menu.append(&item(
         app,
         "status",
         engine_label(l, state),
         false,
-        None::<&str>,
+        engine_dot(state),
     )?)?;
     if state == "ready" {
         menu.append(&PredefinedMenuItem::separator(app)?)?;
         match containers {
             Some(list) if !list.is_empty() => {
                 let running = list.iter().filter(|c| c.running).count() as u64;
-                menu.append(&MenuItem::with_id(
+                menu.append(&item(
                     app,
                     "count",
                     containers_label(l, running),
                     false,
-                    None::<&str>,
+                    png!("cube"),
                 )?)?;
                 for c in list.iter().take(MAX_LISTED) {
+                    // Un sous-menu ne porte pas d'icône : le point d'état est dans le texte.
                     let title = format!("{} {}", if c.running { "●" } else { "○" }, c.name);
                     let sub = Submenu::with_id(app, format!("c|{}", c.id), title, true)?;
-                    sub.append(&MenuItem::with_id(
+                    sub.append(&item(
                         app,
                         format!("c|start|{}", c.id),
                         label(l, "container_start"),
                         !c.running,
-                        None::<&str>,
+                        png!("play"),
                     )?)?;
-                    sub.append(&MenuItem::with_id(
+                    sub.append(&item(
                         app,
                         format!("c|restart|{}", c.id),
                         label(l, "container_restart"),
                         c.running,
-                        None::<&str>,
+                        png!("restart"),
                     )?)?;
-                    sub.append(&MenuItem::with_id(
+                    sub.append(&item(
                         app,
                         format!("c|stop|{}", c.id),
                         label(l, "container_stop"),
                         c.running,
-                        None::<&str>,
+                        png!("stop"),
                     )?)?;
                     menu.append(&sub)?;
                 }
                 if list.len() > MAX_LISTED {
                     let more = label(l, "containers_more")
                         .replace("{{count}}", &(list.len() - MAX_LISTED).to_string());
-                    menu.append(&MenuItem::with_id(app, "open", more, true, None::<&str>)?)?;
+                    menu.append(&item(app, "open", more, true, png!("open"))?)?;
                 }
             }
             Some(_) => {
-                menu.append(&MenuItem::with_id(
+                menu.append(&item(
                     app,
                     "count",
                     containers_label(l, 0),
                     false,
-                    None::<&str>,
+                    png!("cube"),
                 )?)?;
             }
             None => {}
         }
     }
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&MenuItem::with_id(
-        app,
-        "open",
-        label(l, "open"),
-        true,
-        None::<&str>,
-    )?)?;
-    menu.append(&MenuItem::with_id(
+    menu.append(&item(app, "open", label(l, "open"), true, png!("open"))?)?;
+    menu.append(&item(
         app,
         "start",
         label(l, "start"),
         matches!(state, "stopped" | "failed"),
-        None::<&str>,
+        png!("bolt"),
     )?)?;
-    menu.append(&MenuItem::with_id(
+    menu.append(&item(
         app,
         "stop",
         label(l, "stop"),
         matches!(state, "ready" | "degraded"),
-        None::<&str>,
+        png!("stop"),
     )?)?;
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&MenuItem::with_id(
-        app,
-        "quit",
-        label(l, "quit"),
-        true,
-        None::<&str>,
-    )?)?;
+    menu.append(&item(app, "quit", label(l, "quit"), true, png!("quit"))?)?;
     Ok(menu)
 }
 
@@ -327,6 +348,26 @@ mod tests {
             ] {
                 assert_ne!(label(&l, key), key, "clé tray.{key} absente en {lang}");
             }
+        }
+    }
+
+    #[test]
+    fn icones_png_decodables() {
+        let all: [&[u8]; 11] = [
+            png!("dot-green"),
+            png!("dot-grey"),
+            png!("dot-orange"),
+            png!("dot-red"),
+            png!("play"),
+            png!("stop"),
+            png!("restart"),
+            png!("open"),
+            png!("quit"),
+            png!("cube"),
+            png!("bolt"),
+        ];
+        for bytes in all {
+            assert!(icon(bytes).is_some());
         }
     }
 }

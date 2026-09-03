@@ -2,7 +2,7 @@ import { useEffect, useState, type JSX } from "react";
 import logo from "./assets/logo.svg";
 import { useTranslation } from "react-i18next";
 import { EngineProvider, useEngine } from "./engine";
-import { EngineBar } from "./components/EngineBar";
+import { EngineFooter } from "./components/EngineFooter";
 import { SetupScreen } from "./views/SetupScreen";
 import { ContainersView } from "./views/ContainersView";
 import { ContainerDetail } from "./views/ContainerDetail";
@@ -70,7 +70,9 @@ function Nav({ section, onSelect }: { section: Section; onSelect: (s: Section) =
           </button>
         );
       })}
-      <div className="sidebar-foot">{t("app.name")} 0.1.0</div>
+      <div className="sidebar-foot">
+        <EngineFooter />
+      </div>
     </nav>
   );
 }
@@ -94,7 +96,6 @@ function Shell() {
 
   return (
     <div className="flex h-full flex-col">
-      <EngineBar />
       <div className="flex min-h-0 flex-1">
         <Nav
           section={section}

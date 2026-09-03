@@ -102,7 +102,8 @@
     },
     "compose": "Compose project",
     "count_one": "{{count}} container",
-    "count_other": "{{count}} containers"
+    "count_other": "{{count}} containers",
+    "open_port": "Open {{url}} in the browser"
   },
   "detail": {
     "tabs": {

@@ -1,14 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
-    <radialGradient id="orb" cx="50%" cy="42%" r="60%">
-      <stop offset="0" stop-color="#5b9dff"/>
-      <stop offset="0.55" stop-color="#3b7cf6"/>
-      <stop offset="1" stop-color="#2f6be6"/>
-    </radialGradient>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0.86" stop-color="#3b82f6" stop-opacity="0.55"/>
-      <stop offset="1" stop-color="#3b82f6" stop-opacity="0"/>
-    </radialGradient>
     <linearGradient id="topL" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#a9d0ff"/>
       <stop offset="1" stop-color="#5a97ff"/>
@@ -33,22 +24,18 @@
       <stop offset="0" stop-color="#244cb8"/>
       <stop offset="1" stop-color="#173586"/>
     </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#1e3a8a" flood-opacity="0.35"/>
+    </filter>
   </defs>
-  <!-- halo doux puis orbe -->
-  <circle cx="512" cy="512" r="500" fill="url(#glow)"/>
-  <circle cx="512" cy="512" r="430" fill="url(#orb)"/>
-  <!-- cube isométrique : sommet T, gauche L, droite R, centre C, bas B, coins bas LB / RB -->
-  <g stroke-linejoin="round">
-    <!-- face du dessus, deux facettes -->
-    <polygon points="512,200 236,352 512,504" fill="url(#topL)"/>
-    <polygon points="512,200 788,352 512,504" fill="url(#topR)"/>
-    <!-- face gauche -->
-    <polygon points="236,352 512,504 512,808" fill="url(#leftA)"/>
-    <polygon points="236,352 236,656 512,808" fill="url(#leftB)"/>
-    <!-- face droite -->
-    <polygon points="512,504 788,352 512,808" fill="url(#rightA)"/>
-    <polygon points="788,352 788,656 512,808" fill="url(#rightB)"/>
-    <!-- arête lumineuse du dessus -->
-    <polyline points="236,352 512,200 788,352" fill="none" stroke="#dbeafe" stroke-opacity="0.9" stroke-width="12" stroke-linecap="round"/>
+  <!-- cube isométrique seul, fond transparent : sommet T, gauche L, droite R, centre C, bas B -->
+  <g stroke-linejoin="round" filter="url(#shadow)">
+    <polygon points="512,96 152,296 512,496" fill="url(#topL)"/>
+    <polygon points="512,96 872,296 512,496" fill="url(#topR)"/>
+    <polygon points="152,296 512,496 512,896" fill="url(#leftA)"/>
+    <polygon points="152,296 152,696 512,896" fill="url(#leftB)"/>
+    <polygon points="512,496 872,296 512,896" fill="url(#rightA)"/>
+    <polygon points="872,296 872,696 512,896" fill="url(#rightB)"/>
+    <polyline points="152,296 512,96 872,296" fill="none" stroke="#dbeafe" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round"/>
   </g>
 </svg>

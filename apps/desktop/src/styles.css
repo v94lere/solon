@@ -222,7 +222,7 @@ select {
   font-weight: 650;
   letter-spacing: -0.01em;
 }
-.sidebar-brand img { width: 28px; height: 28px; filter: drop-shadow(0 2px 6px rgba(47, 111, 240, 0.35)); }
+.sidebar-brand img { width: 30px; height: 30px; }
 .nav-item {
   display: flex;
   align-items: center;
@@ -238,7 +238,13 @@ select {
 .nav-item:hover { background: var(--surface-3); color: var(--ink); }
 .nav-item[aria-current="page"] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 .nav-item svg { width: 17px; height: 17px; flex: none; }
-.sidebar-foot { margin-top: auto; padding: 8px 10px; color: var(--ink-3); font-size: 11.5px; }
+.sidebar-foot { margin-top: auto; padding: 6px 4px 2px; border-top: 1px solid var(--line); }
+.engine-footer { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 6px; color: var(--ink-2); font-size: 12px; }
+.engine-footer .pill-dot { width: 18px; height: 18px; border-radius: 6px; }
+.engine-footer .pill-dot::before { width: 8px; height: 8px; }
+.engine-footer-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.port-link { color: var(--accent-ink); text-decoration: none; cursor: pointer; background: none; border: 0; padding: 0; font: inherit; }
+.port-link:hover { text-decoration: underline; }
 
 /* Pastille « point seul » (statut dans les tableaux) : le texte est en infobulle et en aria-label */
 .pill-dot { width: 26px; height: 24px; padding: 0; justify-content: center; border-radius: 8px; }
