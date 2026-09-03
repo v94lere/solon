@@ -11,7 +11,8 @@ export function EngineFooter() {
   const [busy, setBusy] = useState(false);
   const state = !serviceAvailable ? "service_unavailable" : (snapshot?.state ?? "stopped");
   const tone = state === "ready" ? "pill-ok" : state === "starting" || state === "stopping" || state === "degraded" ? "pill-warn" : state === "failed" || state === "service_unavailable" ? "pill-bad" : "pill-muted";
-  const label = t(`engine.state.${state}`);
+  // Libellé court : le pied de la barre latérale n'a pas la place de « Moteur en marche ».
+  const label = t(`engine.short.${state}`, { defaultValue: t(`engine.state.${state}`) });
   const boot = snapshot?.state === "ready" && snapshot.last_boot_ms != null ? t("engine.boot_time", { seconds: (snapshot.last_boot_ms / 1000).toFixed(1) }) : "";
 
   async function run(action: () => Promise<void>) {
@@ -26,7 +27,7 @@ export function EngineFooter() {
   }
 
   return (
-    <div className="engine-footer" role="status" aria-live="polite" title={boot || label}>
+    <div className="engine-footer" role="status" aria-live="polite" title={boot ? `${t(`engine.state.${state}`)} — ${boot}` : t(`engine.state.${state}`)}>
       <span className={`pill pill-dot ${tone}`} aria-hidden="true" />
       <span className="engine-footer-label">{label}</span>
       <span className="flex-1" />

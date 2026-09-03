@@ -38,7 +38,16 @@
     "retry": "Try again",
     "boot_time": "Started in {{seconds}} s",
     "recovered": "The previous session ended unexpectedly; storage was checked and recovered.",
-    "service_hint": "The Solon background service must be running. Reinstalling Solon repairs it."
+    "service_hint": "The Solon background service must be running. Reinstalling Solon repairs it.",
+    "short": {
+      "ready": "Running",
+      "starting": "Starting…",
+      "stopping": "Stopping…",
+      "degraded": "Restarting…",
+      "failed": "Failed",
+      "stopped": "Stopped",
+      "service_unavailable": "Service not running"
+    }
   },
   "error": {
     "title": "Something needs your attention",

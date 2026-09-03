@@ -38,7 +38,16 @@
     "retry": "Réessayer",
     "boot_time": "Démarré en {{seconds}} s",
     "recovered": "La session précédente s'est terminée brutalement ; le stockage a été vérifié et récupéré.",
-    "service_hint": "Le service Solon en arrière-plan doit être en cours d'exécution. Réinstaller Solon le répare."
+    "service_hint": "Le service Solon en arrière-plan doit être en cours d'exécution. Réinstaller Solon le répare.",
+    "short": {
+      "ready": "En marche",
+      "starting": "Démarrage…",
+      "stopping": "Arrêt…",
+      "degraded": "Redémarrage…",
+      "failed": "En échec",
+      "stopped": "Arrêté",
+      "service_unavailable": "Service arrêté"
+    }
   },
   "error": {
     "title": "Une action est nécessaire",
