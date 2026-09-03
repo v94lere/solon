@@ -110,11 +110,12 @@ fn build_menu<R: Runtime>(
     containers: Option<&[TrayContainer]>,
 ) -> tauri::Result<Menu<R>> {
     let menu = Menu::new(app)?;
+    // Lignes d'information : actives (sinon Windows grise leur icône) et elles ouvrent la fenêtre.
     menu.append(&item(
         app,
         "status",
         engine_label(l, state),
-        false,
+        true,
         engine_dot(state),
     )?)?;
     if state == "ready" {
@@ -126,7 +127,7 @@ fn build_menu<R: Runtime>(
                     app,
                     "count",
                     containers_label(l, running),
-                    false,
+                    true,
                     png!("cube"),
                 )?)?;
                 for c in list.iter().take(MAX_LISTED) {
@@ -167,7 +168,7 @@ fn build_menu<R: Runtime>(
                     app,
                     "count",
                     containers_label(l, 0),
-                    false,
+                    true,
                     png!("cube"),
                 )?)?;
             }
@@ -208,7 +209,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .on_menu_event(|app, event| {
             let id = event.id().as_ref();
             match id {
-                "open" => show_main(app),
+                "open" | "status" | "count" => show_main(app),
                 "start" => {
                     tauri::async_runtime::spawn(async {
                         let _ = service::call(ServiceCommand::Start).await;
