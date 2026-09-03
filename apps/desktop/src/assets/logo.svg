@@ -1,28 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Solon">
   <defs>
     <linearGradient id="topL" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#a9d0ff"/>
-      <stop offset="1" stop-color="#5a97ff"/>
+      <stop offset="0" stop-color="#ffd6c2"/>
+      <stop offset="1" stop-color="#ff9a6a"/>
     </linearGradient>
     <linearGradient id="topR" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7fb4ff"/>
-      <stop offset="1" stop-color="#3f7ff0"/>
+      <stop offset="0" stop-color="#ffb897"/>
+      <stop offset="1" stop-color="#ff8a58"/>
     </linearGradient>
     <linearGradient id="leftA" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2f66e0"/>
-      <stop offset="1" stop-color="#1e46b0"/>
+      <stop offset="0" stop-color="#f26a36"/>
+      <stop offset="1" stop-color="#c94b1e"/>
     </linearGradient>
     <linearGradient id="leftB" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2a5ad0"/>
-      <stop offset="1" stop-color="#173a98"/>
+      <stop offset="0" stop-color="#e85f2c"/>
+      <stop offset="1" stop-color="#b8411a"/>
     </linearGradient>
     <linearGradient id="rightA" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1c3f9e"/>
-      <stop offset="1" stop-color="#132c74"/>
+      <stop offset="0" stop-color="#c2441b"/>
+      <stop offset="1" stop-color="#8f2f10"/>
     </linearGradient>
     <linearGradient id="rightB" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#244cb8"/>
-      <stop offset="1" stop-color="#173586"/>
+      <stop offset="0" stop-color="#d85224"/>
+      <stop offset="1" stop-color="#a63813"/>
     </linearGradient>
   </defs>
   <g stroke-linejoin="round">
@@ -32,6 +32,6 @@
     <polygon points="152,296 152,696 512,896" fill="url(#leftB)"/>
     <polygon points="512,496 872,296 512,896" fill="url(#rightA)"/>
     <polygon points="872,296 872,696 512,896" fill="url(#rightB)"/>
-    <polyline points="152,296 512,96 872,296" fill="none" stroke="#dbeafe" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round"/>
+    <polyline points="152,296 512,96 872,296" fill="none" stroke="#fff0e8" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round"/>
   </g>
 </svg>

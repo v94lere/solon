@@ -19,7 +19,7 @@ export function TerminalPanel({ id, running }: { id: string; running: boolean })
       cursorBlink: true,
       fontFamily: '"Cascadia Mono", Consolas, monospace',
       fontSize: 13,
-      theme: dark ? { background: "#1e1e1e", foreground: "#f0f0f0" } : { background: "#ffffff", foreground: "#1b1b1b", cursor: "#1b1b1b" },
+      theme: dark ? { background: "#222222", foreground: "#f1f1f1", cursor: "#ff7a47" } : { background: "#ffffff", foreground: "#222222", cursor: "#ff7a47" },
       allowProposedApi: true,
     });
     const fit = new FitAddon();

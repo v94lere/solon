@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { containers, type LogChunk } from "../api";
 
 const MAX_LINES = 8000;
-const COLORS = ["#2b7bf5", "#1f9d4b", "#b5651d", "#8e44ad", "#c2185b", "#00838f", "#6d4c41", "#455a64"];
+const COLORS = ["#ff7a47", "#2e9e1b", "#3b82f6", "#8e44ad", "#c2185b", "#00838f", "#6d4c41", "#737373"];
 
 export interface LogSource {
   id: string;

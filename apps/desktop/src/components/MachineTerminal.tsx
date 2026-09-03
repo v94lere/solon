@@ -19,7 +19,7 @@ export function MachineTerminal({ open, onClose }: { open: boolean; onClose: () 
       cursorBlink: true,
       fontFamily: '"Cascadia Mono", Consolas, monospace',
       fontSize: 13,
-      theme: dark ? { background: "#17181d", foreground: "#eef0f5" } : { background: "#ffffff", foreground: "#17181c", cursor: "#17181c" },
+      theme: dark ? { background: "#222222", foreground: "#f1f1f1", cursor: "#ff7a47" } : { background: "#ffffff", foreground: "#222222", cursor: "#ff7a47" },
       allowProposedApi: true,
     });
     const fit = new FitAddon();
