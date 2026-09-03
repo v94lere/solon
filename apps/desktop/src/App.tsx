@@ -118,7 +118,11 @@ function Shell() {
     setSection("projects");
     setProject(dir);
   }, []);
-  const openTerminal = useCallback(() => setTerminalOpen(true), []);
+  // Une seule fenêtre modale à la fois : ouvrir l'une ferme l'autre.
+  const openTerminal = useCallback(() => {
+    setPaletteOpen(false);
+    setTerminalOpen(true);
+  }, []);
   const closeTerminal = useCallback(() => setTerminalOpen(false), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
   const paletteActions = useMemo(() => ({ go, openContainer, openProject, openTerminal }), [go, openContainer, openProject, openTerminal]);
@@ -129,9 +133,11 @@ function Shell() {
       if (!e.ctrlKey || e.altKey) return;
       if (e.key.toLowerCase() === "k") {
         e.preventDefault();
+        setTerminalOpen(false);
         setPaletteOpen((o) => !o);
       } else if (e.key === "`" || e.code === "Backquote") {
         e.preventDefault();
+        setPaletteOpen(false);
         if (ready) setTerminalOpen((o) => !o);
       } else if (/^[1-6]$/.test(e.key)) {
         e.preventDefault();

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { containers, images, networks, volumes, engine, type ContainerSummary } from "../api";
-import { loadRecentProjects } from "../projects";
+import { loadRecentProjects, projectBaseName, projectDirOf } from "../projects";
 import type { Section } from "../App";
 
 export interface PaletteActions {
@@ -68,8 +68,15 @@ export function CommandPalette({ open, onClose, actions }: { open: boolean; onCl
       const name = (c.Names?.[0] ?? c.Id.slice(0, 12)).replace(/^\//, "");
       list.push({ key: `c:${c.Id}`, group: t("palette.groups.containers"), label: name, hint: `${c.Image} · ${c.State}`, run: done(() => actions.openContainer(c.Id)) });
     }
-    for (const dir of loadRecentProjects()) {
-      list.push({ key: `p:${dir}`, group: t("palette.groups.projects"), label: dir.split(/[\\/]/).pop() ?? dir, hint: dir, run: done(() => actions.openProject(dir)) });
+    // Projets : récents + détectés d'après les étiquettes Compose des conteneurs.
+    const projectDirs = new Map<string, string>();
+    for (const dir of loadRecentProjects()) projectDirs.set(dir.toLowerCase(), dir);
+    for (const c of data.containers) {
+      const dir = projectDirOf(c);
+      if (dir && !projectDirs.has(dir.toLowerCase())) projectDirs.set(dir.toLowerCase(), dir);
+    }
+    for (const dir of projectDirs.values()) {
+      list.push({ key: `p:${dir}`, group: t("palette.groups.projects"), label: projectBaseName(dir), hint: dir, run: done(() => actions.openProject(dir)) });
     }
     for (const im of data.images) list.push({ key: `i:${im}`, group: t("palette.groups.images"), label: im, run: done(() => actions.go("images")) });
     for (const v of data.volumes) list.push({ key: `v:${v}`, group: t("palette.groups.volumes"), label: v, run: done(() => actions.go("volumes")) });
