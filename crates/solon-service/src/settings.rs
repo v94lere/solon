@@ -5,13 +5,30 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 use solon_core::ipc::Settings;
 
+/// Processeurs par défaut : tous les cœurs logiques moins deux (gardés pour Windows et l'application),
+/// au moins 2. C'est la seule mesure où Docker Desktop devançait Solon (il prend tous les cœurs).
+pub fn default_processors() -> u32 {
+    let n = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4) as u32;
+    n.saturating_sub(2).clamp(2, 64)
+}
+
+/// Réglages par défaut de cette machine (`Settings::default()` ne connaît pas le matériel).
+pub fn default_settings() -> Settings {
+    Settings {
+        processors: default_processors(),
+        ..Settings::default()
+    }
+}
+
 pub fn load_settings(path: &Path) -> Settings {
     match std::fs::read_to_string(path) {
         Ok(text) => serde_json::from_str(&text).unwrap_or_else(|e| {
             tracing::warn!("settings.json illisible ({e}), valeurs par défaut");
-            Settings::default()
+            default_settings()
         }),
-        Err(_) => Settings::default(),
+        Err(_) => default_settings(),
     }
 }
 

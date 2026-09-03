@@ -17,6 +17,9 @@ apps/desktop/src-tauri/gen/schemas/
 # Image Linux construite (les sources du pipeline sont versionnées, pas les artefacts)
 /image/out/
 
+# CLI Docker et Compose téléchargés par installer/fetch-docker-cli.ps1 (redistribués dans l'installeur)
+/installer/vendor/
+
 # Éditeurs / OS
 .vscode/settings.json
 .idea/

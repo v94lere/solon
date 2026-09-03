@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { engine } from "../api";
 import { useEngine } from "../engine";
-import { IconPlay, IconRestart, IconStop } from "./Icons";
+import { IconPlay, IconRestart, IconStop, IconTerminal } from "./Icons";
 
 /** Pied de la barre latérale : état du moteur (point + libellé) et commandes démarrer / redémarrer / arrêter. */
-export function EngineFooter() {
+export function EngineFooter({ onTerminal }: { onTerminal: () => void }) {
   const { t } = useTranslation();
   const { snapshot, serviceAvailable } = useEngine();
   const [busy, setBusy] = useState(false);
@@ -34,6 +34,11 @@ export function EngineFooter() {
       {serviceAvailable && (state === "stopped" || state === "failed") && (
         <button type="button" className="icon-btn" title={t("engine.start")} aria-label={t("engine.start")} disabled={busy} onClick={() => run(() => engine.start())}>
           <IconPlay />
+        </button>
+      )}
+      {serviceAvailable && state === "ready" && (
+        <button type="button" className="icon-btn" title={`${t("machine.terminal")} (Ctrl+\`)`} aria-label={t("machine.terminal")} onClick={onTerminal}>
+          <IconTerminal />
         </button>
       )}
       {serviceAvailable && (state === "ready" || state === "degraded") && (

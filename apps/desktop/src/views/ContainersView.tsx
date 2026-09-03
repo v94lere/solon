@@ -3,9 +3,10 @@ import { useTranslation } from "react-i18next";
 import { IconLogs, IconPlay, IconRestart, IconStop, IconTrash } from "../components/Icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { containers, formatBytes, type ContainerSummary, type StatSample } from "../api";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ComposePanel } from "../components/ComposePanel";
+import { PortLinks } from "../components/PortLinks";
+import { projectDirOf } from "../projects";
 
 const COMPOSE_LABEL = "com.docker.compose.project";
 
@@ -31,39 +32,7 @@ function stateClass(state: string) {
   }
 }
 
-type PortRow = { host: number; guest: number; proto: string };
-
-function publishedPorts(c: ContainerSummary): PortRow[] {
-  const seen = new Map<string, PortRow>();
-  for (const p of c.Ports ?? []) {
-    if (p.PublicPort) seen.set(`${p.PublicPort}/${p.Type}`, { host: p.PublicPort, guest: p.PrivatePort, proto: p.Type ?? "tcp" });
-  }
-  return [...seen.values()].sort((a, b) => a.host - b.host);
-}
-
-/** Liste des ports publiés ; un port TCP est un lien qui ouvre http://localhost:<port> dans le navigateur. */
-function PortLinks({ c, running }: { c: ContainerSummary; running: boolean }) {
-  const { t } = useTranslation();
-  const ports = publishedPorts(c);
-  if (ports.length === 0) return null;
-  return (
-    <span className="flex flex-wrap gap-x-2">
-      {ports.map((p) => {
-        const text = `${p.host}→${p.guest}/${p.proto}`;
-        const url = `http://localhost:${p.host}/`;
-        return running && p.proto === "tcp" ? (
-          <button key={text} type="button" className="port-link mono" title={t("containers.open_port", { url })} onClick={() => void openUrl(url)}>
-            {text}
-          </button>
-        ) : (
-          <span key={text}>{text}</span>
-        );
-      })}
-    </span>
-  );
-}
-
-export function ContainersView({ onOpen }: { onOpen: (id: string) => void }) {
+export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string) => void; onOpenProject: (dir: string) => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [showStopped, setShowStopped] = useState(true);
@@ -137,7 +106,7 @@ export function ContainersView({ onOpen }: { onOpen: (id: string) => void }) {
         </label>
         <input type="search" className="input w-72" placeholder={t("containers.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("containers.search")} />
       </div>
-      <ComposePanel />
+      <ComposePanel onOpenProject={onOpenProject} />
       {error && (
         <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>
           {error}
@@ -174,6 +143,7 @@ export function ContainersView({ onOpen }: { onOpen: (id: string) => void }) {
                   stats={stats}
                   busy={busy}
                   onOpen={onOpen}
+                  onOpenProject={onOpenProject}
                   onAct={act}
                   onRemove={(c) => {
                     setRemoveVolumes(false);
@@ -217,6 +187,7 @@ function GroupRows({
   onOpen,
   onAct,
   onRemove,
+  onOpenProject,
 }: {
   project: string;
   list: ContainerSummary[];
@@ -225,6 +196,7 @@ function GroupRows({
   onOpen: (id: string) => void;
   onAct: (id: string, action: () => Promise<void>) => Promise<void>;
   onRemove: (c: ContainerSummary) => void;
+  onOpenProject: (dir: string) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -232,7 +204,16 @@ function GroupRows({
       {project && (
         <tr>
           <td colSpan={7} className="!py-1 text-[11.5px] font-semibold uppercase tracking-wide" style={{ color: "var(--accent-ink)", background: "var(--surface-2)" }}>
-            {t("containers.compose")} · {project}
+            {(() => {
+              const dir = list.map(projectDirOf).find((d) => d);
+              return dir ? (
+                <button type="button" className="hover:underline" style={{ color: "inherit", font: "inherit", textTransform: "inherit" }} title={dir} onClick={() => onOpenProject(dir)}>
+                  {t("containers.compose")} · {project} →
+                </button>
+              ) : (
+                <>{t("containers.compose")} · {project}</>
+              );
+            })()}
           </td>
         </tr>
       )}

@@ -1,8 +1,12 @@
-import { useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 import logo from "./assets/logo.svg";
 import { useTranslation } from "react-i18next";
 import { EngineProvider, useEngine } from "./engine";
 import { EngineFooter } from "./components/EngineFooter";
+import { MachineTerminal } from "./components/MachineTerminal";
+import { CommandPalette } from "./components/CommandPalette";
+import { ProjectsView } from "./views/ProjectsView";
+import { ProjectView } from "./views/ProjectView";
 import { SetupScreen } from "./views/SetupScreen";
 import { ContainersView } from "./views/ContainersView";
 import { ContainerDetail } from "./views/ContainerDetail";
@@ -11,13 +15,19 @@ import { VolumesView } from "./views/VolumesView";
 import { NetworksView } from "./views/NetworksView";
 import { SettingsView } from "./views/SettingsView";
 
-export type Section = "containers" | "images" | "volumes" | "networks" | "settings";
+export type Section = "containers" | "projects" | "images" | "volumes" | "networks" | "settings";
 
 const icons: Record<Section, JSX.Element> = {
   containers: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
       <path d="M12 3 3.5 7.5v9L12 21l8.5-4.5v-9Z" />
       <path d="M3.5 7.5 12 12l8.5-4.5M12 12v9" />
+    </svg>
+  ),
+  projects: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+      <path d="M3 11h18" />
     </svg>
   ),
   images: (
@@ -46,10 +56,11 @@ const icons: Record<Section, JSX.Element> = {
   ),
 };
 
-function Nav({ section, onSelect }: { section: Section; onSelect: (s: Section) => void }) {
+function Nav({ section, onSelect, onTerminal }: { section: Section; onSelect: (s: Section) => void; onTerminal: () => void }) {
   const { t } = useTranslation();
   const items: { id: Section; label: string }[] = [
     { id: "containers", label: t("nav.containers") },
+    { id: "projects", label: t("nav.projects") },
     { id: "images", label: t("nav.images") },
     { id: "volumes", label: t("nav.volumes") },
     { id: "networks", label: t("nav.networks") },
@@ -71,25 +82,71 @@ function Nav({ section, onSelect }: { section: Section; onSelect: (s: Section) =
         );
       })}
       <div className="sidebar-foot">
-        <EngineFooter />
+        <EngineFooter onTerminal={onTerminal} />
       </div>
     </nav>
   );
 }
 
+const SECTION_KEYS: Section[] = ["containers", "projects", "images", "volumes", "networks", "settings"];
+
 function Shell() {
   const { ready } = useEngine();
   const [section, setSection] = useState<Section>("containers");
   const [selected, setSelected] = useState<string | null>(null);
+  const [project, setProject] = useState<string | null>(null);
+  const [terminalOpen, setTerminalOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
-    if (!ready) setSelected(null);
+    if (!ready) {
+      setSelected(null);
+      setTerminalOpen(false);
+    }
   }, [ready]);
+
+  const go = useCallback((s: Section) => {
+    setSection(s);
+    setSelected(null);
+    if (s !== "projects") setProject(null);
+  }, []);
+  const openContainer = useCallback((id: string) => {
+    setSection("containers");
+    setSelected(id);
+  }, []);
+  const openProject = useCallback((dir: string) => {
+    setSection("projects");
+    setProject(dir);
+  }, []);
+  const openTerminal = useCallback(() => setTerminalOpen(true), []);
+  const closeTerminal = useCallback(() => setTerminalOpen(false), []);
+  const closePalette = useCallback(() => setPaletteOpen(false), []);
+  const paletteActions = useMemo(() => ({ go, openContainer, openProject, openTerminal }), [go, openContainer, openProject, openTerminal]);
+
+  // Raccourcis globaux : Ctrl+K recherche, Ctrl+` terminal, Ctrl+1…6 sections.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || e.altKey) return;
+      if (e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      } else if (e.key === "`" || e.code === "Backquote") {
+        e.preventDefault();
+        if (ready) setTerminalOpen((o) => !o);
+      } else if (/^[1-6]$/.test(e.key)) {
+        e.preventDefault();
+        go(SECTION_KEYS[Number(e.key) - 1]);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [go, ready]);
 
   let content;
   if (section === "settings") content = <SettingsView />;
   else if (!ready) content = <SetupScreen />;
-  else if (section === "containers") content = selected ? <ContainerDetail id={selected} onBack={() => setSelected(null)} /> : <ContainersView onOpen={setSelected} />;
+  else if (section === "containers") content = selected ? <ContainerDetail id={selected} onBack={() => setSelected(null)} /> : <ContainersView onOpen={setSelected} onOpenProject={openProject} />;
+  else if (section === "projects") content = project ? <ProjectView dir={project} onBack={() => setProject(null)} onOpenContainer={openContainer} /> : <ProjectsView onOpen={openProject} />;
   else if (section === "images") content = <ImagesView />;
   else if (section === "volumes") content = <VolumesView />;
   else content = <NetworksView />;
@@ -97,17 +154,13 @@ function Shell() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex min-h-0 flex-1">
-        <Nav
-          section={section}
-          onSelect={(s) => {
-            setSection(s);
-            setSelected(null);
-          }}
-        />
+        <Nav section={section} onSelect={go} onTerminal={openTerminal} />
         <main className="min-w-0 flex-1 overflow-hidden" style={{ background: "var(--bg)" }}>
           {content}
         </main>
       </div>
+      <MachineTerminal open={terminalOpen} onClose={closeTerminal} />
+      <CommandPalette open={paletteOpen} onClose={closePalette} actions={paletteActions} />
     </div>
   );
 }

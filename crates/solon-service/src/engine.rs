@@ -396,6 +396,18 @@ impl Engine {
                 tracing::error!("relais API Docker arrêté : {e}");
             }
         }));
+        tasks.push(tokio::spawn(async move {
+            if let Err(e) = solon_hvsock::relay::serve_named_pipe_with_sddl(
+                solon_core::ipc::SHELL_PIPE.into(),
+                guid,
+                solon_core::protocol::PORT_SHELL,
+                Some(solon_hvsock::relay::DOCKER_PIPE_SDDL),
+            )
+            .await
+            {
+                tracing::error!("relais du terminal machine arrêté : {e}");
+            }
+        }));
 
         Ok(Running {
             vm,

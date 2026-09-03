@@ -13,6 +13,8 @@ use crate::protocol::PortBinding;
 pub const CONTROL_PIPE: &str = r"\\.\pipe\solon-control";
 /// Pipe où le service expose l'API Docker (compatible `docker -H npipe:////./pipe/solon`).
 pub const DOCKER_PIPE: &str = r"\\.\pipe\solon";
+/// Terminal dans la machine (relais vers le port vsock `PORT_SHELL`).
+pub const SHELL_PIPE: &str = r"\\.\pipe\solon-shell";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IpcRequest {

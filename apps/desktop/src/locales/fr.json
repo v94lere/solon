@@ -7,7 +7,8 @@
     "images": "Images",
     "volumes": "Volumes",
     "networks": "Réseaux",
-    "settings": "Réglages"
+    "settings": "Réglages",
+    "projects": "Projets"
   },
   "engine": {
     "state": {
@@ -291,5 +292,51 @@
     "container_restart": "Redémarrer",
     "container_stop": "Arrêter",
     "containers_more": "… et {{count}} autres (ouvrir Solon)"
+  },
+  "projects": {
+    "title": "Projets",
+    "count_one": "{{count}} projet",
+    "count_other": "{{count}} projets",
+    "empty": "Aucun projet Compose. Ouvrez un dossier contenant compose.yaml.",
+    "columns": {
+      "name": "Nom",
+      "folder": "Dossier",
+      "services": "Services"
+    },
+    "running_count": "{{running}}/{{total}} en marche",
+    "not_started": "non démarré",
+    "open": "Ouvrir",
+    "forget": "Retirer de la liste"
+  },
+  "project": {
+    "back": "Projets",
+    "rebuild": "Reconstruire",
+    "explorer": "Explorateur",
+    "vscode": "VS Code",
+    "logs": "Journaux (tous les services)",
+    "output": "Sortie de la commande",
+    "no_services": "Aucun conteneur pour ce projet. Cliquez sur Up pour le démarrer.",
+    "columns": {
+      "service": "Service",
+      "container": "Conteneur"
+    }
+  },
+  "machine": {
+    "terminal": "Terminal de la machine",
+    "terminal_hint": "shell root dans le moteur Solon — Échap pour fermer"
+  },
+  "palette": {
+    "title": "Recherche",
+    "placeholder": "Rechercher conteneurs, images, projets, actions…",
+    "no_results": "Aucun résultat",
+    "foot": "↑↓ naviguer · Entrée ouvrir · Échap fermer · Ctrl+1…6 sections · Ctrl+` terminal",
+    "groups": {
+      "actions": "Actions",
+      "containers": "Conteneurs",
+      "images": "Images",
+      "volumes": "Volumes",
+      "networks": "Réseaux",
+      "projects": "Projets"
+    }
   }
 }

@@ -7,7 +7,8 @@
     "images": "Images",
     "volumes": "Volumes",
     "networks": "Networks",
-    "settings": "Settings"
+    "settings": "Settings",
+    "projects": "Projects"
   },
   "engine": {
     "state": {
@@ -291,5 +292,51 @@
     "container_restart": "Restart",
     "container_stop": "Stop",
     "containers_more": "… and {{count}} more (open Solon)"
+  },
+  "projects": {
+    "title": "Projects",
+    "count_one": "{{count}} project",
+    "count_other": "{{count}} projects",
+    "empty": "No Compose project yet. Open a folder containing compose.yaml.",
+    "columns": {
+      "name": "Name",
+      "folder": "Folder",
+      "services": "Services"
+    },
+    "running_count": "{{running}}/{{total}} running",
+    "not_started": "not started",
+    "open": "Open",
+    "forget": "Remove from the list"
+  },
+  "project": {
+    "back": "Projects",
+    "rebuild": "Rebuild",
+    "explorer": "Explorer",
+    "vscode": "VS Code",
+    "logs": "Logs (all services)",
+    "output": "Command output",
+    "no_services": "No container for this project yet. Click Up to start it.",
+    "columns": {
+      "service": "Service",
+      "container": "Container"
+    }
+  },
+  "machine": {
+    "terminal": "Machine terminal",
+    "terminal_hint": "root shell inside the Solon engine — Esc to close"
+  },
+  "palette": {
+    "title": "Search",
+    "placeholder": "Search containers, images, projects, actions…",
+    "no_results": "No results",
+    "foot": "↑↓ navigate · Enter open · Esc close · Ctrl+1…6 sections · Ctrl+` terminal",
+    "groups": {
+      "actions": "Actions",
+      "containers": "Containers",
+      "images": "Images",
+      "volumes": "Volumes",
+      "networks": "Networks",
+      "projects": "Projects"
+    }
   }
 }

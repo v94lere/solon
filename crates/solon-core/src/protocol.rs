@@ -20,6 +20,19 @@ pub const PORT_CONTROL: u32 = 5000;
 pub const PORT_DOCKER: u32 = 5001;
 pub const PORT_PORTS: u32 = 5002;
 pub const PORT_EVENTS: u32 = 5003;
+/// Terminal interactif dans la machine (hôte → agent : en-tête JSON puis trames ; agent → hôte : octets bruts du TTY).
+pub const PORT_SHELL: u32 = 5004;
+
+/// Type de trame hôte → agent sur le canal terminal : `[type, len_hi, len_lo, charge utile]`.
+pub const SHELL_FRAME_INPUT: u8 = 0;
+pub const SHELL_FRAME_RESIZE: u8 = 1;
+
+/// Première ligne envoyée par l'hôte à l'ouverture d'un terminal dans la machine.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellHeader {
+    pub cols: u16,
+    pub rows: u16,
+}
 
 /// Version du protocole ; l'agent la renvoie dans [`HealthReport`], le service refuse une
 /// version majeure différente.

@@ -223,6 +223,22 @@ export const networks = {
   inspect: (id: string) => invoke<unknown>("network_inspect", { id }),
 };
 
+// ---- Terminal dans la machine ----
+export const machineShell = {
+  open: (cols: number, rows: number, onOutput: (o: ExecOutput) => void) => {
+    const channel = new Channel<ExecOutput>();
+    channel.onmessage = onOutput;
+    return invoke<number>("machine_shell_open", { cols, rows, channel });
+  },
+  input: (id: number, data: string) => invoke<void>("machine_shell_input", { id, data }),
+  resize: (id: number, cols: number, rows: number) => invoke<void>("machine_shell_resize", { id, cols, rows }),
+  close: (id: number) => invoke<void>("machine_shell_close", { id }),
+};
+
+export const system = {
+  openInVsCode: (dir: string) => invoke<void>("open_in_vscode", { dir }),
+};
+
 // ---- Compose ----
 export interface ComposeProject {
   dir: string;

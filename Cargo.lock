@@ -3303,6 +3303,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "solon-docker-shim"
+version = "0.1.0"
+
+[[package]]
 name = "solon-hvsock"
 version = "0.1.0"
 dependencies = [

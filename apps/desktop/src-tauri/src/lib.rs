@@ -6,6 +6,7 @@
 mod compose;
 mod docker;
 mod service;
+mod shell;
 mod tray;
 
 use std::sync::Arc;
@@ -77,6 +78,22 @@ fn set_language(app: tauri::AppHandle, lang: String) {
     }
 }
 
+/// Ouvre un dossier dans VS Code : la commande `code` si elle est dans le PATH, sinon l'URL `vscode://`.
+#[tauri::command]
+fn open_in_vscode(dir: String) -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let status = std::process::Command::new("cmd")
+        .args(["/C", "code", &dir])
+        .creation_flags(CREATE_NO_WINDOW)
+        .status();
+    if matches!(status, Ok(s) if s.success()) {
+        return Ok(());
+    }
+    let url = format!("vscode://file/{}", dir.replace('\\', "/"));
+    tauri_plugin_opener::open_url(url, None::<&str>).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn paths_logs_dir() -> String {
     let base = std::env::var_os("ProgramData")
@@ -96,6 +113,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(Arc::new(docker::DockerState::default()))
+        .manage(Arc::new(shell::ShellState::default()))
         .setup(|app| {
             tray::setup(app.handle())?;
             Ok(())
@@ -120,6 +138,11 @@ pub fn run() {
             settings_set,
             service_exec,
             paths_logs_dir,
+            open_in_vscode,
+            shell::machine_shell_open,
+            shell::machine_shell_input,
+            shell::machine_shell_resize,
+            shell::machine_shell_close,
             set_language,
             docker::containers_list,
             docker::container_inspect,

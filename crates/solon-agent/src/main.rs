@@ -27,6 +27,8 @@ mod ports;
 #[cfg(target_os = "linux")]
 mod rpc;
 #[cfg(target_os = "linux")]
+mod shell;
+#[cfg(target_os = "linux")]
 mod system;
 #[cfg(target_os = "linux")]
 mod vsock;
@@ -90,6 +92,10 @@ fn main() {
     {
         let st = state.clone();
         std::thread::spawn(move || ports::serve(st));
+    }
+    {
+        let st = state.clone();
+        std::thread::spawn(move || shell::serve(st));
     }
     let ready_ms = t0.elapsed().as_millis();
     println!(
