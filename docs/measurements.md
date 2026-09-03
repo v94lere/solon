@@ -332,3 +332,29 @@ des blocs de 2 Mo signalables. Non fait au MVP : 426–516 Mo reste le budget an
 - `tauri icon` accepte un SVG et régénère toutes les tailles (Windows, macOS, mobiles) ; les jeux Android/iOS
   ont été retirés du dépôt (hors périmètre).
 
+## Comparatif Docker Desktop 4.66.1 (WSL2) — Solon 0.1.0, même machine, 3 septembre 2026
+
+Machine : Windows 11 Pro 26200, 16 cœurs. Charge : `examples/odoo18` (Odoo 18 Community + PostgreSQL 16), même fichier
+Compose, même dossier partagé (`config/`, `addons/`), volumes nommés pour les données. Docker Desktop utilise ses
+réglages par défaut (WSL2, tous les cœurs, 6,6 Go visibles par les conteneurs) ; Solon ses réglages par défaut
+(4 processeurs, 2 Go).
+
+| Mesure | Docker Desktop | Solon | Lecture |
+|---|---|---|---|
+| Moteur prêt après l'ordre de démarrage | 6,1 s (application déjà installée, WSL chaud) | 1,1 s (rattachement) / 2,6–3,4 s (démarrage complet) | Solon 2 à 5× plus rapide |
+| Mémoire au repos, aucun conteneur | **1 998 Mo** (vmmemWSL 1 335 + processus Docker Desktop 663) | **426–516 Mo** | Solon ≈ 4× plus léger |
+| Mémoire avec Odoo + PostgreSQL, 150 s de repos | **5 146 Mo** (vmmemWSL 4 771) | **1 892 Mo** (dont invité : 353 Mo utilisés, 400 Mo de cache ; conteneurs 151 + 114 Mo) | Solon ≈ 2,7× plus léger ; les deux gardent trop de cache |
+| `docker pull odoo:18.0` (2 Go) depuis ECR public | **échec** (`cloudfront.net … EOF`, 3 essais) ; images transférées depuis Solon par `docker save/load` | 38,8 s | Réseau sortant de Docker Desktop défaillant sur cette machine, pas mesuré |
+| `compose down` + `compose up -d`, images présentes | 7,1 s | 10,3 s | Docker Desktop plus rapide (plus de cœurs, `down` compris côté Solon) |
+| Odoo répond après `up` | 1,5 s | 2,9–3,1 s | |
+| Création d'une base avec données de démonstration | 13,6 s | 16,4–17,7 s | Docker Desktop +20 % : 16 cœurs contre 4 pour Solon (réglable) |
+| Page de connexion, moyenne de 5 chargements | 27–46 ms | 34 ms | Équivalent |
+
+Conclusions honnêtes : Solon gagne nettement sur ce qui coûte tous les jours (démarrage, mémoire) ; à charge égale
+Docker Desktop reste 20 à 30 % plus rapide sur les tâches CPU parce qu'il dispose par défaut de tous les cœurs (Solon :
+4, modifiable dans Réglages) ; la latence des requêtes web est identique. Les deux moteurs gardent le cache disque de
+l'invité en mémoire ; Solon plafonne à l'allocation (2 Go), Docker Desktop monte à 5 Go.
+
+Incidents pendant la mesure : rate limit anonyme du registre ECR (`toomanyrequests`) sur les deux moteurs ; Odoo lancé
+en double sur le même dossier `config/` réécrit `admin_passwd` haché à tour de rôle (sans conséquence, même mot de passe).
+
