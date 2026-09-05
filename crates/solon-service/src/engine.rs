@@ -403,16 +403,24 @@ impl Engine {
         let mut tasks = Vec::new();
         tasks.push(self.spawn_event_loop(events, guid));
         tasks.push(self.spawn_exit_watcher(vm.clone()));
+        {
+            let engine = self.clone();
+            tasks.push(tokio::spawn(async move {
+                if let Err(e) = crate::docker_proxy::serve(engine, guid).await {
+                    tracing::error!("mandataire API Docker arrêté : {e}");
+                }
+            }));
+        }
         tasks.push(tokio::spawn(async move {
             if let Err(e) = solon_hvsock::relay::serve_named_pipe_with_sddl(
-                solon_core::ipc::DOCKER_PIPE.into(),
+                solon_core::ipc::EXEC_PIPE.into(),
                 guid,
-                solon_core::protocol::PORT_DOCKER,
+                solon_core::protocol::PORT_EXEC,
                 Some(solon_hvsock::relay::DOCKER_PIPE_SDDL),
             )
             .await
             {
-                tracing::error!("relais API Docker arrêté : {e}");
+                tracing::error!("relais d'exécution en flux arrêté : {e}");
             }
         }));
         tasks.push(tokio::spawn(async move {

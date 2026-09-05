@@ -128,6 +128,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             compose::compose_detect,
             compose::compose_run,
+            compose::compose_stream,
             engine_status,
             engine_start,
             engine_stop,

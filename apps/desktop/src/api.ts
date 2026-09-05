@@ -251,9 +251,19 @@ export interface ComposeResult {
   ms: number;
   guest_dir: string;
 }
+export interface ComposeChunk {
+  kind: "stdout" | "stderr" | "exit" | "error";
+  text: string;
+}
 export const compose = {
   detect: (dir: string) => invoke<ComposeProject | null>("compose_detect", { dir }),
   run: (dir: string, args: string[], timeoutS?: number) => invoke<ComposeResult>("compose_run", { dir, args, timeoutS: timeoutS ?? null }),
+  /** Sortie en flux ; la promesse se résout avec le code de sortie. */
+  stream: (dir: string, args: string[], onChunk: (c: ComposeChunk) => void) => {
+    const channel = new Channel<ComposeChunk>();
+    channel.onmessage = onChunk;
+    return invoke<number>("compose_stream", { dir, args, channel });
+  },
 };
 
 // Flux ouverts côté Rust : fermés si la page se recharge (sinon les tâches continueraient à

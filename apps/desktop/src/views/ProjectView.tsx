@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { compose, containers, system, type ComposeProject, type ComposeResult, type ContainerSummary } from "../api";
+import { compose, containers, system, type ComposeProject, type ContainerSummary } from "../api";
 import { projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, serviceNameOf } from "../projects";
 import { MultiLogsPanel } from "../components/MultiLogsPanel";
 import { PortLinks } from "../components/PortLinks";
@@ -23,7 +23,9 @@ export function ProjectView({ dir, onBack, onOpenContainer }: { dir: string; onB
   const queryClient = useQueryClient();
   const [project, setProject] = useState<ComposeProject | null | undefined>(undefined);
   const [busy, setBusy] = useState<string | null>(null);
-  const [result, setResult] = useState<ComposeResult | null>(null);
+  const [output, setOutput] = useState<{ kind: string; text: string }[]>([]);
+  const [exitCode, setExitCode] = useState<number | null>(null);
+  const outputRef = useRef<HTMLPreElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [showOutput, setShowOutput] = useState(false);
   const query = useQuery({ queryKey: ["containers", true], queryFn: () => containers.list(true), refetchInterval: 5000 });
@@ -47,10 +49,15 @@ export function ProjectView({ dir, onBack, onOpenContainer }: { dir: string; onB
     setBusy(label);
     setError(null);
     setShowOutput(true);
+    setOutput([]);
+    setExitCode(null);
     try {
-      const r = await compose.run(dir, args, 1800);
-      setResult(r);
-      if (r.code !== 0) setError(t("compose.exit", { code: r.code ?? "?", seconds: (r.ms / 1000).toFixed(1) }));
+      const code = await compose.stream(dir, args, (c) => {
+        if (c.kind === "exit") return;
+        setOutput((prev) => (prev.length > 4000 ? prev.slice(prev.length - 4000) : prev).concat({ kind: c.kind, text: c.text }));
+      });
+      setExitCode(code);
+      if (code !== 0) setError(t("project.exit_code", { code }));
       await queryClient.invalidateQueries({ queryKey: ["containers"] });
     } catch (e) {
       setError(String(e));
@@ -58,6 +65,10 @@ export function ProjectView({ dir, onBack, onOpenContainer }: { dir: string; onB
       setBusy(null);
     }
   }
+
+  useEffect(() => {
+    outputRef.current?.scrollTo({ top: outputRef.current.scrollHeight });
+  }, [output]);
 
   async function act(id: string, action: () => Promise<void>) {
     setBusy(id);
@@ -150,8 +161,12 @@ export function ProjectView({ dir, onBack, onOpenContainer }: { dir: string; onB
             <span className="flex-1" />
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowOutput(false)}>{t("common.close")}</button>
           </div>
-          <pre className="mono max-h-40 overflow-auto p-2 text-xs leading-5 whitespace-pre-wrap">
-            {result ? `${result.output.trim() || t("compose.no_output")}\n[${t("compose.exit", { code: result.code ?? "?", seconds: (result.ms / 1000).toFixed(1) })}]` : t("compose.running")}
+          <pre ref={outputRef} className="mono max-h-48 overflow-auto p-2 text-xs leading-5 whitespace-pre-wrap">
+            {output.length === 0 && busy ? t("compose.running") : null}
+            {output.map((c, i) => (
+              <span key={i} style={{ color: c.kind === "stderr" ? "var(--ink-2)" : undefined }}>{c.text}</span>
+            ))}
+            {exitCode !== null && <span style={{ color: exitCode === 0 ? "var(--ok)" : "var(--bad)" }}>{`\n[${t("project.exit_code", { code: exitCode })}]`}</span>}
           </pre>
         </div>
       )}

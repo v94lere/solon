@@ -662,9 +662,13 @@ pub fn start_periodic_sync() {
 /// puisse récupérer la mémoire (hints HCS `EnableColdDiscardHint`). Coût : relecture du disque
 /// racine à la prochaine activité, quelques dizaines de ms.
 pub fn start_idle_cache_release() {
+    // Toutes les 30 s, si la machine est calme : vider le cache de pages puis **compacter** la
+    // mémoire pour former des blocs de 2 Mo libres, seuls signalables à l'hôte par le ballon
+    // Hyper-V (« cold discard hint », ordre 9). Sans compactage, la mémoire libérée reste
+    // fragmentée et l'hôte ne la récupère pas.
     std::thread::spawn(|| {
         loop {
-            std::thread::sleep(Duration::from_secs(120));
+            std::thread::sleep(Duration::from_secs(30));
             let load1 = fs::read_to_string("/proc/loadavg")
                 .ok()
                 .and_then(|s| {
@@ -673,13 +677,10 @@ pub fn start_idle_cache_release() {
                         .and_then(|v| v.parse::<f64>().ok())
                 })
                 .unwrap_or(1.0);
-            if load1 < 0.2 {
+            if load1 < 0.5 {
                 unsafe { libc::sync() };
-                let _ = fs::write(
-                    "/proc/sys/vm/drop_caches",
-                    "1
-",
-                );
+                let _ = fs::write("/proc/sys/vm/drop_caches", "1\n");
+                let _ = fs::write("/proc/sys/vm/compact_memory", "1\n");
             }
         }
     });

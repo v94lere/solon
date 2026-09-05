@@ -15,6 +15,8 @@ pub const CONTROL_PIPE: &str = r"\\.\pipe\solon-control";
 pub const DOCKER_PIPE: &str = r"\\.\pipe\solon";
 /// Terminal dans la machine (relais vers le port vsock `PORT_SHELL`).
 pub const SHELL_PIPE: &str = r"\\.\pipe\solon-shell";
+/// Exécution en flux (Compose) : relais vers le port vsock `PORT_EXEC`.
+pub const EXEC_PIPE: &str = r"\\.\pipe\solon-exec";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IpcRequest {

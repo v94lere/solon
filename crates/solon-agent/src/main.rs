@@ -19,6 +19,8 @@ mod bench;
 #[cfg(target_os = "linux")]
 mod events;
 #[cfg(target_os = "linux")]
+mod execstream;
+#[cfg(target_os = "linux")]
 mod forward;
 #[cfg(target_os = "linux")]
 mod net;
@@ -97,6 +99,10 @@ fn main() {
     {
         let st = state.clone();
         std::thread::spawn(move || shell::serve(st));
+    }
+    {
+        let st = state.clone();
+        std::thread::spawn(move || execstream::serve(st));
     }
     let ready_ms = t0.elapsed().as_millis();
     println!(

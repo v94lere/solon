@@ -22,6 +22,22 @@ pub const PORT_PORTS: u32 = 5002;
 pub const PORT_EVENTS: u32 = 5003;
 /// Terminal interactif dans la machine (hôte → agent : en-tête JSON puis trames ; agent → hôte : octets bruts du TTY).
 pub const PORT_SHELL: u32 = 5004;
+/// Exécution d'une commande avec sortie en flux (Compose) : en-tête JSON puis trames agent → hôte.
+pub const PORT_EXEC: u32 = 5005;
+
+/// Trames agent → hôte du canal d'exécution en flux : `[type, len_hi, len_lo, charge]`.
+pub const EXEC_FRAME_STDOUT: u8 = 0;
+pub const EXEC_FRAME_STDERR: u8 = 1;
+/// Charge : code de sortie en décimal ; dernière trame.
+pub const EXEC_FRAME_EXIT: u8 = 2;
+
+/// Première ligne envoyée par l'hôte sur le canal d'exécution en flux.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExecStreamRequest {
+    pub command: String,
+    #[serde(default)]
+    pub cwd: Option<String>,
+}
 
 /// Type de trame hôte → agent sur le canal terminal : `[type, len_hi, len_lo, charge utile]`.
 pub const SHELL_FRAME_INPUT: u8 = 0;

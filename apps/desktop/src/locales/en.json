@@ -319,7 +319,8 @@
     "columns": {
       "service": "Service",
       "container": "Container"
-    }
+    },
+    "exit_code": "exit code {{code}}"
   },
   "machine": {
     "terminal": "Machine terminal",

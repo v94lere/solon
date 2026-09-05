@@ -9,6 +9,107 @@ use solon_core::ipc::{ServiceCommand, ShareInfo};
 
 use crate::service;
 
+/// Sortie d'une commande Compose en flux.
+#[derive(Debug, Clone, Serialize)]
+pub struct ComposeChunk {
+    /// `stdout`, `stderr`, `exit` (texte = code) ou `error`.
+    pub kind: &'static str,
+    pub text: String,
+}
+
+/// Exécute `docker compose <args>` dans la machine avec la sortie **en flux** (canal `solon-exec`).
+/// Renvoie le code de sortie une fois la commande terminée.
+#[tauri::command]
+pub async fn compose_stream(
+    dir: String,
+    args: Vec<String>,
+    channel: tauri::ipc::Channel<ComposeChunk>,
+) -> Result<i32, String> {
+    use solon_core::protocol::{
+        EXEC_FRAME_EXIT, EXEC_FRAME_STDERR, EXEC_FRAME_STDOUT, ExecStreamRequest,
+    };
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let share: ShareInfo = serde_json::from_value(
+        service::call(ServiceCommand::EnsureShare {
+            host_path: dir.clone(),
+        })
+        .await?,
+    )
+    .map_err(|e| format!("réponse du service illisible : {e}"))?;
+    let quoted_args: Vec<String> = args.iter().map(|a| shell_quote(a)).collect();
+    let req = ExecStreamRequest {
+        command: format!("docker compose {}", quoted_args.join(" ")),
+        cwd: Some(share.guest_path.clone()),
+    };
+    let mut pipe = open_exec_pipe().await?;
+    let mut header = serde_json::to_string(&req).map_err(|e| e.to_string())?;
+    header.push('\n');
+    pipe.write_all(header.as_bytes())
+        .await
+        .map_err(|e| e.to_string())?;
+    let mut head = [0u8; 3];
+    loop {
+        if let Err(e) = pipe.read_exact(&mut head).await {
+            let _ = channel.send(ComposeChunk {
+                kind: "error",
+                text: format!("connexion interrompue : {e}"),
+            });
+            return Err(e.to_string());
+        }
+        let len = u16::from_be_bytes([head[1], head[2]]) as usize;
+        let mut payload = vec![0u8; len];
+        pipe.read_exact(&mut payload)
+            .await
+            .map_err(|e| e.to_string())?;
+        let text = String::from_utf8_lossy(&payload).into_owned();
+        match head[0] {
+            EXEC_FRAME_STDOUT => {
+                let _ = channel.send(ComposeChunk {
+                    kind: "stdout",
+                    text,
+                });
+            }
+            EXEC_FRAME_STDERR => {
+                let _ = channel.send(ComposeChunk {
+                    kind: "stderr",
+                    text,
+                });
+            }
+            EXEC_FRAME_EXIT => {
+                let code = text.trim().parse::<i32>().unwrap_or(-1);
+                let _ = channel.send(ComposeChunk {
+                    kind: "exit",
+                    text: code.to_string(),
+                });
+                return Ok(code);
+            }
+            _ => {}
+        }
+    }
+}
+
+async fn open_exec_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeClient, String> {
+    use tokio::net::windows::named_pipe::ClientOptions;
+    const ERROR_PIPE_BUSY: i32 = 231;
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        match ClientOptions::new().open(solon_core::ipc::EXEC_PIPE) {
+            Ok(pipe) => return Ok(pipe),
+            Err(e)
+                if e.raw_os_error() == Some(ERROR_PIPE_BUSY)
+                    && std::time::Instant::now() < deadline =>
+            {
+                tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+            }
+            Err(e) => {
+                return Err(format!(
+                    "canal d'exécution indisponible (le moteur est-il démarré ?) : {e}"
+                ));
+            }
+        }
+    }
+}
+
 pub const COMPOSE_FILES: &[&str] = &[
     "compose.yaml",
     "compose.yml",
