@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { IconLogs, IconPlay, IconRestart, IconStop, IconTrash } from "../components/Icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { containers, formatBytes, type ContainerSummary, type StatSample } from "../api";
+import { markUserAction } from "../engine";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ComposePanel } from "../components/ComposePanel";
 import { PortLinks } from "../components/PortLinks";
@@ -82,6 +83,7 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
   }, [rows]);
 
   async function act(id: string, action: () => Promise<void>) {
+    markUserAction(id);
     setBusy(id);
     setError(null);
     try {

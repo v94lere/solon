@@ -163,7 +163,12 @@
     "theme": "Apparence",
     "theme_light": "Clair",
     "theme_dark": "Sombre",
-    "theme_system": "Suivre Windows"
+    "theme_system": "Suivre Windows",
+    "diagnostic": "Diagnostic",
+    "diagnostic_help": "Rassemble les journaux, l'état, les réglages et les versions dans une archive zip à joindre à un rapport de bug. Aucun identifiant n'est inclus.",
+    "diagnostic_export": "Exporter un diagnostic…",
+    "diagnostic_done": "{{count}} fichiers écrits dans {{path}}",
+    "diagnostic_open": "Ouvrir le dossier"
   },
   "images": {
     "title": "Images",
@@ -339,5 +344,15 @@
       "networks": "Réseaux",
       "projects": "Projets"
     }
+  },
+  "notify": {
+    "engine_failed_title": "Solon : le moteur n'a pas démarré",
+    "engine_failed_body": "Ouvrez Solon pour le détail.",
+    "engine_degraded_title": "Solon : redémarrage du moteur",
+    "engine_degraded_body": "Docker s'est arrêté de façon inattendue et redémarre.",
+    "disk_title": "Solon : disque du moteur presque plein",
+    "disk_body": "{{pct}} % utilisés, {{free}} Go restants. Supprimez des images ou volumes inutilisés.",
+    "container_died_title": "Solon : conteneur arrêté",
+    "container_died_body": "{{name}} s'est terminé avec le code {{code}}."
   }
 }

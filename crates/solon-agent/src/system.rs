@@ -651,11 +651,47 @@ fn supervise(state: Arc<State>) {
 /// brutale (ext4 `data=ordered` ne valide sinon que toutes les 5 s). Coût négligeable au repos.
 pub fn start_periodic_sync() {
     std::thread::spawn(|| {
+        let mut tick = 0u32;
+        let mut warned = false;
         loop {
             std::thread::sleep(Duration::from_secs(2));
             unsafe { libc::sync() };
+            tick += 1;
+            // Toutes les 60 s : occupation du disque de données ; alerte à 90 %, réarmée sous 80 %.
+            if tick % 30 == 0 {
+                if let Some((used_pct, free_mb)) = disk_usage("/var/lib/solon") {
+                    if used_pct >= 90 && !warned {
+                        warned = true;
+                        crate::events::broadcast(&solon_core::protocol::AgentEvent::DiskPressure {
+                            used_pct,
+                            free_mb,
+                        });
+                        log(&format!(
+                            "disque de données à {used_pct} % ({free_mb} Mo libres)"
+                        ));
+                    } else if used_pct < 80 {
+                        warned = false;
+                    }
+                }
+            }
         }
     });
+}
+
+/// Occupation d'un système de fichiers : (pourcentage utilisé, Mo libres).
+pub fn disk_usage(path: &str) -> Option<(u8, u64)> {
+    let c = CString::new(path).ok()?;
+    let mut st: libc::statvfs = unsafe { std::mem::zeroed() };
+    if unsafe { libc::statvfs(c.as_ptr(), &mut st) } != 0 {
+        return None;
+    }
+    let total = st.f_blocks as u64 * st.f_frsize as u64;
+    let avail = st.f_bavail as u64 * st.f_frsize as u64;
+    if total == 0 {
+        return None;
+    }
+    let used_pct = (((total - avail) * 100) / total).min(100) as u8;
+    Some((used_pct, avail / (1024 * 1024)))
 }
 
 /// Au repos (charge < 0,2 sur 1 min), libère le cache de pages toutes les 2 min pour que l'hôte

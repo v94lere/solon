@@ -4,6 +4,7 @@
 //! - [`docker`] : API Docker via `bollard` sur le pipe exposé par le service ; flux par `Channel`.
 
 mod compose;
+mod diagnostic;
 mod docker;
 mod service;
 mod shell;
@@ -112,6 +113,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(Arc::new(docker::DockerState::default()))
         .manage(Arc::new(shell::ShellState::default()))
         .setup(|app| {
@@ -144,6 +146,7 @@ pub fn run() {
             shell::machine_shell_input,
             shell::machine_shell_resize,
             shell::machine_shell_close,
+            diagnostic::diagnostic_export,
             set_language,
             docker::containers_list,
             docker::container_inspect,

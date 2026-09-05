@@ -531,6 +531,9 @@ pub struct DockerEvent {
     pub kind: String,
     pub id: String,
     pub name: String,
+    /// Code de sortie (événement `die`), tel que fourni par Docker.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<String>,
 }
 
 #[tauri::command]
@@ -554,6 +557,9 @@ pub async fn docker_events_open(
                     .and_then(|a| a.attributes.as_ref())
                     .and_then(|a| a.get("name").cloned())
                     .unwrap_or_default(),
+                exit_code: actor
+                    .and_then(|a| a.attributes.as_ref())
+                    .and_then(|m| m.get("exitCode").cloned()),
             };
             if channel.send(event).is_err() {
                 return;

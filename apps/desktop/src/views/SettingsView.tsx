@@ -3,8 +3,13 @@ import { useTranslation } from "react-i18next";
 import { applyTheme, loadTheme, type Theme } from "../theme";
 import { engine, type Settings } from "../api";
 import { setLanguage } from "../i18n";
+import { save as saveDialog } from "@tauri-apps/plugin-dialog";
+import { openPath } from "@tauri-apps/plugin-opener";
+import { diagnostic } from "../api";
 
 export function SettingsView() {
+  const [diag, setDiag] = useState<string | null>(null);
+  const [diagDir, setDiagDir] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(loadTheme());
   const { t, i18n } = useTranslation();
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -49,6 +54,37 @@ export function SettingsView() {
           <option value="dark">{t("settings.theme_dark")}</option>
           <option value="system">{t("settings.theme_system")}</option>
         </select>
+      </section>
+      <section className="card mt-4 p-4">
+        <h2 className="font-semibold">{t("settings.diagnostic")}</h2>
+        <p className="mt-1" style={{ color: "var(--ink-2)" }}>{t("settings.diagnostic_help")}</p>
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              void (async () => {
+                setDiag(null);
+                const dest = (await saveDialog({ defaultPath: "solon-diagnostic.zip", filters: [{ name: "Zip", extensions: ["zip"] }] })) as string | null;
+                if (!dest) return;
+                try {
+                  const n = await diagnostic.export(dest);
+                  setDiag(t("settings.diagnostic_done", { count: n, path: dest }));
+                  setDiagDir(dest.replace(/[\\/][^\\/]*$/, ""));
+                } catch (e) {
+                  setDiag(String(e));
+                  setDiagDir(null);
+                }
+              })();
+            }}
+          >
+            {t("settings.diagnostic_export")}
+          </button>
+          {diag && <span style={{ color: "var(--ink-2)" }}>{diag}</span>}
+          {diagDir && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => void openPath(diagDir)}>{t("settings.diagnostic_open")}</button>
+          )}
+        </div>
       </section>
       <section className="card mt-4 p-4">
         <h2 className="font-semibold">{t("settings.engine")}</h2>

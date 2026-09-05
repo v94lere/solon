@@ -235,6 +235,8 @@ pub enum AgentEvent {
     },
     /// Journal de l'agent.
     Log { level: LogLevel, message: String },
+    /// Le disque de données dépasse un seuil d'occupation (émis une fois par franchissement).
+    DiskPressure { used_pct: u8, free_mb: u64 },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -247,7 +249,7 @@ pub enum LogLevel {
 }
 
 /// Un port publié par un conteneur, tel qu'annoncé par Docker.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Default)]
 pub struct PortBinding {
     pub container_id: String,
     /// `tcp` ou `udp` (UDP hors périmètre du MVP : relayé plus tard).
@@ -258,6 +260,14 @@ pub struct PortBinding {
     /// Adresse du conteneur dans le réseau Docker (cible du relais).
     pub container_ip: String,
     pub container_port: u16,
+    /// Nom du conteneur sans le `/` initial (domaines locaux `nom.solon.local`).
+    #[serde(default)]
+    pub container_name: String,
+    /// Étiquettes Compose, si le conteneur en vient (`service.projet.solon.local`).
+    #[serde(default)]
+    pub compose_project: Option<String>,
+    #[serde(default)]
+    pub compose_service: Option<String>,
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -288,6 +298,15 @@ pub struct InspectedContainer {
     pub id: String,
     pub name: String,
     pub network_settings: InspectedNetworkSettings,
+    #[serde(default)]
+    pub config: InspectedConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(rename_all = "PascalCase")]
+pub struct InspectedConfig {
+    #[serde(default)]
+    pub labels: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -349,6 +368,17 @@ impl InspectedContainer {
                     host_port,
                     container_ip: container_ip.clone(),
                     container_port,
+                    container_name: self.name.trim_start_matches('/').to_owned(),
+                    compose_project: self
+                        .config
+                        .labels
+                        .get("com.docker.compose.project")
+                        .cloned(),
+                    compose_service: self
+                        .config
+                        .labels
+                        .get("com.docker.compose.service")
+                        .cloned(),
                 });
             }
         }

@@ -163,7 +163,12 @@
     "theme": "Appearance",
     "theme_light": "Light",
     "theme_dark": "Dark",
-    "theme_system": "Follow Windows"
+    "theme_system": "Follow Windows",
+    "diagnostic": "Diagnostic",
+    "diagnostic_help": "Bundle the logs, state, settings and versions into a zip file to attach to a bug report. No credentials are included.",
+    "diagnostic_export": "Export a diagnostic…",
+    "diagnostic_done": "{{count}} files written to {{path}}",
+    "diagnostic_open": "Open folder"
   },
   "images": {
     "title": "Images",
@@ -339,5 +344,15 @@
       "networks": "Networks",
       "projects": "Projects"
     }
+  },
+  "notify": {
+    "engine_failed_title": "Solon: engine failed to start",
+    "engine_failed_body": "Open Solon for details.",
+    "engine_degraded_title": "Solon: engine restarting",
+    "engine_degraded_body": "Docker stopped unexpectedly and is being restarted.",
+    "disk_title": "Solon: engine disk almost full",
+    "disk_body": "{{pct}} % used, {{free}} GB left. Remove unused images or volumes.",
+    "container_died_title": "Solon: container stopped",
+    "container_died_body": "{{name}} exited with code {{code}}."
   }
 }

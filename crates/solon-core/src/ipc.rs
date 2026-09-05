@@ -162,6 +162,9 @@ pub struct EngineSnapshot {
     /// Le service s'est rattaché à une machine déjà en marche (redémarrage du service).
     #[serde(default)]
     pub reattached: bool,
+    /// Le mandataire des domaines locaux (`*.solon.local` → 127.0.0.1:80) est actif.
+    #[serde(default)]
+    pub local_domains: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -199,6 +202,11 @@ pub enum ServiceEvent {
     Log {
         level: String,
         message: String,
+    },
+    /// Disque de données du moteur presque plein.
+    DiskPressure {
+        used_pct: u8,
+        free_mb: u64,
     },
 }
 

@@ -22,6 +22,9 @@ export interface SolonError {
 }
 
 export interface PortBinding {
+  container_name?: string;
+  compose_project?: string | null;
+  compose_service?: string | null;
   container_id: string;
   protocol: string;
   host_ip: string;
@@ -42,6 +45,7 @@ export interface EngineSnapshot {
   guest_address: string | null;
   published_ports: PortBinding[];
   recovered_from_crash: boolean;
+  local_domains?: boolean;
   reattached?: boolean;
 }
 
@@ -50,6 +54,7 @@ export type ServiceEvent =
   | { event: "container"; action: string; id: string; name: string }
   | { event: "ports"; bindings: PortBinding[] }
   | { event: "log"; level: string; message: string }
+  | { event: "disk_pressure"; used_pct: number; free_mb: number }
   | { event: "service_unavailable"; detail: string };
 
 export interface PrereqItem {
@@ -165,9 +170,16 @@ export const containers = {
   },
 };
 
+export interface DockerEventInfo {
+  action: string;
+  type: string;
+  id: string;
+  name: string;
+  exit_code?: string;
+}
 export const dockerEvents = {
-  subscribe: (onEvent: (e: { action: string; type: string; id: string; name: string }) => void) => {
-    const channel = new Channel<{ action: string; type: string; id: string; name: string }>();
+  subscribe: (onEvent: (e: DockerEventInfo) => void) => {
+    const channel = new Channel<DockerEventInfo>();
     channel.onmessage = onEvent;
     return invoke<number>("docker_events_open", { channel }).then(trackStream);
   },
@@ -221,6 +233,12 @@ export const networks = {
   create: (name: string, driver?: string) => invoke<string>("network_create", { name, driver: driver ?? null }),
   remove: (id: string) => invoke<void>("network_remove", { id }),
   inspect: (id: string) => invoke<unknown>("network_inspect", { id }),
+};
+
+// ---- Diagnostic ----
+export const diagnostic = {
+  /** Écrit l'archive zip ; renvoie le nombre de fichiers inclus. */
+  export: (dest: string) => invoke<number>("diagnostic_export", { dest }),
 };
 
 // ---- Terminal dans la machine ----

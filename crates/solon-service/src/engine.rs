@@ -51,6 +51,8 @@ struct Inner {
     /// Sérialise start/stop/restart.
     op: Mutex<()>,
     stopping: std::sync::atomic::AtomicBool,
+    /// Domaines locaux `*.solon.local` → port hôte (partagé avec le mandataire HTTP).
+    domains: crate::domains::SharedDomains,
 }
 
 #[derive(Clone)]
@@ -73,6 +75,7 @@ impl Engine {
                 running: Mutex::new(None),
                 op: Mutex::new(()),
                 stopping: Default::default(),
+                domains: Default::default(),
             }),
         }
     }
@@ -102,6 +105,18 @@ impl Engine {
 
     fn emit(&self, event: ServiceEvent) {
         let _ = self.inner.events.send(event);
+    }
+
+    /// Recalcule la table `*.solon.local` et le bloc du fichier `hosts` d'après les ports publiés.
+    async fn update_domains(&self, bindings: &[solon_core::protocol::PortBinding]) {
+        let map = crate::domains::domains_for(bindings);
+        *self.inner.domains.write().await = map.clone();
+        if let Err(e) = tokio::task::spawn_blocking(move || crate::domains::write_hosts_block(&map))
+            .await
+            .unwrap_or_else(|e| Err(std::io::Error::other(e)))
+        {
+            tracing::warn!("fichier hosts non mis à jour : {e}");
+        }
     }
 
     fn step(&self, step: ProvisionStep) {
@@ -399,8 +414,25 @@ impl Engine {
         }
         ports.apply(&initial_ports, guid);
         self.set(|s| s.published_ports = initial_ports.clone());
+        self.update_domains(&initial_ports).await;
 
         let mut tasks = Vec::new();
+        // Domaines locaux : mandataire HTTP sur 127.0.0.1:80 (si le port est libre).
+        match crate::domains::bind_proxy().await {
+            Ok(listener) => {
+                self.set(|s| s.local_domains = true);
+                let domains = self.inner.domains.clone();
+                tasks.push(tokio::spawn(async move {
+                    if let Err(e) = crate::domains::serve_proxy(listener, domains).await {
+                        tracing::warn!("mandataire des domaines locaux arrêté : {e}");
+                    }
+                }));
+            }
+            Err(e) => {
+                tracing::warn!("domaines locaux indisponibles (port 80 occupé ?) : {e}");
+                self.set(|s| s.local_domains = false);
+            }
+        }
         tasks.push(self.spawn_event_loop(events, guid));
         tasks.push(self.spawn_exit_watcher(vm.clone()));
         {
@@ -464,6 +496,7 @@ impl Engine {
                         if let Some(r) = engine.inner.running.lock().await.as_mut() {
                             r.ports.apply(&bindings, guid);
                         }
+                        engine.update_domains(&bindings).await;
                         engine
                             .inner
                             .snapshot
@@ -472,6 +505,10 @@ impl Engine {
                     }
                     Ok(Some(AgentEvent::Container { action, id, name })) => {
                         engine.emit(ServiceEvent::Container { action, id, name })
+                    }
+                    Ok(Some(AgentEvent::DiskPressure { used_pct, free_mb })) => {
+                        tracing::warn!(used_pct, free_mb, "disque de données presque plein");
+                        engine.emit(ServiceEvent::DiskPressure { used_pct, free_mb })
                     }
                     Ok(Some(AgentEvent::EngineDown { exit, restarts })) => {
                         tracing::warn!(exit, restarts, "dockerd arrêté dans l'invité");
@@ -597,9 +634,11 @@ impl Engine {
         st.clean_shutdown = true;
         st.updated_unix_ms = settings::now_unix_ms();
         let _ = settings::save_state(&state_path, &st);
+        self.update_domains(&[]).await;
         self.set(|s| {
             s.state = Some(EngineState::Stopped);
             s.step = None;
+            s.local_domains = false;
             s.published_ports.clear();
             s.guest_address = None;
             s.ready_since_unix_ms = None;

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { compose, containers, system, type ComposeProject, type ContainerSummary } from "../api";
+import { markUserAction } from "../engine";
 import { projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, serviceNameOf } from "../projects";
 import { MultiLogsPanel } from "../components/MultiLogsPanel";
 import { PortLinks } from "../components/PortLinks";
@@ -71,6 +72,7 @@ export function ProjectView({ dir, onBack, onOpenContainer }: { dir: string; onB
   }, [output]);
 
   async function act(id: string, action: () => Promise<void>) {
+    markUserAction(id);
     setBusy(id);
     try {
       await action();

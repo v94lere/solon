@@ -13,6 +13,7 @@
 pub mod agent_client;
 pub mod disk;
 pub mod docker_proxy;
+pub mod domains;
 pub mod engine;
 pub mod ipc;
 pub mod network;
