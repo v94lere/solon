@@ -17,6 +17,41 @@ use windows::core::GUID;
 
 use crate::engine::Engine;
 
+/// Préchauffage : la **première** ouverture d'un fichier côté Windows coûte ~3,5 ms (NTFS, antivirus),
+/// contre ~0,2 ms ensuite. Quand un dossier est listé, ses petits fichiers sont lus une fois en tâche
+/// de fond pour que la première lecture depuis un conteneur soit déjà rapide (`find … | xargs cat`,
+/// `npm install`, `git status`). Borné : au plus 64 fichiers de 256 Ko par dossier, 4 lectures en
+/// parallèle, jamais pour les gros fichiers.
+const PREFETCH_MAX_FILES: usize = 64;
+const PREFETCH_MAX_SIZE: u64 = 256 * 1024;
+static PREFETCH_SLOTS: std::sync::LazyLock<std::sync::Arc<tokio::sync::Semaphore>> =
+    std::sync::LazyLock::new(|| std::sync::Arc::new(tokio::sync::Semaphore::new(4)));
+
+fn prefetch(paths: Vec<PathBuf>) {
+    if paths.is_empty() {
+        return;
+    }
+    let Ok(handle) = tokio::runtime::Handle::try_current() else {
+        return;
+    };
+    for p in paths {
+        let slots = PREFETCH_SLOTS.clone();
+        handle.spawn(async move {
+            let Ok(_permit) = slots.acquire().await else {
+                return;
+            };
+            let _ = tokio::task::spawn_blocking(move || {
+                use std::io::Read;
+                if let Ok(mut f) = std::fs::File::open(&p) {
+                    let mut sink = [0u8; 64 * 1024];
+                    while matches!(f.read(&mut sink), Ok(n) if n > 0) {}
+                }
+            })
+            .await;
+        });
+    }
+}
+
 pub async fn serve(engine: Engine, vm_id: GUID) {
     for i in 0..FS_CONNECTIONS {
         let engine = engine.clone();
@@ -164,15 +199,23 @@ fn handle(shared: &[String], req: FsRequest, data: Vec<u8>) -> (FsResponse, Vec<
             Ok(p) => match std::fs::read_dir(&p) {
                 Ok(rd) => {
                     let mut entries = Vec::new();
+                    let mut warm: Vec<PathBuf> = Vec::new();
                     for e in rd.flatten() {
                         // Sous Windows, `DirEntry::metadata` vient du listage : pas d'appel par fichier.
                         if let Ok(md) = e.metadata() {
+                            if md.is_file()
+                                && md.len() <= PREFETCH_MAX_SIZE
+                                && warm.len() < PREFETCH_MAX_FILES
+                            {
+                                warm.push(e.path());
+                            }
                             entries.push(FsEntry {
                                 name: e.file_name().to_string_lossy().into_owned(),
                                 attr: attr_of(&md),
                             });
                         }
                     }
+                    prefetch(warm);
                     FsResponse::Entries { entries }
                 }
                 Err(e) => err(e),

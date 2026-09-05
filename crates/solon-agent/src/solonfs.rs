@@ -134,6 +134,11 @@ struct SolonFs {
     attrs: HashMap<u64, Cached<FsAttr>>,
     /// Listes de dossiers : (nom, inode) ; les attributs des enfants sont dans `attrs`.
     dirs: HashMap<u64, Cached<Vec<(String, u64)>>>,
+    /// Instantané du listage pris à la première lecture d'un dossier ouvert (par descripteur) : les
+    /// lectures suivantes du même descripteur voient la même liste, même si le dossier change entre
+    /// deux appels (sinon `rm -rf` saute des entrées et finit sur « dossier non vide »).
+    dir_handles: HashMap<u64, Vec<(u64, FileType, String)>>,
+    next_fh: u64,
     uid: u32,
     gid: u32,
 }
@@ -147,6 +152,8 @@ impl SolonFs {
             next_ino: 2,
             attrs: HashMap::new(),
             dirs: HashMap::new(),
+            dir_handles: HashMap::new(),
+            next_fh: 1,
             uid: 0,
             gid: 0,
         };
@@ -641,40 +648,48 @@ impl Filesystem for SolonFs {
     }
 
     fn opendir(&mut self, _req: &Request<'_>, _ino: u64, _flags: i32, reply: ReplyOpen) {
-        reply.opened(0, 0);
+        let fh = self.next_fh;
+        self.next_fh += 1;
+        reply.opened(fh, 0);
     }
 
     fn readdir(
         &mut self,
         _req: &Request<'_>,
         ino: u64,
-        _fh: u64,
+        fh: u64,
         offset: i64,
         mut reply: ReplyDirectory,
     ) {
-        let list = match self.fetch_dir(ino) {
-            Ok(l) => l,
-            Err(e) => return reply.error(e),
-        };
-        let parent_ino = self
-            .inodes
-            .get(&ino)
-            .and_then(|p| p.parent().map(|pp| pp.to_path_buf()))
-            .and_then(|pp| self.by_path.get(&pp).copied())
-            .unwrap_or(1);
-        let mut all: Vec<(u64, FileType, String)> = Vec::with_capacity(list.len() + 2);
-        all.push((ino, FileType::Directory, ".".into()));
-        all.push((parent_ino, FileType::Directory, "..".into()));
-        for (name, child) in list {
-            let kind = match self.attrs.get(&child).map(|c| c.value.kind) {
-                Some(FsKind::Dir) => FileType::Directory,
-                Some(FsKind::Symlink) => FileType::Symlink,
-                _ => FileType::RegularFile,
+        if offset == 0 || !self.dir_handles.contains_key(&fh) {
+            let list = match self.fetch_dir(ino) {
+                Ok(l) => l,
+                Err(e) => return reply.error(e),
             };
-            all.push((child, kind, name));
+            let parent_ino = self
+                .inodes
+                .get(&ino)
+                .and_then(|p| p.parent().map(|pp| pp.to_path_buf()))
+                .and_then(|pp| self.by_path.get(&pp).copied())
+                .unwrap_or(1);
+            let mut all: Vec<(u64, FileType, String)> = Vec::with_capacity(list.len() + 2);
+            all.push((ino, FileType::Directory, ".".into()));
+            all.push((parent_ino, FileType::Directory, "..".into()));
+            for (name, child) in list {
+                let kind = match self.attrs.get(&child).map(|c| c.value.kind) {
+                    Some(FsKind::Dir) => FileType::Directory,
+                    Some(FsKind::Symlink) => FileType::Symlink,
+                    _ => FileType::RegularFile,
+                };
+                all.push((child, kind, name));
+            }
+            self.dir_handles.insert(fh, all);
         }
-        for (i, (child, kind, name)) in all.into_iter().enumerate().skip(offset.max(0) as usize) {
-            if reply.add(child, (i + 1) as i64, kind, name) {
+        let Some(all) = self.dir_handles.get(&fh) else {
+            return reply.error(libc::EBADF);
+        };
+        for (i, (child, kind, name)) in all.iter().enumerate().skip(offset.max(0) as usize) {
+            if reply.add(*child, (i + 1) as i64, *kind, name) {
                 break;
             }
         }
@@ -685,10 +700,11 @@ impl Filesystem for SolonFs {
         &mut self,
         _req: &Request<'_>,
         _ino: u64,
-        _fh: u64,
+        fh: u64,
         _flags: i32,
         reply: ReplyEmpty,
     ) {
+        self.dir_handles.remove(&fh);
         reply.ok()
     }
 
