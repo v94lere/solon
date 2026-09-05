@@ -392,3 +392,19 @@ synchrones sont ~2× plus rapides sur Solon. Suspects restants, à tester isolé
 (ordonnancement HCS avec 22 vCPU pour 24 cœurs logiques). Le redémarrage de pile et la mise en route d'Odoo sont
 désormais au niveau de Docker Desktop ; la mémoire est passée sous 1,2 Go avec la pile.
 
+## Lot « trois défauts » (5–6 septembre 2026)
+
+| Vérification | Résultat |
+|---|---|
+| `docker run -v C:\…:/data` depuis le CLI Windows (via `bin\docker.exe`) | lecture et écriture du dossier Windows OK, lecteur partagé à la volée |
+| `--mount type=bind,source=C:/…,readonly` | OK (chemins avec `/` acceptés) |
+| `docker compose up -d` avec le CLI **Windows** et des binds relatifs (`./config`) | OK ; `inspect` montre `/mnt/host/c/Users/…/config` |
+| `docker exec` (connexion hijackée) à travers le mandataire | OK |
+| Sortie Compose en direct dans l'écran projet | lignes affichées au fil de l'eau, code de sortie en fin |
+| Mémoire hôte avec Odoo + PostgreSQL, 150 s de repos | **612 Mo** (contre 1 196–1 892 Mo avant) ; invité : 357 Mo utilisés, 207 Mo de cache |
+
+Faits établis : le compactage mémoire (`/proc/sys/vm/compact_memory`) après `drop_caches` est ce qui permet au ballon
+Hyper-V de rendre la mémoire ; sans lui, les pages libres restent fragmentées et l'hôte garde 1,2 à 1,9 Go. Un
+installeur construit pendant l'écriture de `rootfs.vhd` embarque un fichier de bonne taille mais d'empreinte fausse :
+le contrôle SHA-256 du service l'a détecté (`IMAGE_CORRUPTED`) ; attendre la fin complète de `image/build.sh`.
+
