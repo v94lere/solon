@@ -16,7 +16,8 @@ moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une ic
 - Expose l'API Docker sur `\\.\pipe\solon` : l'interface Solon et le CLI `docker` que vous avez déjà
   fonctionnent (`docker -H npipe:////./pipe/solon ps`, ou un contexte `docker context create`).
 - Relaie les ports publiés vers `localhost` sans configuration.
-- Partage vos dossiers Windows à la demande (projets Compose, montages `-v C:\...`).
+- Partage vos dossiers Windows à la demande : `docker run -v C:\...`, `--mount`, projets Compose, exactement
+  comme avec Docker Desktop (le lecteur est partagé à la volée et remonté à chaque démarrage).
 - Mémoire au repos (moteur + service) : **430 à 520 Mo** mesurés pour 2 Go alloués.
 - **Aucune télémétrie, aucune requête réseau sortante** en dehors de ce que vos conteneurs et vos
   `docker pull` demandent.
@@ -80,7 +81,7 @@ cd apps\desktop; npm run tauri dev
 - **Conteneurs** : liste temps réel avec CPU et mémoire, filtre, groupes Compose (cliquables), actions en
   icônes, journaux en flux, terminal, inspection. Un **port publié est un lien** vers `http://localhost:<port>`.
 - **Projets** : chaque projet Compose a son écran : services et leur état, **journaux de tous les services
-  mêlés**, Up / Down / Reconstruire, ouverture du dossier dans l'**Explorateur** ou dans **VS Code**. « Ouvrir un
+  mêlés**, Up / Down / Reconstruire avec la **sortie en direct**, ouverture du dossier dans l'**Explorateur** ou dans **VS Code**. « Ouvrir un
   projet… » choisit un dossier contenant `compose.yaml` ; les projets déjà lancés sont détectés automatiquement.
 - **Images, Volumes, Réseaux** : liste, création, inspection, suppression (toujours avec confirmation).
 - **Terminal de la machine** (icône en bas de la barre latérale, ou `Ctrl+\``) : un shell root dans le moteur
@@ -154,13 +155,10 @@ perdues, comme sur toute machine Linux.
 ## Limites connues (version 0.1)
 
 - **Windows Famille** n'est pas pris en charge (composant Hyper-V absent).
-- **Sortie de Compose** affichée à la fin de la commande, pas en flux ; un `docker compose up` long paraît figé
-  jusqu'à la fin. Utilisez le CLI `docker compose` dans un terminal si vous voulez suivre en direct.
 - **Ports UDP** publiés non relayés vers `localhost` (TCP seulement).
 - **Un seul moteur par machine**, pas de profils multiples.
-- **Montages de dossiers Windows** : métadonnées lentes (voir plus haut). Un dossier n'est partagé avec le
-  moteur qu'à l'ouverture d'un projet Compose ; les chemins `C:\...` passés à `docker run -v` depuis le CLI ne
-  sont pas encore traduits (le lecteur partagé est visible sous `/mnt/host/c/...`).
+- **Montages de dossiers Windows** : métadonnées lentes (voir plus haut). Les chemins `C:\...` de `docker run -v`,
+  `--mount` et des fichiers Compose sont traduits automatiquement et le lecteur est partagé à la volée.
 - **Docker Hub** : le CLI `docker` de Windows peut réutiliser des identifiants périmés stockés par Docker
   Desktop (voir « Utilisation »).
 - **Installeur non signé** (avertissement SmartScreen) ; le chemin « activation de Hyper-V puis redémarrage »
