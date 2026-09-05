@@ -84,6 +84,14 @@ cd apps\desktop; npm run tauri dev
   mêlés**, Up / Down / Reconstruire avec la **sortie en direct**, ouverture du dossier dans l'**Explorateur** ou dans **VS Code**. « Ouvrir un
   projet… » choisit un dossier contenant `compose.yaml` ; les projets déjà lancés sont détectés automatiquement.
 - **Images, Volumes, Réseaux** : liste, création, inspection, suppression (toujours avec confirmation).
+- **Domaines locaux** : chaque conteneur qui publie un port TCP est joignable sur `http://<nom>.solon.local`
+  (et `http://<service>.<projet>.solon.local` pour Compose), sans retenir de port. Solon tient à jour un bloc
+  dans le fichier `hosts` de Windows et route les requêtes depuis `127.0.0.1:80` d'après le nom demandé. Si un
+  autre logiciel occupe déjà le port 80, les domaines sont désactivés et les ports restent utilisables.
+- **Notifications Windows** : conteneur arrêté avec une erreur (hors actions faites dans Solon), moteur en échec
+  ou en redémarrage, disque du moteur plein à 90 %.
+- **Diagnostic** (Réglages → Exporter un diagnostic) : une archive zip avec les journaux, l'état, les réglages,
+  les prérequis et `docker info`, à joindre à un rapport de bug. Aucun identifiant n'y figure.
 - **Terminal de la machine** (icône en bas de la barre latérale, ou `Ctrl+\``) : un shell root dans le moteur
   Linux lui-même, pour `docker`, `ps`, `df`, `dmesg`…
 - **Recherche globale `Ctrl+K`** : conteneurs, images, volumes, réseaux, projets, actions du moteur, sections.

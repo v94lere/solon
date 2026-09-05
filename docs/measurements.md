@@ -408,3 +408,14 @@ Hyper-V de rendre la mémoire ; sans lui, les pages libres restent fragmentées 
 installeur construit pendant l'écriture de `rootfs.vhd` embarque un fichier de bonne taille mais d'empreinte fausse :
 le contrôle SHA-256 du service l'a détecté (`IMAGE_CORRUPTED`) ; attendre la fin complète de `image/build.sh`.
 
+## Lot « caractère » (6 septembre 2026)
+
+| Vérification | Résultat |
+|---|---|
+| Bloc `hosts` écrit par le service | `odoo.odoo18.solon.local`, `odoo18-odoo-1.solon.local`, `web.solon.local` → 127.0.0.1 |
+| `Resolve-DnsName odoo.odoo18.solon.local` | 127.0.0.1 (le fichier hosts l'emporte sur mDNS pour `.local`) |
+| `http://odoo.odoo18.solon.local/web/login?db=demo` | HTTP 200 (page Odoo complète, 5 087 octets) |
+| `http://web.solon.local/` | HTTP 200 |
+| Nom inconnu | non résolu (pas d'entrée hosts) ; en cas de `Host` inconnu sur 127.0.0.1:80, page 404 listant les domaines |
+| Port 80 sur cette machine | libre : mandataire actif (`local_domains=true` dans l'état) |
+
