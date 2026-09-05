@@ -417,5 +417,6 @@ le contrôle SHA-256 du service l'a détecté (`IMAGE_CORRUPTED`) ; attendre la 
 | `http://odoo.odoo18.solon.local/web/login?db=demo` | HTTP 200 (page Odoo complète, 5 087 octets) |
 | `http://web.solon.local/` | HTTP 200 |
 | Nom inconnu | non résolu (pas d'entrée hosts) ; en cas de `Host` inconnu sur 127.0.0.1:80, page 404 listant les domaines |
-| Port 80 sur cette machine | libre : mandataire actif (`local_domains=true` dans l'état) |
+| Port 80 sur cette machine | libre : mandataire actif (`local_domains=true` dans l'état) || Notification Windows | toast « Solon : conteneur arrêté — crashtest s'est terminé avec le code 3 » 3 s après `exit 3`, icône Solon |
+| Export de diagnostic | archive de 14 fichiers (18 Ko) : LISEZMOI, état, prérequis, réglages, partages, version, docker info, state.json, journaux récents, bloc hosts |
 
