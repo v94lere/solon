@@ -19,7 +19,45 @@ use solon_core::protocol::{
 use crate::events;
 use crate::vsock;
 
-pub const DATA_DEVICE: &str = "/dev/sdb";
+/// Étiquette ext4 (16 octets à l'offset 1144) d'un périphérique bloc, vide si illisible.
+fn ext4_label(dev: &str) -> String {
+    use std::io::{Read, Seek, SeekFrom};
+    let Ok(mut f) = fs::File::open(dev) else {
+        return String::new();
+    };
+    if f.seek(SeekFrom::Start(1024 + 0x78)).is_err() {
+        return String::new();
+    }
+    let mut buf = [0u8; 16];
+    if f.read_exact(&mut buf).is_err() {
+        return String::new();
+    }
+    let end = buf.iter().position(|b| *b == 0).unwrap_or(16);
+    String::from_utf8_lossy(&buf[..end]).into_owned()
+}
+
+/// Disque de données : celui étiqueté « solon-data », sinon le premier disque qui n'est pas la racine
+/// (« solon-root »), c'est-à-dire un disque vierge à formater. L'ordre `/dev/sda`/`/dev/sdb` n'est pas
+/// garanti par l'énumération SCSI.
+pub fn find_data_device() -> Option<String> {
+    let mut blank: Option<String> = None;
+    for c in b'a'..=b'z' {
+        let dev = format!("/dev/sd{}", c as char);
+        if !Path::new(&dev).exists() {
+            continue;
+        }
+        match ext4_label(&dev).as_str() {
+            "solon-data" => return Some(dev),
+            "solon-root" => {}
+            _ => {
+                if blank.is_none() {
+                    blank = Some(dev);
+                }
+            }
+        }
+    }
+    blank
+}
 pub const DATA_MOUNT: &str = "/var/lib/solon";
 pub const DOCKER_SOCK: &str = "/run/docker.sock";
 pub const CONTAINERD_SOCK: &str = "/run/containerd/containerd.sock";
@@ -183,17 +221,21 @@ fn has_ext4_superblock(device: &str) -> Result<bool, String> {
 /// puis liaison de `/var/lib/docker` et `/var/lib/containerd` dessus.
 pub fn prepare_data_disk(state: &State) -> Result<DataDiskReport, String> {
     let deadline = Instant::now() + Duration::from_secs(5);
-    while !Path::new(DATA_DEVICE).exists() {
+    let data_device = loop {
+        if let Some(d) = find_data_device() {
+            break d;
+        }
         if Instant::now() > deadline {
-            return Err(format!("{DATA_DEVICE} absent"));
+            return Err("disque de données absent".to_owned());
         }
         std::thread::sleep(Duration::from_millis(50));
-    }
+    };
+    let data_device = data_device.as_str();
     let mut report = DataDiskReport {
-        device: DATA_DEVICE.into(),
+        device: data_device.into(),
         ..Default::default()
     };
-    if !has_ext4_superblock(DATA_DEVICE)? {
+    if !has_ext4_superblock(data_device)? {
         log("disque de données vierge : formatage ext4");
         let out = Command::new("/sbin/mkfs.ext4")
             .args([
@@ -203,7 +245,7 @@ pub fn prepare_data_disk(state: &State) -> Result<DataDiskReport, String> {
                 "solon-data",
                 "-E",
                 "lazy_itable_init=1,lazy_journal_init=1",
-                DATA_DEVICE,
+                data_device,
             ])
             .output()
             .map_err(|e| format!("mkfs.ext4 : {e}"))?;
@@ -216,7 +258,7 @@ pub fn prepare_data_disk(state: &State) -> Result<DataDiskReport, String> {
         report.formatted_now = true;
     }
     let fsck = Command::new("/sbin/e2fsck")
-        .args(["-p", DATA_DEVICE])
+        .args(["-p", data_device])
         .output()
         .map_err(|e| format!("e2fsck : {e}"))?;
     report.fsck_exit = fsck.status.code().unwrap_or(-1);
@@ -234,7 +276,7 @@ pub fn prepare_data_disk(state: &State) -> Result<DataDiskReport, String> {
         ));
     }
     mount(
-        DATA_DEVICE,
+        data_device,
         DATA_MOUNT,
         "ext4",
         libc::MS_NOATIME,
