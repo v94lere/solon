@@ -37,3 +37,7 @@ libc = "0.2"
 lto = "thin"
 codegen-units = 1
 strip = true
+
+# fuser : voir third_party/fuser/SOLON-NOTES.md (compilation croisée Windows → Linux)
+[patch.crates-io]
+fuser = { path = "third_party/fuser" }

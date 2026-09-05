@@ -107,6 +107,21 @@ impl Engine {
         let _ = self.inner.events.send(event);
     }
 
+    /// Lettres des lecteurs partagés avec la machine en marche (vide si arrêtée).
+    pub async fn shared_drives(&self) -> Vec<String> {
+        self.inner
+            .running
+            .lock()
+            .await
+            .as_ref()
+            .map(|r| r.shares.keys().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    pub async fn is_stopped(&self) -> bool {
+        self.inner.running.lock().await.is_none()
+    }
+
     /// Recalcule la table `*.solon.local` et le bloc du fichier `hosts` d'après les ports publiés.
     async fn update_domains(&self, bindings: &[solon_core::protocol::PortBinding]) {
         let map = crate::domains::domains_for(bindings);
@@ -441,6 +456,13 @@ impl Engine {
                 if let Err(e) = crate::docker_proxy::serve(engine, guid).await {
                     tracing::error!("mandataire API Docker arrêté : {e}");
                 }
+            }));
+        }
+        {
+            // Serveur de fichiers solonfs (FUSE côté invité) : ouvre ses connexions vers l'agent.
+            let engine = self.clone();
+            tasks.push(tokio::spawn(async move {
+                crate::fileserver::serve(engine, guid).await;
             }));
         }
         tasks.push(tokio::spawn(async move {

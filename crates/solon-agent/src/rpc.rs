@@ -87,7 +87,11 @@ fn serve_client(client: File, state: Arc<State>) -> std::io::Result<()> {
                 Err(e) => Response::err(id, e),
             },
             Command::MountShare(req) => match system::mount_plan9(&req) {
-                Ok(r) => Response::ok(id, r),
+                Ok(r) => {
+                    // Même lecteur exposé aussi par solonfs (FUSE), en parallèle du 9P.
+                    crate::solonfs::mount(&req.name);
+                    Response::ok(id, r)
+                }
                 Err(e) => Response::err(id, e),
             },
             Command::UnmountShare { target } => match system::umount(&target) {

@@ -289,6 +289,7 @@ pub fn mount_boot_shares() {
                         "partage {drive} remonté sur {} (vsock {port}, {} ms)",
                         req.target, r.mount_ms
                     ));
+                    crate::solonfs::mount(drive);
                     last.clear();
                     break;
                 }

@@ -31,6 +31,8 @@ mod rpc;
 #[cfg(target_os = "linux")]
 mod shell;
 #[cfg(target_os = "linux")]
+mod solonfs;
+#[cfg(target_os = "linux")]
 mod system;
 #[cfg(target_os = "linux")]
 mod vsock;
@@ -104,6 +106,7 @@ fn main() {
         let st = state.clone();
         std::thread::spawn(move || execstream::serve(st));
     }
+    std::thread::spawn(solonfs::serve_pool);
     let ready_ms = t0.elapsed().as_millis();
     println!(
         "SOLON-AGENT-READY agent_ms={ready_ms} uptime_s={:.2}",

@@ -18,3 +18,5 @@ serde_json = { workspace = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = { workspace = true }
+# Client FUSE pur Rust (sans libfuse) : montage direct par PID 1.
+fuser = { version = "0.15", default-features = false, features = ["abi-7-31"] }

@@ -15,6 +15,7 @@ pub mod disk;
 pub mod docker_proxy;
 pub mod domains;
 pub mod engine;
+pub mod fileserver;
 pub mod ipc;
 pub mod network;
 pub mod paths;
