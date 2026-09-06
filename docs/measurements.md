@@ -450,3 +450,13 @@ Défauts trouvés et corrigés pendant le lot : (1) `rm -rf` sautait des entrée
 données comme racine (`/dev/sda` n'est pas garanti) → disques choisis par étiquette ext4 (`solon-root`, `solon-data`)
 dans l'initrd et l'agent.
 
+### Bascule des conteneurs sur solonfs (6 septembre 2026)
+
+| Vérification | Résultat |
+|---|---|
+| Montages après démarrage | `solonfs on /mnt/host/c` (FUSE), `hcs-plan9 on /mnt/host9p/c` (secours) |
+| Odoo (compose, `./config` et `./addons` montés) | démarre, « Using configuration file at /etc/odoo/odoo.conf », page de connexion HTTP 200 via `odoo.odoo18.solon.local` |
+| `docker run -v %TEMP%\…:/data` : lecture d'un fichier Windows, écriture d'un fichier et d'un sous-dossier | vus côté Windows immédiatement |
+| Fichier modifié côté Windows puis lu par un nouveau conteneur 2 s après | nouveau contenu (cache 1,5 s) |
+| Démarrage du moteur avec les deux montages | 2,1 s |
+
