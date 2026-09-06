@@ -364,7 +364,7 @@ en double sur le même dossier `config/` réécrit `admin_passwd` haché à tour
 |---|---|
 | Processeurs par défaut sur la machine de test (24 cœurs logiques) | 22 (`nproc` dans l'invité) ; le réglage reste modifiable |
 | Terminal dans la machine | ouvert en < 1 s, `sh -l` root, redimensionnement suivi ; `Ctrl+\`` |
-| CLI intégré (`C:\Program Files\Solonin` en tête du PATH) | `docker version` : client 29.7.2 / serveur 29.5.3 ; `docker compose version` : plugin trouvé (celui de Docker Desktop passe avant le nôtre tant qu'il est installé, ordre de recherche du CLI) |
+| CLI intégré (`C:\Program Files\Solonin` en tête du PATH) | `docker version` : client 29.7.2 / serveur 29.5.3 ; `docker compose version` : **c'était le plugin de Docker Desktop** qui répondait ; sans lui (test machine vierge), `docker compose` était introuvable : `DOCKER_CLI_PLUGIN_EXTRA_DIRS` n'est pas lue par le CLI 29, seule la clé `cliPluginsExtraDirs` de `config.json` l'est. Corrigé dans le lanceur. |
 | Installeur | 105 Mo avec le CLI et Compose (+25 Mo) |
 | **Défaut corrigé** : partages non remontés après redémarrage du moteur | reproduit sur Odoo (`/etc/odoo/odoo.conf` absent, `No section: 'options'`) ; après correctif : `solon.shares=c:9100` dans la ligne de commande du noyau, `/mnt/host/c` monté avant dockerd, Odoo redémarre avec sa configuration, connexion HTTP 200 |
 | Redémarrage du moteur avec un partage à remonter | 5,2 s (contre 1,1 s en rattachement) |

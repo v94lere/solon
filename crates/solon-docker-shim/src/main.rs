@@ -3,8 +3,11 @@
 //! Il lance le CLI Docker officiel (`docker-cli.exe`, à côté de lui) en le dirigeant vers le moteur
 //! Solon (`npipe:////./pipe/solon`) **sauf** si l'utilisateur a choisi explicitement un hôte ou un
 //! contexte (`-H`, `--host`, `-c`, `--context`, ou les variables `DOCKER_HOST` / `DOCKER_CONTEXT`).
-//! Le plugin Compose livré avec Solon (`bin\cli-plugins\docker-compose.exe`) est rendu visible par
-//! `DOCKER_CLI_PLUGIN_EXTRA_DIRS`. Le code de sortie du CLI est propagé tel quel.
+//! Le plugin Compose livré avec Solon (`bin\cli-plugins\docker-compose.exe`) est rendu visible en
+//! ajoutant son dossier à `cliPluginsExtraDirs` dans le fichier de configuration du CLI de
+//! l'utilisateur (`%USERPROFILE%\.docker\config.json`, ou `DOCKER_CONFIG`) : le CLI n'a pas de
+//! variable d'environnement pour cela, et c'est ce que fait aussi Docker Desktop. Les autres clés du
+//! fichier sont préservées. Le code de sortie du CLI est propagé tel quel.
 
 use std::ffi::OsString;
 use std::process::{Command, exit};
@@ -51,6 +54,50 @@ fn targets_engine_explicitly(args: &[OsString]) -> bool {
     false
 }
 
+/// Ajoute `plugins_dir` à `cliPluginsExtraDirs` du `config.json` du CLI Docker s'il n'y est pas.
+/// Sans bruit en cas d'échec : `docker compose` sera alors simplement introuvable.
+fn ensure_plugin_dir(plugins_dir: &std::path::Path) {
+    let config_dir = std::env::var_os("DOCKER_CONFIG")
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("USERPROFILE").map(|h| std::path::PathBuf::from(h).join(".docker"))
+        });
+    let Some(config_dir) = config_dir else {
+        return;
+    };
+    let path = config_dir.join("config.json");
+    let wanted = plugins_dir.to_string_lossy().into_owned();
+    let mut root: serde_json::Value = std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+    if !root.is_object() {
+        return;
+    }
+    let dirs = root
+        .as_object_mut()
+        .unwrap()
+        .entry("cliPluginsExtraDirs")
+        .or_insert_with(|| serde_json::json!([]));
+    if !dirs.is_array() {
+        return;
+    }
+    let list = dirs.as_array_mut().unwrap();
+    if list
+        .iter()
+        .any(|d| d.as_str().is_some_and(|s| s.eq_ignore_ascii_case(&wanted)))
+    {
+        return;
+    }
+    list.push(serde_json::Value::String(wanted));
+    if std::fs::create_dir_all(&config_dir).is_err() {
+        return;
+    }
+    if let Ok(text) = serde_json::to_string_pretty(&root) {
+        let _ = std::fs::write(&path, text);
+    }
+}
+
 fn main() {
     let exe = match std::env::current_exe() {
         Ok(p) => p,
@@ -80,12 +127,7 @@ fn main() {
     {
         cmd.env("DOCKER_HOST", SOLON_HOST);
     }
-    let mut plugin_dirs = dir.join("cli-plugins").into_os_string();
-    if let Some(prev) = std::env::var_os("DOCKER_CLI_PLUGIN_EXTRA_DIRS") {
-        plugin_dirs.push(";");
-        plugin_dirs.push(prev);
-    }
-    cmd.env("DOCKER_CLI_PLUGIN_EXTRA_DIRS", plugin_dirs);
+    ensure_plugin_dir(&dir.join("cli-plugins"));
 
     match cmd.status() {
         Ok(status) => exit(status.code().unwrap_or(1)),
