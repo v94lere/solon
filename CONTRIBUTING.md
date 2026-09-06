@@ -28,7 +28,7 @@ périphérique Plan9 à déclarer dès la création, `docker events` qui ne vide
 - Windows 11 Pro/Entreprise/Éducation avec Hyper-V et la Plateforme de machine virtuelle activés.
 - Rust stable (`rustup`), cible `x86_64-unknown-linux-musl` (`rustup target add x86_64-unknown-linux-musl`).
 - Node 22 et npm.
-- WSL 2 avec Ubuntu pour construire l'image Linux (`image/build.sh`, en root : `wsl -u root`).
+- Solon installé : l'image Linux se construit dans un conteneur Solon (`image/build.sh` sous Alpine, ~15 s), plus besoin de WSL.
 - Une session administrateur pour lancer le service en mode console (`tests/e2e/start-console.ps1`).
 
 Construire :
@@ -36,7 +36,7 @@ Construire :
 ```powershell
 cargo build --workspace --examples
 cargo build -p solon-agent --release --target x86_64-unknown-linux-musl
-wsl -u root -e bash -c "cd /mnt/c/.../solon && SKIP_KERNEL=1 bash image/build.sh /mnt/c/.../target/x86_64-unknown-linux-musl/release/solon-agent"
+docker run --rm -v "${PWD}:/work" -w /work public.ecr.aws/docker/library/alpine:3.24 sh -c "apk add -q bash curl python3 e2fsprogs coreutils tar grep findutils gzip; SKIP_KERNEL=1 SOLON_IMAGE_VERSION=0.1.0-dev.N bash image/build.sh /work/target/x86_64-unknown-linux-musl/release/solon-agent"
 cd apps\desktop; npm install; npm run typecheck
 ```
 

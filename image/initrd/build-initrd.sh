@@ -18,7 +18,10 @@ TREE="$INITRD_WORKDIR/tree"
 rm -rf "$TREE"
 mkdir -p "$TREE/bin" "$TREE/proc" "$TREE/sys" "$TREE/dev" "$TREE/run" "$TREE/newroot"
 
-file="$(curl -fsSL "$MAIN/x86_64/" | grep -oE 'busybox-static-[0-9][^"<]*\.apk' | head -1)"
+# Page téléchargée d'abord : avec `pipefail`, `head -1` fermerait le tube avant la fin de curl (SIGPIPE) et
+# ferait échouer le script sous busybox/Alpine.
+page="$(curl -fsSL "$MAIN/x86_64/")"
+file="$(printf '%s' "$page" | grep -oE 'busybox-static-[0-9][^"<]*\.apk' | head -1 || true)"
 [ -n "$file" ] || { echo "busybox-static introuvable" >&2; exit 1; }
 [ -f "$INITRD_WORKDIR/dl/$file" ] || curl -fsSL -o "$INITRD_WORKDIR/dl/$file" "$MAIN/x86_64/$file"
 tar -xzf "$INITRD_WORKDIR/dl/$file" -C "$INITRD_WORKDIR" bin/busybox.static 2>/dev/null

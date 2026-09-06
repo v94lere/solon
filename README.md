@@ -53,18 +53,19 @@ Désinstallation : Paramètres → Applications → Solon. Le désinstalleur arr
 
 ### Depuis les sources (développeurs)
 
-Prérequis : Rust stable (≥ 1.85), Node 22, WSL 2 avec une distribution Ubuntu (pour construire l'image
-Linux), une session Windows **administrateur** pour lancer le service.
+Prérequis : Rust stable (≥ 1.85), Node 22, et **Solon lui-même** installé (l'image Linux du moteur se construit
+dans un conteneur Solon : pas besoin de WSL). Une session Windows **administrateur** sert seulement au mode console.
 
 ```powershell
-# 1. Image Linux (noyau + système racine + initrd), depuis WSL en root
-wsl -u root -e bash -c "cd /mnt/c/chemin/vers/solon && bash image/build.sh /mnt/c/chemin/vers/solon/target/x86_64-unknown-linux-musl/release/solon-agent"
-
-# 2. Agent invité (compilation croisée depuis Windows, sans chaîne C)
+# 1. Agent invité (compilation croisée depuis Windows, sans chaîne C)
 rustup target add x86_64-unknown-linux-musl
 cargo build -p solon-agent --release --target x86_64-unknown-linux-musl
 
-# 3. Service et application
+# 2. Image Linux (noyau réutilisé + système racine Alpine + initrd), construite dans un conteneur Solon (~15 s)
+docker run --rm -v "${PWD}:/work" -w /work public.ecr.aws/docker/library/alpine:3.24 sh -c "apk add -q bash curl python3 e2fsprogs coreutils tar grep findutils gzip; SKIP_KERNEL=1 SOLON_IMAGE_VERSION=0.1.0-dev.N bash image/build.sh /work/target/x86_64-unknown-linux-musl/release/solon-agent"
+#    (le noyau lui-même se compile une fois avec image/kernel/build-kernel.sh, ~7 min, dans le même genre de conteneur)
+
+# 3. Service et application (l'installeur embarque image/out/<version>, voir tauri.conf.json)
 cargo build --release -p solon-service
 cd apps\desktop && npm install && npm run tauri build
 ```

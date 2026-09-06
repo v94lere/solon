@@ -803,11 +803,14 @@ pub fn mount(drive: &str) {
     let drive = drive.to_owned();
     std::thread::spawn(move || {
         let fs = SolonFs::new(&drive);
+        // Pas de `DefaultPermissions` : les fichiers Windows n'ont pas de droits POSIX, c'est le
+        // système de fichiers qui répond (tout est permis, `chmod`/`chown` acceptés et ignorés), sinon
+        // le noyau refuse un `chmod` fait par un utilisateur non root du conteneur (EPERM), ce qui
+        // casse des images comme Warpgate qui sécurisent leurs fichiers au démarrage.
         let options = [
             MountOption::FSName("solonfs".into()),
             MountOption::Subtype("solonfs".into()),
             MountOption::AllowOther,
-            MountOption::DefaultPermissions,
             MountOption::NoAtime,
         ];
         log(&format!("solonfs : montage de {target}"));

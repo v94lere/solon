@@ -46,7 +46,8 @@ mkdir -p "$ROOT"
 
 fetch_apk() { # <repo_url> <nom_paquet> -> chemin local
     local repo="$1" name="$2" file
-    file="$(curl -fsSL "$repo/x86_64/" | grep -oE "$name-[0-9][^\"<]*\.apk" | head -1)"
+    page="$(curl -fsSL "$repo/x86_64/")"
+    file="$(printf '%s' "$page" | grep -oE "$name-[0-9][^\"<]*\.apk" | head -1 || true)"
     [ -n "$file" ] || { echo "paquet $name introuvable dans $repo/x86_64" >&2; exit 1; }
     [ -f "$WORK/dl/$file" ] || curl -fsSL -o "$WORK/dl/$file" "$repo/x86_64/$file"
     echo "$WORK/dl/$file"
