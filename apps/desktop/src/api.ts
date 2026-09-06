@@ -79,8 +79,24 @@ export interface Settings {
 }
 
 // ---- moteur / service ----
+export interface MachineMetrics {
+  uptime_s: number;
+  cpu_busy_ticks: number;
+  cpu_total_ticks: number;
+  cpus: number;
+  load1: number;
+  mem_total_kb: number;
+  mem_available_kb: number;
+  disk_total_bytes: number;
+  disk_used_bytes: number;
+  net_rx_bytes: number;
+  net_tx_bytes: number;
+  containers_running: number;
+}
+
 export const engine = {
   status: () => invoke<EngineSnapshot>("engine_status"),
+  metrics: () => invoke<MachineMetrics>("engine_metrics"),
   start: () => invoke<void>("engine_start"),
   stop: (force = false) => invoke<void>("engine_stop", { force }),
   restart: () => invoke<void>("engine_restart"),

@@ -25,7 +25,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 const SERVICE_NAME: &str = "SolonService";
 const SERVICE_DISPLAY: &str = "Solon";
 const SERVICE_DESCRIPTION: &str =
-    "Moteur de conteneurs Solon : possède la machine et expose l'API Docker.";
+    "Solon container engine: owns the Linux machine and exposes the Docker API.";
 
 fn engine_config() -> EngineConfig {
     let root = std::env::var_os("SOLON_ROOT")
@@ -204,7 +204,7 @@ fn install() -> Result<(), String> {
         .set_description(SERVICE_DESCRIPTION)
         .map_err(|e| e.to_string())?;
     println!(
-        "service {SERVICE_NAME} installé (démarrage automatique). Démarrage : sc start {SERVICE_NAME}"
+        "service {SERVICE_NAME} installed (automatic start). Start it with: sc start {SERVICE_NAME}"
     );
     Ok(())
 }
@@ -239,7 +239,7 @@ fn uninstall() -> Result<(), String> {
         }
     }
     service.delete().map_err(|e| format!("suppression : {e}"))?;
-    println!("service {SERVICE_NAME} supprimé");
+    println!("service {SERVICE_NAME} removed");
     Ok(())
 }
 

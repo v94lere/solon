@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { engine } from "../api";
 import { useEngine } from "../engine";
-import { IconPlay, IconRestart, IconStop, IconTerminal } from "./Icons";
+import { IconPlay, IconRestart, IconStop } from "./Icons";
 
-/** Pied de la barre latérale : état du moteur (point + libellé) et commandes démarrer / redémarrer / arrêter. */
-export function EngineFooter({ onTerminal }: { onTerminal: () => void }) {
+/** Pied de la barre latérale : état du moteur (point + libellé) et commandes démarrer / redémarrer / arrêter.
+ *  En mode compact (barre repliée), seul le point d'état reste visible ; l'infobulle porte le libellé. */
+export function EngineFooter({ compact = false }: { compact?: boolean }) {
   const { t } = useTranslation();
   const { snapshot, serviceAvailable } = useEngine();
   const [busy, setBusy] = useState(false);
@@ -27,21 +28,17 @@ export function EngineFooter({ onTerminal }: { onTerminal: () => void }) {
   }
 
   return (
-    <div className="engine-footer" role="status" aria-live="polite" title={boot ? `${t(`engine.state.${state}`)} — ${boot}` : t(`engine.state.${state}`)}>
+    <div className={`engine-footer ${compact ? "is-compact" : ""}`} role="status" aria-live="polite" title={boot ? `${t(`engine.state.${state}`)} — ${boot}` : t(`engine.state.${state}`)}>
       <span className={`pill pill-dot ${tone}`} aria-hidden="true" />
-      <span className="engine-footer-label">{label}</span>
+      {compact && <span className="sr-only">{label}</span>}
+      {!compact && <span className="engine-footer-label">{label}</span>}
       <span className="flex-1" />
-      {serviceAvailable && (state === "stopped" || state === "failed") && (
+      {!compact && serviceAvailable && (state === "stopped" || state === "failed") && (
         <button type="button" className="icon-btn" title={t("engine.start")} aria-label={t("engine.start")} disabled={busy} onClick={() => run(() => engine.start())}>
           <IconPlay />
         </button>
       )}
-      {serviceAvailable && state === "ready" && (
-        <button type="button" className="icon-btn" title={`${t("machine.terminal")} (Ctrl+\`)`} aria-label={t("machine.terminal")} onClick={onTerminal}>
-          <IconTerminal />
-        </button>
-      )}
-      {serviceAvailable && (state === "ready" || state === "degraded") && (
+      {!compact && serviceAvailable && (state === "ready" || state === "degraded") && (
         <>
           <button type="button" className="icon-btn" title={t("engine.restart")} aria-label={t("engine.restart")} disabled={busy} onClick={() => run(() => engine.restart())}>
             <IconRestart />

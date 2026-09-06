@@ -831,6 +831,23 @@ impl Engine {
     }
 
     /// Santé rapportée par l'agent (None si le moteur ne tourne pas).
+    /// Compteurs bruts de la machine (écran Activité).
+    pub async fn metrics(&self) -> Result<solon_core::protocol::MachineMetrics> {
+        let agent = self
+            .inner
+            .running
+            .lock()
+            .await
+            .as_ref()
+            .map(|r| r.agent.clone())
+            .ok_or_else(|| {
+                SolonError::new(ErrorCode::EngineUnreachable, "le moteur n'est pas démarré")
+            })?;
+        agent
+            .call_typed(Command::Metrics, Duration::from_secs(5))
+            .await
+    }
+
     pub async fn health(&self) -> Option<HealthReport> {
         let agent = self
             .inner

@@ -314,3 +314,8 @@ fn watch_docker(state: Arc<State>) {
         std::thread::sleep(Duration::from_secs(1));
     }
 }
+
+/// Nombre de conteneurs en marche au dernier relevé (voir `refresh_ports`).
+pub fn running_count() -> u32 {
+    hub().endpoints.lock().unwrap().len() as u32
+}

@@ -448,7 +448,7 @@ where
         Ok(Ok(s)) => s,
         _ => {
             let body = format!(
-                "<!doctype html><meta charset=\"utf-8\"><title>Solon</title><body style=\"font-family:Segoe UI,sans-serif;max-width:40em;margin:4em auto;color:#222\"><h1 style=\"font-weight:600\">Solon</h1><p>Le conteneur derrière <code>{host}</code> ne répond pas sur le port {} ({}).</p><p>Vérifiez qu'il écoute bien sur ce port, ou publiez le bon port.</p></body>",
+                "<!doctype html><meta charset=\"utf-8\"><title>Solon</title><body style=\"font-family:Segoe UI,sans-serif;max-width:40em;margin:4em auto;color:#222\"><h1 style=\"font-weight:600\">Solon</h1><p>The container behind <code>{host}</code> is not answering on port {} ({}).</p><p>Check that it listens on that port, or publish the right one.</p></body>",
                 target.port, target.ip
             );
             let resp = format!(
@@ -474,13 +474,13 @@ fn not_found_page(host: &str, domains: &DomainMap) -> String {
         ));
     }
     if items.is_empty() {
-        items.push_str("<li><em>aucun conteneur en marche pour l'instant</em></li>");
+        items.push_str("<li><em>no running container yet</em></li>");
     }
     format!(
-        "<!doctype html><html lang=\"fr\"><meta charset=\"utf-8\"><title>Solon</title>\
+        "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><title>Solon</title>\
 <body style=\"font-family:Segoe UI,sans-serif;max-width:40em;margin:4em auto;color:#222\">\
-<h1 style=\"font-weight:600\">Solon</h1><p><code>{host}</code> ne correspond à aucun conteneur.</p>\
-<p>Domaines disponibles :</p><ul>{items}</ul></body></html>"
+<h1 style=\"font-weight:600\">Solon</h1><p><code>{host}</code> does not match any container.</p>\
+<p>Available domains:</p><ul>{items}</ul></body></html>"
     )
 }
 

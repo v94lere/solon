@@ -853,3 +853,71 @@ pub fn shutdown(state: &State, timeout: Duration) -> ! {
         std::thread::sleep(Duration::from_secs(1));
     }
 }
+
+/// Relevé des compteurs de la machine pour l'écran Activité (voir [`MachineMetrics`]).
+pub fn metrics() -> solon_core::protocol::MachineMetrics {
+    use solon_core::protocol::MachineMetrics;
+    let mut m = MachineMetrics {
+        uptime_s: uptime_secs(),
+        ..Default::default()
+    };
+    if let Ok(stat) = fs::read_to_string("/proc/stat") {
+        if let Some(line) = stat.lines().find(|l| l.starts_with("cpu ")) {
+            let v: Vec<u64> = line
+                .split_whitespace()
+                .skip(1)
+                .filter_map(|x| x.parse().ok())
+                .collect();
+            let total: u64 = v.iter().sum();
+            let idle = v.get(3).copied().unwrap_or(0) + v.get(4).copied().unwrap_or(0);
+            m.cpu_total_ticks = total;
+            m.cpu_busy_ticks = total.saturating_sub(idle);
+        }
+        m.cpus = stat
+            .lines()
+            .filter(|l| l.starts_with("cpu") && !l.starts_with("cpu "))
+            .count() as u32;
+    }
+    if let Ok(load) = fs::read_to_string("/proc/loadavg") {
+        m.load1 = load
+            .split_whitespace()
+            .next()
+            .and_then(|x| x.parse().ok())
+            .unwrap_or(0.0);
+    }
+    if let Ok(mem) = fs::read_to_string("/proc/meminfo") {
+        let field = |k: &str| -> u64 {
+            mem.lines()
+                .find(|l| l.starts_with(k))
+                .and_then(|l| l.split_whitespace().nth(1))
+                .and_then(|v| v.parse::<u64>().ok())
+                .unwrap_or(0)
+        };
+        m.mem_total_kb = field("MemTotal");
+        m.mem_available_kb = field("MemAvailable");
+    }
+    if let Ok(c) = CString::new(DATA_MOUNT) {
+        let mut st: libc::statvfs = unsafe { std::mem::zeroed() };
+        if unsafe { libc::statvfs(c.as_ptr(), &mut st) } == 0 {
+            let total = st.f_blocks as u64 * st.f_frsize as u64;
+            let avail = st.f_bavail as u64 * st.f_frsize as u64;
+            m.disk_total_bytes = total;
+            m.disk_used_bytes = total.saturating_sub(avail);
+        }
+    }
+    if let Ok(dev) = fs::read_to_string("/proc/net/dev") {
+        if let Some(line) = dev.lines().find(|l| l.trim_start().starts_with("eth0:")) {
+            let v: Vec<u64> = line
+                .split(':')
+                .nth(1)
+                .unwrap_or("")
+                .split_whitespace()
+                .filter_map(|x| x.parse().ok())
+                .collect();
+            m.net_rx_bytes = v.first().copied().unwrap_or(0);
+            m.net_tx_bytes = v.get(8).copied().unwrap_or(0);
+        }
+    }
+    m.containers_running = crate::events::running_count();
+    m
+}

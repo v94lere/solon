@@ -79,11 +79,15 @@ cd apps\desktop; npm run tauri dev
 
 ## Utilisation
 
-- **Conteneurs** : liste temps réel avec CPU et mémoire, filtre, groupes Compose (cliquables), actions en
-  icônes, journaux en flux, terminal, inspection. Un **port publié est un lien** vers `http://localhost:<port>`.
-- **Projets** : chaque projet Compose a son écran : services et leur état, **journaux de tous les services
-  mêlés**, Up / Down / Reconstruire avec la **sortie en direct**, ouverture du dossier dans l'**Explorateur** ou dans **VS Code**. « Ouvrir un
-  projet… » choisit un dossier contenant `compose.yaml` ; les projets déjà lancés sont détectés automatiquement.
+Le menu de gauche a deux parties : **Docker** (Containers, Volumes, Images, Networks) et **General** (Activity,
+Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icônes seules ; le choix est mémorisé.
+
+- **Conteneurs** : liste temps réel avec CPU et mémoire, filtre, groupes Compose, actions en icônes, journaux en
+  flux, terminal, inspection. Un **port publié est un lien** vers `http://localhost:<port>`, le domaine local aussi.
+  Les **projets Compose** vivent ici : « Ouvrir un projet… » choisit un dossier contenant `compose.yaml`, la liste
+  déroulante rappelle les projets récents, et un clic sur l'en-tête d'un groupe Compose ouvre l'écran du projet :
+  services et leur état, **journaux de tous les services mêlés**, Up / Down / Reconstruire avec la **sortie en
+  direct**, ouverture du dossier dans l'**Explorateur** ou dans **VS Code**.
 - **Images, Volumes, Réseaux** : liste, création, inspection, suppression (toujours avec confirmation).
 - **Des adresses qui marchent, toujours** : chaque conteneur en marche est joignable sur
   `https://<nom>.solon.local` (et `https://<service>.<projet>.solon.local` pour Compose), **qu'il publie un port
@@ -99,10 +103,13 @@ cd apps\desktop; npm run tauri dev
   ou en redémarrage, disque du moteur plein à 90 %.
 - **Diagnostic** (Réglages → Exporter un diagnostic) : une archive zip avec les journaux, l'état, les réglages,
   les prérequis et `docker info`, à joindre à un rapport de bug. Aucun identifiant n'y figure.
-- **Terminal de la machine** (icône en bas de la barre latérale, ou `Ctrl+\``) : un shell root dans le moteur
-  Linux lui-même, pour `docker`, `ps`, `df`, `dmesg`…
+- **Activity** : performances en temps réel. En haut, le moteur : processeur, mémoire (utilisée / totale, réservée),
+  stockage des données, réseau, avec les courbes de la dernière minute. En dessous, chaque conteneur en marche :
+  processeur, mémoire, débit réseau, courbe du processeur ; colonnes triables. Rien n'est installé dans les conteneurs.
+- **Terminal** (section, ou `Ctrl+\``) : un shell root dans le moteur Linux lui-même, pour `docker`, `ps`, `df`,
+  `dmesg`… La session reste ouverte quand on change de section ; « Nouvelle session » en relance une.
 - **Recherche globale `Ctrl+K`** : conteneurs, images, volumes, réseaux, projets, actions du moteur, sections.
-  `Ctrl+1` à `Ctrl+6` changent de section.
+  `Ctrl+1` à `Ctrl+7` changent de section dans l'ordre du menu.
 - **Réglages** : langue (anglais par défaut, français), apparence, mémoire et processeurs du moteur (par défaut
   tous les cœurs moins deux), limite de stockage, démarrage à l'ouverture de session.
 - **Barre des tâches** : un clic sur l'icône ouvre le menu : état du moteur, nombre de conteneurs en

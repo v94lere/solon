@@ -549,3 +549,27 @@ Objectif : joindre tout conteneur en marche depuis Windows **sans publier de por
 - La route Windows est non persistante (recréée à chaque démarrage du moteur) : si le service est tué sans passer par l'arrêt, une route orpheline reste jusqu'au redémarrage ou au prochain démarrage du moteur (elle est d'abord supprimée puis recréée).
 - La clé de l'autorité est dans `%ProgramData%\Solon\ca\solon-ca.key` (droits SYSTEM/administrateurs) : un administrateur local peut signer des certificats pour n'importe quel nom **sur cette machine seulement** (l'autorité n'est installée nulle part ailleurs), comme avec mkcert.
 
+## Lot « menu » (6 septembre 2026, soir) — deux catégories, repli, Projets fusionnés, Activité, Terminal
+
+Validé par Valère avant réalisation : (1) bouton pour replier le menu en icônes seules ; (2) fusion de l'onglet Projets
+dans Conteneurs ; (3) menu en deux catégories, **Docker** (Containers, Volumes, Images, Networks) et **General**
+(Activity, Terminal, Settings) ; (4) anglais par défaut partout. Image du moteur **0.1.0-dev.15** (agent : commande
+`Metrics`).
+
+| Élément | Réalisation | Vérification (captures `.local/build/menu-*.png`, `u*.png`, `v*.png`) |
+|---|---|---|
+| Menu replié | `Ctrl+B` ou bouton en haut du menu ; 56 px, icônes seules, libellés et raccourcis en infobulle, état du moteur réduit au point ; mémorisé (`localStorage` `solon.sidebar`) | replié / déplié dans les deux sens, y compris depuis le terminal |
+| Projets dans Conteneurs | plus d'onglet Projets ; en-tête d'un groupe Compose → écran du projet (services, journaux mêlés, Up / Down / Rebuild, Explorateur, VS Code) avec retour « ← Containers » | clic sur « COMPOSE PROJECT · ODOO18 → » : écran du projet `C:\Users\neveu\Desktop\odoo18\compose.yaml`, 2/2 running, journaux d'Odoo en direct |
+| Deux catégories | ordre du menu = ordre des raccourcis `Ctrl+1` … `Ctrl+7` ; palette `Ctrl+K` alignée | palette : Containers Ctrl+1 … Settings Ctrl+7, Terminal Ctrl+` |
+| Activity | agent : `Command::Metrics` (`/proc/stat`, `/proc/meminfo`, `/proc/loadavg`, `statvfs(/var/lib/solon)`, `/proc/net/dev` eth0) ; service `ServiceCommand::Metrics` ; app : relevé toutes les 2 s, pourcentages et débits par différence, courbes glissantes de 60 points ; conteneurs : flux `stats` existant, débits réseau par différence, tri par colonne | 22 processeurs, 457 MiB sur 1,9 GiB (2,0 GiB réservés), stockage 6,1 GiB sur 62 GiB (10 %), réseau eth0 ; 3 conteneurs avec CPU, mémoire / limite, débits, courbe |
+| Terminal en section | `MachineTerminalPanel` monté à la première visite puis conservé masqué (la session survit aux changements de section) ; « New session » ; raccourcis de l'application prioritaires sur le shell (`attachCustomKeyEventHandler`) ; focus rendu quand la section est masquée | `echo terminal-ok` puis `Ctrl+B` (menu replié, pas de `^B` dans le shell), `Ctrl+1` puis `Ctrl+K` (palette ouverte) |
+| Anglais par défaut | déjà le cas dans l'interface ; passés en anglais : pages 404 / 502 du mandataire `*.solon.local`, messages de l'installeur (`hooks.nsh`), journal `setup.log`, console et description du service | `setup.log` : « service started: Running » |
+
+### Défauts trouvés en chemin
+
+| Défaut | Cause | Correction |
+|---|---|---|
+| Après une mise à jour, **service arrêté, rien dans `setup.log`** | en traduisant `setup.ps1`, `"feature $feature: enabled"` : PowerShell lit `$feature:` comme un lecteur → **erreur d'analyse de tout le script**, silencieuse | `${feature}:` ; règle et vérification `Parser::ParseFile` ajoutées à CONTRIBUTING |
+| `Ctrl+B` sans effet après usage du terminal | xterm garde le focus quand sa section est masquée et « consomme » Ctrl+B / Ctrl+K | raccourcis exclus du terminal ; `term.blur()` quand la section est masquée |
+| Clic sur l'en-tête de groupe manqué dans les tests | le bouton n'a que la largeur du texte | sans changement (test corrigé) |
+

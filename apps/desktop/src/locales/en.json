@@ -8,7 +8,12 @@
     "volumes": "Volumes",
     "networks": "Networks",
     "settings": "Settings",
-    "projects": "Projects"
+    "docker": "Docker",
+    "general": "General",
+    "activity": "Activity",
+    "terminal": "Terminal",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
   },
   "engine": {
     "state": {
@@ -301,22 +306,10 @@
     "containers_more": "… and {{count}} more (open Solon)"
   },
   "projects": {
-    "title": "Projects",
-    "count_one": "{{count}} project",
-    "count_other": "{{count}} projects",
-    "empty": "No Compose project yet. Open a folder containing compose.yaml.",
-    "columns": {
-      "name": "Name",
-      "folder": "Folder",
-      "services": "Services"
-    },
-    "running_count": "{{running}}/{{total}} running",
-    "not_started": "not started",
-    "open": "Open",
-    "forget": "Remove from the list"
+    "running_count": "{{running}}/{{total}} running"
   },
   "project": {
-    "back": "Projects",
+    "back": "Containers",
     "rebuild": "Rebuild",
     "explorer": "Explorer",
     "vscode": "VS Code",
@@ -330,14 +323,15 @@
     "exit_code": "exit code {{code}}"
   },
   "machine": {
-    "terminal": "Machine terminal",
-    "terminal_hint": "root shell inside the Solon engine — Esc to close"
+    "terminal": "Terminal",
+    "terminal_hint": "root shell inside the Solon engine",
+    "new_session": "New session"
   },
   "palette": {
     "title": "Search",
     "placeholder": "Search containers, images, projects, actions…",
     "no_results": "No results",
-    "foot": "↑↓ navigate · Enter open · Esc close · Ctrl+1…6 sections · Ctrl+` terminal",
+    "foot": "↑↓ navigate · Enter open · Esc close · Ctrl+1…7 sections · Ctrl+` terminal · Ctrl+B sidebar",
     "groups": {
       "actions": "Actions",
       "containers": "Containers",
@@ -356,5 +350,28 @@
     "disk_body": "{{pct}} % used, {{free}} GB left. Remove unused images or volumes.",
     "container_died_title": "Solon: container stopped",
     "container_died_body": "{{name}} exited with code {{code}}."
+  },
+  "activity": {
+    "title": "Activity",
+    "subtitle": "Live performance of the engine and its containers",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "disk": "Storage",
+    "network": "Network",
+    "of": "of {{total}}",
+    "reserved": "{{value}} reserved",
+    "load": "load {{value}}",
+    "cpus_one": "{{count}} processor",
+    "cpus_other": "{{count}} processors",
+    "waiting": "Collecting…",
+    "empty": "No running container.",
+    "unavailable": "Engine metrics are unavailable: the engine image needs an update. Restart the engine after installing the new version.",
+    "columns": {
+      "name": "Container",
+      "cpu": "CPU",
+      "memory": "Memory",
+      "network": "Network",
+      "trend": "CPU, last minute"
+    }
   }
 }

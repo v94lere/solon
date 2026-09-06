@@ -65,6 +65,12 @@ async fn settings_set(settings: Settings) -> Result<(), String> {
         .map(|_| ())
 }
 
+/// Compteurs de la machine pour l'écran Activité.
+#[tauri::command]
+async fn engine_metrics() -> Result<Value, String> {
+    service::call(ServiceCommand::Metrics).await
+}
+
 /// Commande shell dans la machine (Compose, diagnostic).
 #[tauri::command]
 async fn service_exec(command: String, timeout_s: Option<u64>) -> Result<Value, String> {
@@ -128,6 +134,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            engine_metrics,
             compose::compose_detect,
             compose::compose_run,
             compose::compose_stream,

@@ -86,6 +86,10 @@ async fn handle(
                 }
             }
             ServiceCommand::ListShares => Response::ok(id, engine.list_shares().await),
+            ServiceCommand::Metrics => match engine.metrics().await {
+                Ok(m) => Response::ok(id, m),
+                Err(e) => Response::err(id, e.to_string()),
+            },
             ServiceCommand::Quit => match &quit {
                 Some(q) => {
                     let _ = q.send(()).await;

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { containers, images, networks, volumes, engine, type ContainerSummary } from "../api";
 import { loadRecentProjects, projectBaseName, projectDirOf } from "../projects";
-import type { Section } from "../App";
+import { SECTION_KEYS, type Section } from "../App";
 
 export interface PaletteActions {
   go: (section: Section) => void;
@@ -53,13 +53,7 @@ export function CommandPalette({ open, onClose, actions }: { open: boolean; onCl
       onClose();
     };
     const list: Item[] = [
-      { key: "go:containers", group: t("palette.groups.actions"), label: t("nav.containers"), hint: "Ctrl+1", run: done(() => actions.go("containers")) },
-      { key: "go:projects", group: t("palette.groups.actions"), label: t("nav.projects"), hint: "Ctrl+2", run: done(() => actions.go("projects")) },
-      { key: "go:images", group: t("palette.groups.actions"), label: t("nav.images"), hint: "Ctrl+3", run: done(() => actions.go("images")) },
-      { key: "go:volumes", group: t("palette.groups.actions"), label: t("nav.volumes"), hint: "Ctrl+4", run: done(() => actions.go("volumes")) },
-      { key: "go:networks", group: t("palette.groups.actions"), label: t("nav.networks"), hint: "Ctrl+5", run: done(() => actions.go("networks")) },
-      { key: "go:settings", group: t("palette.groups.actions"), label: t("nav.settings"), hint: "Ctrl+6", run: done(() => actions.go("settings")) },
-      { key: "terminal", group: t("palette.groups.actions"), label: t("machine.terminal"), hint: "Ctrl+`", run: done(actions.openTerminal) },
+      ...SECTION_KEYS.map((id, i) => ({ key: `go:${id}`, group: t("palette.groups.actions"), label: t(`nav.${id}`), hint: id === "terminal" ? "Ctrl+`" : `Ctrl+${i + 1}`, run: done(() => actions.go(id)) })),
       { key: "engine:start", group: t("palette.groups.actions"), label: t("engine.start"), run: done(() => void engine.start()) },
       { key: "engine:restart", group: t("palette.groups.actions"), label: t("engine.restart"), run: done(() => void engine.restart()) },
       { key: "engine:stop", group: t("palette.groups.actions"), label: t("engine.stop"), run: done(() => void engine.stop()) },

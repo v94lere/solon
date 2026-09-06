@@ -114,6 +114,7 @@ fn serve_client(client: File, state: Arc<State>) -> std::io::Result<()> {
                 Err(e) => Response::err(id, e),
             },
             Command::ListPorts => Response::ok(id, crate::events::current_ports()),
+            Command::Metrics => Response::ok(id, system::metrics()),
             Command::Shutdown { timeout_s } => {
                 send(&mut writer, &Response::ok(id, "bye"))?;
                 system::shutdown(&state, Duration::from_secs(timeout_s));

@@ -63,6 +63,8 @@ pub enum ServiceCommand {
     },
     /// Lecteurs actuellement partagés.
     ListShares,
+    /// Compteurs de la machine (écran Activité).
+    Metrics,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

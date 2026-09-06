@@ -95,6 +95,30 @@ pub enum Command {
     },
     /// Demande la liste courante des ports publiés (l'agent la pousse aussi en événement).
     ListPorts,
+    /// Compteurs bruts de la machine (processeur, mémoire, disque des données, réseau) pour
+    /// l'écran Activité ; l'appelant calcule les débits par différence entre deux appels.
+    Metrics,
+}
+
+/// Compteurs de la machine à un instant donné. Les compteurs processeur et réseau sont cumulés
+/// depuis le démarrage : les pourcentages et débits se déduisent de deux relevés.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct MachineMetrics {
+    pub uptime_s: f64,
+    /// Ticks processeur cumulés (tous cœurs) : occupés et total, d'après `/proc/stat`.
+    pub cpu_busy_ticks: u64,
+    pub cpu_total_ticks: u64,
+    pub cpus: u32,
+    pub load1: f64,
+    pub mem_total_kb: u64,
+    pub mem_available_kb: u64,
+    /// Disque des données (`/var/lib/solon`) en octets.
+    pub disk_total_bytes: u64,
+    pub disk_used_bytes: u64,
+    /// Octets cumulés sur `eth0` (vers et depuis l'hôte).
+    pub net_rx_bytes: u64,
+    pub net_tx_bytes: u64,
+    pub containers_running: u32,
 }
 
 fn default_shutdown_timeout() -> u64 {

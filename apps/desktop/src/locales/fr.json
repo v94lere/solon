@@ -8,7 +8,12 @@
     "volumes": "Volumes",
     "networks": "Réseaux",
     "settings": "Réglages",
-    "projects": "Projets"
+    "docker": "Docker",
+    "general": "Général",
+    "activity": "Activité",
+    "terminal": "Terminal",
+    "collapse": "Replier le menu",
+    "expand": "Déplier le menu"
   },
   "engine": {
     "state": {
@@ -301,22 +306,10 @@
     "containers_more": "… et {{count}} autres (ouvrir Solon)"
   },
   "projects": {
-    "title": "Projets",
-    "count_one": "{{count}} projet",
-    "count_other": "{{count}} projets",
-    "empty": "Aucun projet Compose. Ouvrez un dossier contenant compose.yaml.",
-    "columns": {
-      "name": "Nom",
-      "folder": "Dossier",
-      "services": "Services"
-    },
-    "running_count": "{{running}}/{{total}} en marche",
-    "not_started": "non démarré",
-    "open": "Ouvrir",
-    "forget": "Retirer de la liste"
+    "running_count": "{{running}}/{{total}} en marche"
   },
   "project": {
-    "back": "Projets",
+    "back": "Conteneurs",
     "rebuild": "Reconstruire",
     "explorer": "Explorateur",
     "vscode": "VS Code",
@@ -330,14 +323,15 @@
     "exit_code": "code de sortie {{code}}"
   },
   "machine": {
-    "terminal": "Terminal de la machine",
-    "terminal_hint": "shell root dans le moteur Solon — Échap pour fermer"
+    "terminal": "Terminal",
+    "terminal_hint": "shell root dans le moteur Solon",
+    "new_session": "Nouvelle session"
   },
   "palette": {
     "title": "Recherche",
     "placeholder": "Rechercher conteneurs, images, projets, actions…",
     "no_results": "Aucun résultat",
-    "foot": "↑↓ naviguer · Entrée ouvrir · Échap fermer · Ctrl+1…6 sections · Ctrl+` terminal",
+    "foot": "↑↓ naviguer · Entrée ouvrir · Échap fermer · Ctrl+1…7 sections · Ctrl+` terminal · Ctrl+B menu",
     "groups": {
       "actions": "Actions",
       "containers": "Conteneurs",
@@ -356,5 +350,28 @@
     "disk_body": "{{pct}} % utilisés, {{free}} Go restants. Supprimez des images ou volumes inutilisés.",
     "container_died_title": "Solon : conteneur arrêté",
     "container_died_body": "{{name}} s'est terminé avec le code {{code}}."
+  },
+  "activity": {
+    "title": "Activité",
+    "subtitle": "Performances en temps réel du moteur et de ses conteneurs",
+    "cpu": "Processeur",
+    "memory": "Mémoire",
+    "disk": "Stockage",
+    "network": "Réseau",
+    "of": "sur {{total}}",
+    "reserved": "{{value}} réservés",
+    "load": "charge {{value}}",
+    "cpus_one": "{{count}} processeur",
+    "cpus_other": "{{count}} processeurs",
+    "waiting": "Relevé en cours…",
+    "empty": "Aucun conteneur en marche.",
+    "unavailable": "Les mesures du moteur sont indisponibles : l'image du moteur doit être mise à jour. Redémarrez le moteur après avoir installé la nouvelle version.",
+    "columns": {
+      "name": "Conteneur",
+      "cpu": "Processeur",
+      "memory": "Mémoire",
+      "network": "Réseau",
+      "trend": "Processeur, dernière minute"
+    }
   }
 }
