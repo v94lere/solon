@@ -493,3 +493,11 @@ activation → redémarrage » de l'installeur jamais testé jusque-là. Point �
 juste après un redémarrage de Windows peut échouer (réseau pas encore stable ou quota du registre) ; à
 reproduire avant d'ajouter un nouvel essai automatique côté moteur.
 
+### Après le test machine vierge (6 septembre 2026) : corrections révélées par un vrai usage
+
+| Défaut | Cause | Correction | Vérification |
+|---|---|---|---|
+| `docker compose` introuvable | le plugin de Docker Desktop masquait l'absence du nôtre ; le CLI 29 ignore `DOCKER_CLI_PLUGIN_EXTRA_DIRS` | le lanceur inscrit `bin\cli-plugins` dans `cliPluginsExtraDirs` de `config.json` | `docker compose version` → v5.1.4 dans un shell neuf |
+| Warpgate `setup` : « failed to tighten file permissions (EPERM) » | `DefaultPermissions` sur le montage FUSE : le noyau refusait `chmod` à un utilisateur non root sur des fichiers présentés comme root | option retirée, le système de fichiers arbitre (chmod/chown acceptés et ignorés) | `chmod 600` + `chown` par uid 1000 sur un dossier Windows : OK |
+| Image du moteur non reconstructible sans WSL | pipeline lié à Ubuntu WSL | **construction dans un conteneur Solon** (Alpine 3.24), dépôt monté par solonfs ; scripts corrigés (SIGPIPE `curl | head`), taille de bloc ext4 fixée à 4 Kio | image dev.12 construite en **14 s** (contre 3 à 4 min sous WSL), agent présent, empreinte conforme |
+
