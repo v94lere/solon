@@ -315,10 +315,17 @@ pub fn mount_boot_shares() {
         let Ok(port) = port.parse::<u32>() else {
             continue;
         };
+        // Le 9P de Windows reste disponible en secours sous /mnt/host9p ; solonfs prend /mnt/host,
+        // sauf en mode de repli (`solon.fs=9p`) où le 9P garde /mnt/host.
+        let nine_p_root = if crate::solonfs::legacy_mode() {
+            "/mnt/host"
+        } else {
+            "/mnt/host9p"
+        };
         let req = MountShareRequest {
             name: drive.to_owned(),
             port,
-            target: format!("/mnt/host/{drive}"),
+            target: format!("{nine_p_root}/{drive}"),
             read_only: false,
             extra_options: String::new(),
         };

@@ -296,6 +296,9 @@ impl Engine {
                 .collect();
             cmdline.push_str(&format!(" solon.shares={}", list.join(",")));
         }
+        if settings.legacy_file_sharing {
+            cmdline.push_str(" solon.fs=9p");
+        }
         let vm_config = VmConfig {
             id: vm_id.clone(),
             name: "solon".into(),
@@ -717,6 +720,14 @@ impl Engine {
             ));
         }
         let guest_root = format!("/mnt/host/{drive}");
+        // Le 9P de Windows est monté en secours sous /mnt/host9p ; /mnt/host est servi par solonfs
+        // (sauf réglage de repli, où le 9P garde /mnt/host).
+        let nine_p_target =
+            if settings::load_settings(&self.inner.cfg.paths.settings_file()).legacy_file_sharing {
+                guest_root.clone()
+            } else {
+                format!("/mnt/host9p/{drive}")
+            };
         let mut guard = self.inner.running.lock().await;
         let running = guard.as_mut().ok_or_else(|| {
             SolonError::new(ErrorCode::EngineUnreachable, "le moteur n'est pas démarré")
@@ -742,7 +753,7 @@ impl Engine {
                     Command::MountShare(solon_core::protocol::MountShareRequest {
                         name: drive.clone(),
                         port,
-                        target: guest_root.clone(),
+                        target: nine_p_target,
                         read_only: false,
                         extra_options: String::new(),
                     }),

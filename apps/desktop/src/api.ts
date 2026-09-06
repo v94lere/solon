@@ -74,6 +74,7 @@ export interface Settings {
   processors: number;
   data_disk_gib: number;
   autostart: boolean;
+  legacy_file_sharing?: boolean;
 }
 
 // ---- moteur / service ----

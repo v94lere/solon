@@ -127,13 +127,23 @@ docker context use solon
 > des identifiants Docker Hub périmés (« unauthorized: incorrect username or password »). Faites
 > `docker logout` ou utilisez un `DOCKER_CONFIG` vide pour le vérifier ; ce n'est pas lié à Solon.
 
-## Performance des fichiers partagés : à savoir
+## Dossiers Windows partagés : comment ça marche
 
-Les dossiers Windows sont partagés par le protocole 9P de Windows (le même que `/mnt/c` sous WSL2). Le
-débit séquentiel est bon (300–450 Mio/s) mais **chaque opération sur les métadonnées coûte 1 à 2 ms**
-(`stat`, création de fichier). Un `npm install` ou un `git status` sur un gros projet monté depuis
-Windows sera lent. Pour les dépendances et les bases de données, utilisez des **volumes Docker** :
-ils vivent sur le disque de Solon, à vitesse native. Détails et mesures : `docs/measurements.md`.
+Les dossiers Windows montés dans les conteneurs (`-v C:\...`, projets Compose) passent par **solonfs**, le système de
+fichiers de Solon : un serveur côté Windows, un client côté Linux, et un protocole qui ramène tout un dossier en une
+seule question au lieu d'une par fichier. Mesuré sur 5 000 fichiers face au partage 9P de Windows (celui de WSL2 et
+de Docker Desktop) : lister 6,6× plus vite, lire les attributs 94× plus vite, lire le contenu 3,6 à 9× plus vite,
+écrire 4× plus vite. Détails et méthode : `docs/measurements.md`.
+
+Ce qu'il faut savoir :
+
+- Les fichiers apparaissent comme appartenant à `root` en `0777` / `0666` ; `chmod` et `chown` sont acceptés et
+  ignorés (Windows n'a pas de droits POSIX), comme avec Docker Desktop.
+- Un changement fait côté Windows est vu dans le conteneur au plus 1,5 s plus tard.
+- Pour les dépendances et les bases de données, préférez toujours des **volumes Docker** : ils vivent sur le disque de
+  Solon, à vitesse native (20 à 50 ms pour les mêmes 5 000 fichiers).
+- Repli : Réglages → « Utiliser l'ancien partage de fichiers Windows (9P) » remet l'ancien mécanisme au prochain
+  démarrage du moteur. L'ancien partage reste aussi monté en secours sous `/mnt/host9p/<lettre>` dans la machine.
 
 ## Dépannage
 

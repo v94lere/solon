@@ -174,6 +174,9 @@ pub struct Settings {
     pub data_disk_gib: u64,
     /// Démarrer le moteur dès l'ouverture de session (sinon au premier lancement de l'app).
     pub autostart: bool,
+    /// Repli : partager les dossiers Windows par le 9P de Windows (ancien mécanisme) au lieu de solonfs.
+    #[serde(default)]
+    pub legacy_file_sharing: bool,
 }
 
 impl Default for Settings {
@@ -183,6 +186,7 @@ impl Default for Settings {
             processors: 4,
             data_disk_gib: 64,
             autostart: false,
+            legacy_file_sharing: false,
         }
     }
 }

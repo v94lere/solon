@@ -1,4 +1,4 @@
-//! Client FUSE « solonfs » : expose les lecteurs Windows partagés sous `/mnt/solonfs/<lettre>`
+//! Client FUSE « solonfs » : expose les lecteurs Windows partagés sous `/mnt/host/<lettre>`
 //! en interrogeant le serveur de fichiers du service (voir `solon_core::fs`).
 //!
 //! Ce qui le rend rapide par rapport à 9P : un `Readdir` rapporte les attributs de toutes les
@@ -41,13 +41,21 @@ struct Pool {
 }
 
 impl Pool {
-    fn take(&self) -> File {
+    /// Prend une connexion ; `None` si l'hôte n'en a fourni aucune dans le délai (service arrêté ?),
+    /// pour renvoyer une erreur au lieu de bloquer le conteneur indéfiniment.
+    fn take(&self, timeout: Duration) -> Option<File> {
+        let deadline = Instant::now() + timeout;
         let mut free = self.free.lock().unwrap();
         loop {
             if let Some(f) = free.pop() {
-                return f;
+                return Some(f);
             }
-            free = self.ready.wait(free).unwrap();
+            let now = Instant::now();
+            if now >= deadline {
+                return None;
+            }
+            let (guard, _) = self.ready.wait_timeout(free, deadline - now).unwrap();
+            free = guard;
         }
     }
     fn give(&self, f: File) {
@@ -88,7 +96,10 @@ pub fn serve_pool() {
 /// Envoie une requête et attend la réponse ; la connexion est rendue à la réserve, ou fermée si elle
 /// a échoué (l'hôte en rouvrira une).
 fn call(req: &FsRequest, data: &[u8]) -> Result<(FsResponse, Vec<u8>), i32> {
-    let mut conn = pool().take();
+    let Some(mut conn) = pool().take(Duration::from_secs(30)) else {
+        log("solonfs : aucune connexion de l'hôte depuis 30 s, opération refusée (EIO)");
+        return Err(5);
+    };
     let r = (|| -> std::io::Result<(FsResponse, Vec<u8>)> {
         conn.write_all(&encode_frame(req, data))?;
         let mut head = [0u8; 8];
@@ -767,9 +778,20 @@ impl Filesystem for SolonFs {
     }
 }
 
-/// Monte `/mnt/solonfs/<lettre>` dans un thread dédié. Idempotent.
+/// Repli demandé par le service (`solon.fs=9p` sur la ligne de commande du noyau) : le 9P de Windows
+/// reste monté sur `/mnt/host` et solonfs n'est pas monté.
+pub fn legacy_mode() -> bool {
+    std::fs::read_to_string("/proc/cmdline")
+        .map(|c| c.split_whitespace().any(|kv| kv == "solon.fs=9p"))
+        .unwrap_or(false)
+}
+
+/// Monte `/mnt/host/<lettre>` dans un thread dédié. Idempotent ; rien en mode de repli.
 pub fn mount(drive: &str) {
-    let target = format!("/mnt/solonfs/{drive}");
+    if legacy_mode() {
+        return;
+    }
+    let target = format!("/mnt/host/{drive}");
     if MOUNTED.lock().unwrap().contains(&target) {
         return;
     }

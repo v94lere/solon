@@ -106,6 +106,10 @@ export function SettingsView() {
               <input type="checkbox" checked={settings.autostart} onChange={(e) => setSettings({ ...settings, autostart: e.target.checked })} />
               {t("settings.autostart")}
             </label>
+            <label className="col-span-2 flex items-center gap-2" title={t("settings.legacy_fs_help")}>
+              <input type="checkbox" checked={settings.legacy_file_sharing ?? false} onChange={(e) => setSettings({ ...settings, legacy_file_sharing: e.target.checked })} />
+              {t("settings.legacy_fs")}
+            </label>
             <div className="col-span-2 flex items-center gap-3">
               <button type="button" className="btn btn-primary" onClick={() => void save()}>
                 {t("settings.save")}

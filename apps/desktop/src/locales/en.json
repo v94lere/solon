@@ -168,7 +168,9 @@
     "diagnostic_help": "Bundle the logs, state, settings and versions into a zip file to attach to a bug report. No credentials are included.",
     "diagnostic_export": "Export a diagnostic…",
     "diagnostic_done": "{{count}} files written to {{path}}",
-    "diagnostic_open": "Open folder"
+    "diagnostic_open": "Open folder",
+    "legacy_fs": "Use the legacy Windows file sharing (9P) for mounted folders",
+    "legacy_fs_help": "Fallback if a container misbehaves with the Solon file system. Slower. Applies at the next engine start."
   },
   "images": {
     "title": "Images",

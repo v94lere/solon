@@ -420,3 +420,33 @@ le contrôle SHA-256 du service l'a détecté (`IMAGE_CORRUPTED`) ; attendre la 
 | Port 80 sur cette machine | libre : mandataire actif (`local_domains=true` dans l'état) || Notification Windows | toast « Solon : conteneur arrêté — crashtest s'est terminé avec le code 3 » 3 s après `exit 3`, icône Solon |
 | Export de diagnostic | archive de 14 fichiers (18 Ko) : LISEZMOI, état, prérequis, réglages, partages, version, docker info, state.json, journaux récents, bloc hosts |
 
+## Lot « dossiers rapides » — solonfs contre 9P (6 septembre 2026)
+
+Arbre de test : 5 000 fichiers de 0,2 à 4 Ko dans 250 × 2 dossiers (forme d'un `node_modules`), sur le disque C:,
+**copie fraîche** pour chaque mesure (jamais ouverte auparavant). Mesures prises depuis la machine Linux du moteur.
+Disque natif ext4 de la machine, pour l'échelle : `find` 19 ms, `stat` de tout 50 ms, `cat` de tout 19 ms.
+
+| Opération | 9P Windows (`/mnt/host/c`) | **solonfs** (`/mnt/solonfs/c`) | Gain |
+|---|---|---|---|
+| `find` (5 000 fichiers, 500 dossiers) | 5 279 ms | **800 ms** | 6,6× |
+| `stat` de chaque fichier | 11 240 ms | **119 ms** | 94× |
+| lecture de chaque fichier, 1er passage | 23 570 ms | **6 579 ms** | 3,6× |
+| lecture de chaque fichier, 2e passage | 21 500 ms | **2 390 ms** | 9× |
+| `grep -r` sur l'arbre | 13 730 ms | **2 300 ms** | 6× |
+| écriture de 500 fichiers | 3 699 ms | **849 ms** | 4,4× |
+| relecture des 500 | 3 940 ms | **200 ms** | 20× |
+| renommage de 100 | 1 740 ms | **200 ms** | 8,7× |
+| `rm -rf` | 1 689 ms | **279 ms** | 6× |
+
+Comment : un aller-retour hôte↔invité coûte ~0,5 ms quel que soit le protocole ; 9P en dépense un par `stat`.
+solonfs renvoie les attributs de **tout un dossier** en une réponse et les garde 1,5 s en cache côté invité ; les
+lectures demandent 128 Ko d'un coup ; et, mesure clé, la **première ouverture d'un fichier côté Windows coûte
+~3,5 ms** (contre 0,2 ensuite), d'où un préchauffage des petits fichiers d'un dossier dès qu'il est listé.
+Reste : la première lecture est encore à 1,3 ms/fichier (le préchauffage ne rattrape pas tout), et le client FUSE
+est mono-thread.
+
+Défauts trouvés et corrigés pendant le lot : (1) `rm -rf` sautait des entrées parce que la liste d'un dossier
+était relue pendant la suppression → listage figé par descripteur ouvert ; (2) un démarrage a monté le disque de
+données comme racine (`/dev/sda` n'est pas garanti) → disques choisis par étiquette ext4 (`solon-root`, `solon-data`)
+dans l'initrd et l'agent.
+
