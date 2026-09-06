@@ -637,6 +637,8 @@ fn supervise(state: Arc<State>) {
                 announced = true;
                 let up = uptime_secs();
                 state.engine.lock().unwrap().docker_ready_at_uptime_s = Some(up);
+                // Règles d'accès direct de l'hôte, réappliquées après chaque redémarrage de dockerd.
+                crate::net::reapply_host_rules();
                 println!("SOLON-ENGINE-READY uptime_s={up:.2}");
                 events::broadcast(&AgentEvent::EngineReady { uptime_s: up });
             }

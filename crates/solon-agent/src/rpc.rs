@@ -79,13 +79,16 @@ fn serve_client(client: File, state: Arc<State>) -> std::io::Result<()> {
         let response = match request.command {
             Command::Ping => Response::ok(id, "pong"),
             Command::Health => Response::ok(id, system::health(&state)),
-            Command::ConfigureNetwork(cfg) => match net::configure(&cfg) {
-                Ok(()) => {
-                    *state.network_configured.lock().unwrap() = true;
-                    Response::ok(id, serde_json::Value::Null)
+            Command::ConfigureNetwork(cfg) => {
+                crate::net::allow_host_to_containers(cfg.gateway.clone());
+                match net::configure(&cfg) {
+                    Ok(()) => {
+                        *state.network_configured.lock().unwrap() = true;
+                        Response::ok(id, serde_json::Value::Null)
+                    }
+                    Err(e) => Response::err(id, e),
                 }
-                Err(e) => Response::err(id, e),
-            },
+            }
             Command::MountShare(req) => match system::mount_plan9(&req) {
                 Ok(r) => {
                     // Même lecteur exposé aussi par solonfs (FUSE), en parallèle du 9P.

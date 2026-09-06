@@ -5,8 +5,11 @@
 !macro NSIS_HOOK_PREINSTALL
   ; Mise à jour par-dessus une installation existante : le service tient solon-service.exe ouvert.
   ; L'arrêter arrête proprement le moteur (les données de %ProgramData%\Solon sont conservées).
+  ; Puis attente (60 s au plus) que l'hyperviseur relâche les fichiers de l'image (vmlinuz, initrd.img,
+  ; rootfs.vhd restent ouverts quelques secondes après l'arrêt de la machine) : sinon l'installeur
+  ; silencieux remplace le manifeste mais pas l'image, et le moteur démarre en IMAGE_CORRUPTED.
   DetailPrint "Arrêt du service Solon s'il est présent…"
-  nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "Stop-Service -Name SolonService -Force -ErrorAction SilentlyContinue; Get-Process solon -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"'
+  nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "Stop-Service -Name SolonService -Force -ErrorAction SilentlyContinue; Get-Process solon -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; $$d = \"$INSTDIR\image\"; for ($$i = 0; $$i -lt 60; $$i++) { $$busy = $$false; Get-ChildItem $$d -ErrorAction SilentlyContinue | ForEach-Object { try { $$h = [IO.File]::Open($$_.FullName, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None); $$h.Close() } catch { $$busy = $$true } }; if (-not $$busy) { break }; Start-Sleep 1 }; if ($$busy) { Write-Output \"image toujours verrouillée après 60 s\" } else { Write-Output \"image libre après $$i s\" }"'
   Pop $0
 !macroend
 

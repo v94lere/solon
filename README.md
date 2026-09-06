@@ -85,10 +85,16 @@ cd apps\desktop; npm run tauri dev
   mêlés**, Up / Down / Reconstruire avec la **sortie en direct**, ouverture du dossier dans l'**Explorateur** ou dans **VS Code**. « Ouvrir un
   projet… » choisit un dossier contenant `compose.yaml` ; les projets déjà lancés sont détectés automatiquement.
 - **Images, Volumes, Réseaux** : liste, création, inspection, suppression (toujours avec confirmation).
-- **Domaines locaux** : chaque conteneur qui publie un port TCP est joignable sur `http://<nom>.solon.local`
-  (et `http://<service>.<projet>.solon.local` pour Compose), sans retenir de port. Solon tient à jour un bloc
-  dans le fichier `hosts` de Windows et route les requêtes depuis `127.0.0.1:80` d'après le nom demandé. Si un
-  autre logiciel occupe déjà le port 80, les domaines sont désactivés et les ports restent utilisables.
+- **Des adresses qui marchent, toujours** : chaque conteneur en marche est joignable sur
+  `https://<nom>.solon.local` (et `https://<service>.<projet>.solon.local` pour Compose), **qu'il publie un port
+  ou non**. Solon lit le port que l'image expose (80, 8080, 3000, 8069…), tient à jour un bloc dans le fichier
+  `hosts` de Windows, et route les requêtes depuis `127.0.0.1:80` (HTTP) et `127.0.0.1:443` (HTTPS) d'après le nom
+  demandé. Le HTTPS repose sur une autorité de certification locale « Solon Local CA », créée à la première
+  utilisation et installée dans le magasin racine de la machine : le navigateur n'affiche aucun avertissement.
+  Les **adresses des conteneurs** (`10.90.x.y`) sont aussi joignables directement depuis Windows (`curl
+  http://10.90.0.2/`, un client PostgreSQL vers `10.90.1.2:5432`…). Si un autre logiciel occupe le port 80 ou
+  443, la partie correspondante est désactivée et les ports publiés restent utilisables. `curl.exe` de Windows
+  refuse les certificats sans point de révocation : ajouter `--ssl-no-revoke` (comme avec mkcert).
 - **Notifications Windows** : conteneur arrêté avec une erreur (hors actions faites dans Solon), moteur en échec
   ou en redémarrage, disque du moteur plein à 90 %.
 - **Diagnostic** (Réglages → Exporter un diagnostic) : une archive zip avec les journaux, l'état, les réglages,

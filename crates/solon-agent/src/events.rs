@@ -19,6 +19,7 @@ struct Hub {
     clients: Mutex<Vec<File>>,
     ports: Mutex<Vec<PortBinding>>,
     engine_ready: Mutex<bool>,
+    endpoints: Mutex<Vec<solon_core::protocol::ContainerEndpoint>>,
 }
 
 fn hub() -> &'static Hub {
@@ -27,6 +28,7 @@ fn hub() -> &'static Hub {
         clients: Mutex::new(Vec::new()),
         ports: Mutex::new(Vec::new()),
         engine_ready: Mutex::new(false),
+        endpoints: Mutex::new(Vec::new()),
     })
 }
 
@@ -141,6 +143,7 @@ fn refresh_ports(state: &State) {
         }
     };
     let mut bindings = Vec::new();
+    let mut endpoints = Vec::new();
     if !ids.is_empty() {
         let mut inspect = docker_cmd();
         inspect.arg("inspect").args(&ids);
@@ -149,6 +152,9 @@ fn refresh_ports(state: &State) {
                 Ok(list) => {
                     for c in &list {
                         bindings.extend(c.port_bindings());
+                        if let Some(e) = c.endpoint() {
+                            endpoints.push(e);
+                        }
                     }
                 }
                 Err(e) => log(&format!("docker inspect illisible : {e}")),
@@ -158,10 +164,16 @@ fn refresh_ports(state: &State) {
     }
     bindings.sort();
     bindings.dedup();
+    endpoints.sort();
     let changed = *hub().ports.lock().unwrap() != bindings;
     if changed {
         log(&format!("ports publiés : {} liaison(s)", bindings.len()));
         broadcast(&AgentEvent::PortsChanged { bindings });
+    }
+    let ep_changed = *hub().endpoints.lock().unwrap() != endpoints;
+    if ep_changed {
+        *hub().endpoints.lock().unwrap() = endpoints.clone();
+        broadcast(&AgentEvent::EndpointsChanged { endpoints });
     }
 }
 

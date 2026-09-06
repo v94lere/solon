@@ -237,6 +237,27 @@ pub enum AgentEvent {
     Log { level: LogLevel, message: String },
     /// Le disque de données dépasse un seuil d'occupation (émis une fois par franchissement).
     DiskPressure { used_pct: u8, free_mb: u64 },
+    /// L'ensemble des conteneurs en marche avec leur adresse et leurs ports (liste idempotente) :
+    /// sert aux domaines locaux, qui n'exigent aucun port publié.
+    EndpointsChanged { endpoints: Vec<ContainerEndpoint> },
+}
+
+/// Un conteneur en marche vu du réseau : adresse dans le réseau Docker, ports TCP exposés par
+/// l'image et ports conteneur publiés.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
+pub struct ContainerEndpoint {
+    pub id: String,
+    /// Sans le `/` initial.
+    pub name: String,
+    #[serde(default)]
+    pub compose_project: Option<String>,
+    #[serde(default)]
+    pub compose_service: Option<String>,
+    pub ip: String,
+    #[serde(default)]
+    pub exposed_tcp: Vec<u16>,
+    #[serde(default)]
+    pub published_tcp: Vec<u16>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -307,6 +328,9 @@ pub struct InspectedContainer {
 pub struct InspectedConfig {
     #[serde(default)]
     pub labels: BTreeMap<String, String>,
+    /// `{"8069/tcp": {}}`
+    #[serde(default)]
+    pub exposed_ports: BTreeMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -333,6 +357,55 @@ pub struct InspectedNetwork {
 }
 
 impl InspectedContainer {
+    /// Vue réseau du conteneur pour les domaines locaux ; `None` s'il n'a pas d'adresse.
+    pub fn endpoint(&self) -> Option<ContainerEndpoint> {
+        let ip = self
+            .network_settings
+            .networks
+            .values()
+            .map(|n| n.ip_address.as_str())
+            .find(|ip| !ip.is_empty())?
+            .to_owned();
+        let mut exposed_tcp: Vec<u16> = self
+            .config
+            .exposed_ports
+            .keys()
+            .filter_map(|spec| {
+                let (port, proto) = spec.split_once('/').unwrap_or((spec, "tcp"));
+                (proto == "tcp").then(|| port.parse::<u16>().ok()).flatten()
+            })
+            .collect();
+        exposed_tcp.sort_unstable();
+        let mut published_tcp: Vec<u16> = self
+            .network_settings
+            .ports
+            .iter()
+            .filter(|(_, b)| b.is_some())
+            .filter_map(|(spec, _)| {
+                let (port, proto) = spec.split_once('/').unwrap_or((spec, "tcp"));
+                (proto == "tcp").then(|| port.parse::<u16>().ok()).flatten()
+            })
+            .collect();
+        published_tcp.sort_unstable();
+        Some(ContainerEndpoint {
+            id: self.id.clone(),
+            name: self.name.trim_start_matches('/').to_owned(),
+            compose_project: self
+                .config
+                .labels
+                .get("com.docker.compose.project")
+                .cloned(),
+            compose_service: self
+                .config
+                .labels
+                .get("com.docker.compose.service")
+                .cloned(),
+            ip,
+            exposed_tcp,
+            published_tcp,
+        })
+    }
+
     /// Convertit les ports publiés d'un conteneur en liaisons relayables (TCP et UDP).
     pub fn port_bindings(&self) -> Vec<PortBinding> {
         let container_ip = self

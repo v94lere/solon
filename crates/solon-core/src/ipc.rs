@@ -165,6 +165,9 @@ pub struct EngineSnapshot {
     /// Le mandataire des domaines locaux (`*.solon.local` → 127.0.0.1:80) est actif.
     #[serde(default)]
     pub local_domains: bool,
+    /// Le mandataire HTTPS (127.0.0.1:443, autorité locale) est actif.
+    #[serde(default)]
+    pub local_domains_tls: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

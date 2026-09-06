@@ -36,12 +36,14 @@ export function PortLinks({ c, running }: { c: ContainerSummary; running: boolea
   const { t } = useTranslation();
   const { snapshot } = useEngine();
   const ports = publishedPorts(c);
-  if (ports.length === 0) return null;
-  const domain = running && snapshot?.local_domains && ports.some((p) => p.proto === "tcp") ? localDomain(c) : null;
+  // Domaine local : pour tout conteneur en marche, port publié ou non (HTTPS si l'autorité locale est active).
+  const domain = running && snapshot?.local_domains ? localDomain(c) : null;
+  const scheme = snapshot?.local_domains_tls ? "https" : "http";
+  if (ports.length === 0 && !domain) return null;
   return (
     <span className="flex flex-wrap gap-x-2">
       {domain && (
-        <button type="button" className="port-link mono" title={t("containers.open_port", { url: `http://${domain}/` })} onClick={() => void openUrl(`http://${domain}/`)}>
+        <button type="button" className="port-link mono" title={t("containers.open_port", { url: `${scheme}://${domain}/` })} onClick={() => void openUrl(`${scheme}://${domain}/`)}>
           {domain}
         </button>
       )}

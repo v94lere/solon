@@ -46,6 +46,7 @@ export interface EngineSnapshot {
   published_ports: PortBinding[];
   recovered_from_crash: boolean;
   local_domains?: boolean;
+  local_domains_tls?: boolean;
   reattached?: boolean;
 }
 

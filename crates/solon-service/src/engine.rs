@@ -122,9 +122,9 @@ impl Engine {
         self.inner.running.lock().await.is_none()
     }
 
-    /// Recalcule la table `*.solon.local` et le bloc du fichier `hosts` d'après les ports publiés.
-    async fn update_domains(&self, bindings: &[solon_core::protocol::PortBinding]) {
-        let map = crate::domains::domains_for(bindings);
+    /// Recalcule la table `*.solon.local` et le bloc du fichier `hosts` d'après les conteneurs en marche.
+    async fn update_domains(&self, endpoints: &[solon_core::protocol::ContainerEndpoint]) {
+        let map = crate::domains::domains_for(endpoints);
         *self.inner.domains.write().await = map.clone();
         if let Err(e) = tokio::task::spawn_blocking(move || crate::domains::write_hosts_block(&map))
             .await
@@ -236,6 +236,10 @@ impl Engine {
                                     .and_then(|a| a.parse().ok())
                                 {
                                     running.network.address = addr;
+                                    let _ = tokio::task::spawn_blocking(move || {
+                                        crate::domains::ensure_route(addr)
+                                    })
+                                    .await;
                                 }
                                 self.set(|s| {
                                     s.image_version = previous.image_version.clone();
@@ -385,6 +389,14 @@ impl Engine {
         let mut running = self
             .attach(vm, guid, agent, Some(guest_net.endpoint_id.clone()), shares)
             .await?;
+        // Route Windows vers le réseau des conteneurs : domaines locaux sans port publié.
+        let guest_ip = guest_net.address;
+        if let Err(e) = tokio::task::spawn_blocking(move || crate::domains::ensure_route(guest_ip))
+            .await
+            .unwrap_or_else(|e| Err(std::io::Error::other(e)))
+        {
+            tracing::warn!("route vers les conteneurs non posée : {e}");
+        }
         running.network = guest_net;
         running.tasks.push(console_task);
         Ok(running)
@@ -432,7 +444,7 @@ impl Engine {
         }
         ports.apply(&initial_ports, guid);
         self.set(|s| s.published_ports = initial_ports.clone());
-        self.update_domains(&initial_ports).await;
+        self.update_domains(&[]).await;
 
         let mut tasks = Vec::new();
         // Domaines locaux : mandataire HTTP sur 127.0.0.1:80 (si le port est libre).
@@ -450,6 +462,27 @@ impl Engine {
                 tracing::warn!("domaines locaux indisponibles (port 80 occupé ?) : {e}");
                 self.set(|s| s.local_domains = false);
             }
+        }
+        // HTTPS : autorité locale (créée et installée une fois) + mandataire sur 443.
+        let ca_dir = self.inner.cfg.paths.root.join("ca");
+        match tokio::task::spawn_blocking(move || crate::domains::LocalCa::load_or_create(&ca_dir))
+            .await
+            .unwrap_or_else(|e| Err(std::io::Error::other(e)))
+        {
+            Ok(ca) => match crate::domains::bind_tls_proxy().await {
+                Ok(listener) => {
+                    self.set(|s| s.local_domains_tls = true);
+                    let domains = self.inner.domains.clone();
+                    tasks.push(tokio::spawn(async move {
+                        if let Err(e) = crate::domains::serve_tls_proxy(listener, domains, ca).await
+                        {
+                            tracing::warn!("mandataire HTTPS arrêté : {e}");
+                        }
+                    }));
+                }
+                Err(e) => tracing::warn!("HTTPS local indisponible (port 443 occupé ?) : {e}"),
+            },
+            Err(e) => tracing::warn!("autorité de certification locale indisponible : {e}"),
         }
         tasks.push(self.spawn_event_loop(events, guid));
         tasks.push(self.spawn_exit_watcher(vm.clone()));
@@ -521,7 +554,7 @@ impl Engine {
                         if let Some(r) = engine.inner.running.lock().await.as_mut() {
                             r.ports.apply(&bindings, guid);
                         }
-                        engine.update_domains(&bindings).await;
+
                         engine
                             .inner
                             .snapshot
@@ -530,6 +563,9 @@ impl Engine {
                     }
                     Ok(Some(AgentEvent::Container { action, id, name })) => {
                         engine.emit(ServiceEvent::Container { action, id, name })
+                    }
+                    Ok(Some(AgentEvent::EndpointsChanged { endpoints })) => {
+                        engine.update_domains(&endpoints).await;
                     }
                     Ok(Some(AgentEvent::DiskPressure { used_pct, free_mb })) => {
                         tracing::warn!(used_pct, free_mb, "disque de données presque plein");
@@ -660,10 +696,12 @@ impl Engine {
         st.updated_unix_ms = settings::now_unix_ms();
         let _ = settings::save_state(&state_path, &st);
         self.update_domains(&[]).await;
+        let _ = tokio::task::spawn_blocking(crate::domains::remove_route).await;
         self.set(|s| {
             s.state = Some(EngineState::Stopped);
             s.step = None;
             s.local_domains = false;
+            s.local_domains_tls = false;
             s.published_ports.clear();
             s.guest_address = None;
             s.ready_since_unix_ms = None;

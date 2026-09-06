@@ -501,3 +501,51 @@ reproduire avant d'ajouter un nouvel essai automatique côté moteur.
 | Warpgate `setup` : « failed to tighten file permissions (EPERM) » | `DefaultPermissions` sur le montage FUSE : le noyau refusait `chmod` à un utilisateur non root sur des fichiers présentés comme root | option retirée, le système de fichiers arbitre (chmod/chown acceptés et ignorés) | `chmod 600` + `chown` par uid 1000 sur un dossier Windows : OK |
 | Image du moteur non reconstructible sans WSL | pipeline lié à Ubuntu WSL | **construction dans un conteneur Solon** (Alpine 3.24), dépôt monté par solonfs ; scripts corrigés (SIGPIPE `curl | head`), taille de bloc ext4 fixée à 4 Kio | image dev.12 construite en **14 s** (contre 3 à 4 min sous WSL), agent présent, empreinte conforme |
 
+## Lot « des adresses qui marchent, toujours » (6 septembre 2026)
+
+Objectif : joindre tout conteneur en marche depuis Windows **sans publier de port**, par son adresse et par `https://nom.solon.local`, avec un certificat accepté par le navigateur. Image du moteur **0.1.0-dev.14** (agent : règles de pare-feu pour l'hôte), service : route, autorité locale, mandataire HTTPS.
+
+### Ce qui bloquait, et la solution retenue
+
+| Constat (mesuré dans la machine) | Conséquence | Correction |
+|---|---|---|
+| Windows n'a aucune route vers `10.90.0.0/16` | `curl http://10.90.0.2/` : délai dépassé | `route add 10.90.0.0 mask 255.255.0.0 172.30.0.2` posé par le service au démarrage, retiré à l'arrêt |
+| `iptables -t raw -S PREROUTING` : `-d 10.90.0.2/32 ! -i docker0 -j DROP` par conteneur (Docker 28+, « protection contre l'accès direct ») | paquets de l'hôte détruits avant conntrack (0 entrée `dst=10.90.0.2`) | `ACCEPT -i eth0 -s 172.30.0.1` inséré **en tête** de `raw PREROUTING` par l'agent ; Docker **ajoute** ses règles en fin (`-A`), vérifié après redémarrage d'un conteneur et création d'un autre |
+| `DOCKER` : `! -i docker0 -o docker0 -j DROP` | trafic hors ponts refusé dans `FORWARD` | `ACCEPT -s 172.30.0.1` en tête de `DOCKER-USER` (chaîne préservée par dockerd) |
+| première version de l'agent : `/sbin/iptables` introuvable (Alpine : `/usr/sbin/iptables`) | règle jamais posée, sans trace | chemin cherché parmi `/usr/sbin`, `/sbin` ; échec journalisé |
+| alternative écartée : `default-network-opts` → `gateway_mode_ipv4=nat-unprotected` dans `daemon.json` | testé : supprime les `DROP` des **nouveaux** réseaux utilisateur mais pas ceux de `docker0` (le pont par défaut n'en tient pas compte) | non retenu, les deux `ACCEPT` suffisent |
+
+### Vérifications (PC de test, image dev.14 en place, conteneurs `web` (busybox httpd, **aucun port publié**), `odoo18` (compose))
+
+| Test | Résultat |
+|---|---|
+| `route print` | `10.90.0.0/16 → 172.30.0.2` métrique 5 |
+| `curl http://10.90.0.2/` (3 essais) | `hello from web container` à chaque fois |
+| `curl http://10.90.1.3:8069/web/login` | HTTP 303 (Odoo, redirection vers le gestionnaire de bases) |
+| `Test-NetConnection 10.90.1.2 -Port 5432` | `True` (PostgreSQL joignable directement, port non publié) |
+| `ping 10.90.0.2`, `ping 10.90.1.3` | réponses |
+| bloc `hosts` | `web`, `odoo.odoo18`, `db.odoo18`, `odoo18-odoo-1`, `odoo18-db-1` `.solon.local` → 127.0.0.1 |
+| `http://web.solon.local/` | `hello from web container` (conteneur sans port publié) |
+| `https://web.solon.local/` (.NET / Schannel) | 200, certificat `CN=web.solon.local` émis par `O=Solon, CN=Solon Local CA`, expire le 1er janvier 2036 |
+| `https://odoo.odoo18.solon.local/web/login` (.NET) | 200 |
+| Edge (mode headless) sur `https://web.solon.local/` | page rendue, aucun avertissement de certificat |
+| `curl.exe https://…` | code 35 `CRYPT_E_NO_REVOCATION_CHECK` sans `--ssl-no-revoke` ; OK avec (limite connue de curl/Schannel, identique à mkcert) |
+| `certutil -store Root "Solon Local CA"` | présent, `NotAfter 01/01/2036` |
+| conteneur → hôte (`wget http://172.30.0.1/`, `ping 172.30.0.1`) | bloqué par le pare-feu Windows sur `vEthernet (Solon)` : inchangé, non nécessaire |
+| démarrage du moteur | route, mandataires 80 et 443 et autorité prêts en **0,16 s** après le réseau (journal : 14:49:16.618 → 16.774) |
+
+### Défauts trouvés en installant, corrigés dans ce lot
+
+| Défaut | Cause | Correction |
+|---|---|---|
+| Après mise à jour silencieuse : `IMAGE_CORRUPTED` (manifeste dev.14, image dev.13) | l'hyperviseur garde `vmlinuz`, `initrd.img`, `rootfs.vhd` ouverts quelques secondes après l'arrêt de la machine ; l'installeur remplaçait le manifeste mais pas l'image verrouillée | `installer/hooks.nsh` : après l'arrêt du service, attente (60 s au plus) que chaque fichier de `image\` s'ouvre en exclusif |
+| `solon-ca.key` lisible par tous les utilisateurs | `%ProgramData%` hérite d'un droit de lecture pour « Utilisateurs » | dossier `ca\` : héritage retiré, SYSTEM et administrateurs seuls (`icacls`), fichiers existants remis en héritage (`/reset`) ; une première version avec `/T` laissait les fichiers **sans aucun droit** (même SYSTEM refusé) |
+| Installeur reconstruit sans le service | `npm run tauri build` ne recompile pas `solon-service` (ressource copiée depuis `target/release`) | rappel : `cargo build --release -p solon-service` **avant** `tauri build` (déjà dans le README) |
+
+### Ce qui reste fragile
+
+- Le port **443** est aussi réservé sur `127.0.0.1` : un IIS ou un autre serveur local sur 443 désactive le HTTPS (le HTTP sur 80 reste), avec un avertissement dans le journal.
+- Les règles de l'agent visent la passerelle `172.30.0.1` : si la plage HNS change (collision détectée au démarrage), la règle suit puisque l'adresse vient de `ConfigureNetwork`.
+- La route Windows est non persistante (recréée à chaque démarrage du moteur) : si le service est tué sans passer par l'arrêt, une route orpheline reste jusqu'au redémarrage ou au prochain démarrage du moteur (elle est d'abord supprimée puis recréée).
+- La clé de l'autorité est dans `%ProgramData%\Solon\ca\solon-ca.key` (droits SYSTEM/administrateurs) : un administrateur local peut signer des certificats pour n'importe quel nom **sur cette machine seulement** (l'autorité n'est installée nulle part ailleurs), comme avec mkcert.
+
