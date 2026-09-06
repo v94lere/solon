@@ -469,3 +469,27 @@ composants `Microsoft-Hyper-V-All`, `VirtualMachinePlatform` et `Microsoft-Windo
 (redémarrage requis). Phase 2 (installation de Solon seul, activation des composants par l'installeur, redémarrages,
 vérifications `fresh-machine-phase2.ps1`) : résultats à la suite.
 
+### Test « machine vierge » — phase 2 (6 septembre 2026)
+
+Après redémarrage, installeur lancé depuis le Bureau comme un utilisateur (SmartScreen accepté à la main).
+`setup.log` : `Microsoft-Hyper-V` activé en 20 s, `VirtualMachinePlatform` en 8 s, PATH ajouté, service installé,
+**redémarrage requis** signalé à l'installeur ; après ce second redémarrage, `SolonService` était démarré tout seul.
+
+| Vérification (`fresh-machine-phase2.ps1`, sans élévation) | Résultat |
+|---|---|
+| Docker Desktop absent, WSL absent (paquet MSI) | OK (`wsl.exe` de façade répond « non installé ») |
+| Service installé et en marche après le redémarrage | OK |
+| Prérequis tous verts (composants activés par l'installeur) | OK |
+| Premier démarrage du moteur (création + formatage du disque de données) | **6,7 s** ; redémarrage suivant 1,0 s |
+| `docker version` avec le CLI livré par Solon (PATH machine) | 29.7.2 / 29.5.3 |
+| `docker run hello-world` (réseau sortant, registre ECR public) | OK en 539 ms à la seconde exécution ; **la première a échoué** ~1 min après le démarrage de Windows (réseau ou registre pas encore prêt), voir ci-dessous |
+| Montage d'un dossier Windows via solonfs, aller-retour | OK |
+| Port publié relayé sur localhost | OK |
+| Domaine local `fresh-web.solon.local` | OK |
+| Mémoire du moteur | 630–672 Mo |
+
+Conclusion : **Solon fonctionne seul**, sans Docker Desktop ni WSL, y compris le chemin « composants désactivés →
+activation → redémarrage » de l'installeur jamais testé jusque-là. Point à surveiller : le premier `docker pull`
+juste après un redémarrage de Windows peut échouer (réseau pas encore stable ou quota du registre) ; à
+reproduire avant d'ajouter un nouvel essai automatique côté moteur.
+
