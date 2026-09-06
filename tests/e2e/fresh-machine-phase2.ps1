@@ -9,7 +9,9 @@ function Check($name, $ok, $detail) { if ($ok) { Log "OK    $name - $detail" } e
 Log "=== phase 2 : Solon seul sur la machine ==="
 
 Check "Docker Desktop absent" (-not (Test-Path "C:\Program Files\Docker\Docker")) ""
-Check "WSL absent" ((Get-Command wsl.exe -ErrorAction SilentlyContinue) -eq $null -or ((wsl --status 2>&1) -join " ") -match "n'est pas|not installed|introuvable|0x") "wsl.exe : $(if (Get-Command wsl.exe -ErrorAction SilentlyContinue) { 'présent (stub Windows)' } else { 'absent' })"
+# Windows garde un wsl.exe de façade même sans WSL : on vérifie l'absence du paquet MSI.
+$wslMsi = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq "Windows Subsystem for Linux" }
+Check "WSL absent (paquet désinstallé)" ($null -eq $wslMsi) "$(if ($wslMsi) { $wslMsi.DisplayVersion } else { 'aucun paquet WSL ; wsl.exe de Windows répond « non installé »' })"
 $svcObj = Get-Service SolonService -ErrorAction SilentlyContinue
 Check "service SolonService installé et démarré" ($svcObj -and $svcObj.Status -eq "Running") "$($svcObj.Status)"
 $svc = "C:\Program Files\Solon\solon-service.exe"
