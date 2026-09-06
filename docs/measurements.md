@@ -460,3 +460,12 @@ dans l'initrd et l'agent.
 | Fichier modifié côté Windows puis lu par un nouveau conteneur 2 s après | nouveau contenu (cache 1,5 s) |
 | Démarrage du moteur avec les deux montages | 2,1 s |
 
+## Test « machine vierge » (6 septembre 2026) — phase 1
+
+Machine de développement remise dans l'état d'un PC sans Docker (`tests/e2e/fresh-machine-phase1.ps1`, élevé) :
+Docker Desktop 4.66.1 désinstallé (12 s), distributions WSL `docker-desktop` et `Ubuntu` retirées (Ubuntu exportée
+avant en 134 s, 10,25 Go), WSL 2.7.12 désinstallé (8 s), Solon désinstallé avec ses données (6 s, bloc `hosts` propre),
+composants `Microsoft-Hyper-V-All`, `VirtualMachinePlatform` et `Microsoft-Windows-Subsystem-Linux` désactivés
+(redémarrage requis). Phase 2 (installation de Solon seul, activation des composants par l'installeur, redémarrages,
+vérifications `fresh-machine-phase2.ps1`) : résultats à la suite.
+
