@@ -91,7 +91,7 @@ SIZE_MB=$(( $(du -sm "$ROOT" | cut -f1) * 115 / 100 + 24 ))
 echo "==> Image ext4 (${SIZE_MB} Mio, lecture seule, sans journal)"
 IMG="$WORK/rootfs.img"
 rm -f "$IMG"
-E2FSPROGS_FAKE_TIME="$SOURCE_DATE_EPOCH" mkfs.ext4 -q -F -d "$ROOT" -L solon-root \
+E2FSPROGS_FAKE_TIME="$SOURCE_DATE_EPOCH" mkfs.ext4 -q -F -b 4096 -d "$ROOT" -L solon-root \
     -O ^has_journal,^huge_file -m 0 -E root_owner=0:0,hash_seed=00000000-0000-0000-0000-000000000000 \
     -U 5ec7a0a0-0000-4000-8000-000000000001 "$IMG" "${SIZE_MB}M"
 e2fsck -fn "$IMG" >/dev/null
