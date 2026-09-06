@@ -20,3 +20,5 @@ utilise le gestionnaire d'identifiants Windows et peut envoyer des identifiants 
 Résultats et chiffres : `docs/measurements.md`, section « Bloc 2 ».
 
 - `install-test.ps1` : installe Solon en silence depuis l'installeur NSIS (une fenêtre UAC), vérifie le service Windows réel, démarre le moteur puis enchaîne `e2e.ps1`. Ne désinstalle pas.
+
+- `fresh-machine-phase1.ps1` (élevé) / `fresh-machine-phase2.ps1` : test « machine vierge » : retire Docker Desktop, WSL, Solon et désactive Hyper-V (phase 1, puis redémarrage, installation de Solon, redémarrage), puis vérifie Solon seul (phase 2).
