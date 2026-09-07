@@ -604,5 +604,5 @@ Demande : « fait le 1, 2, 3, 10 » de la liste des fonctionnalités d'OrbStack 
 | Intégration | onglet **Files** de la fiche de conteneur ; section Volumes : bouton « Files » ou clic sur le nom → explorateur du volume avec retour | captures `f2`, `f3`, `f5`–`f8` |
 
 Reste à faire de la demande : **1** (machines Linux complètes, proposition « conteneurs système » en attente de
-validation) et la seconde étape du **3** (lecteur réseau `\solon\` dans l'Explorateur, si l'usage le justifie).
+validation) et la seconde étape du **3** (lecteur réseau `\\solon\` dans l'Explorateur, si l'usage le justifie).
 
