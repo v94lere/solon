@@ -6,6 +6,7 @@
 mod compose;
 mod diagnostic;
 mod docker;
+mod files;
 mod service;
 mod shell;
 mod tray;
@@ -159,6 +160,11 @@ pub fn run() {
             docker::container_inspect,
             docker::container_copy_from,
             docker::container_copy_to,
+            files::files_list,
+            files::files_mkdir,
+            files::files_delete,
+            files::files_download,
+            files::files_upload,
             docker::container_start,
             docker::container_stop,
             docker::container_restart,

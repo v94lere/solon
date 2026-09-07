@@ -593,6 +593,16 @@ Demande : « fait le 1, 2, 3, 10 » de la liste des fonctionnalités d'OrbStack 
 | invite `bash-5.3#` au lieu de `debug(web)` | bash **efface `PS1`** dans un shell non interactif, même exporté | invite écrite dans un fichier rc, `bash --rcfile … -i` |
 | `ps` seul n'affichait pas la cible | comportement normal de `ps` (terminal courant) | aide-mémoire du shell : `ps aux` |
 
-Reste à faire de la demande : **1** (machines Linux complètes) et **3** (fichiers des conteneurs et volumes dans
-l'Explorateur), avec un point de validation sur la conception avant de coder.
+### Lot « OrbStack » B (7 septembre 2026) — onglet Fichiers (point 3, première étape validée : onglet d'abord, lecteur réseau ensuite)
+
+| Élément | Réalisation | Vérification (captures `.local/build/f*.png`) |
+|---|---|---|
+| Parcours | `files_list` : commande `stat` de busybox exécutée dans la machine (`ServiceCommand::Exec`) sur le système de fichiers fusionné du conteneur (`GraphDriver.Data.MergedDir`, conteneur en marche) ou sur `/var/lib/docker/volumes/<nom>/_data` ; aucun shell requis dans l'image ; chemins normalisés (`..` refusé), noms cités pour le shell | racine du conteneur Odoo (dossiers, droits, dates), navigation dans `boot`, fil d'Ariane ; volume `odoo18_odoo-db` : données PostgreSQL, droits 700 |
+| Créer, supprimer | `mkdir -p` / `rm -rf` dans la machine, racine protégée, confirmation avant suppression | dossier `aaa-solon-test` créé (755, visible dans la machine), puis supprimé après confirmation |
+| Copier vers Windows | API `archive` : conteneur directement ; volume via un **conteneur auxiliaire jamais démarré** (image vide `solon-empty` importée une fois, 0 octet) qui monte le volume sur `/v`, supprimé après usage | dossier `base` du volume PostgreSQL → 896 fichiers, 23 Mo, aucun auxiliaire restant |
+| Envoyer | boutons fichiers / dossier et **glisser-déposer** depuis l'Explorateur (`onDragDropEvent` de la fenêtre), même mécanique en sens inverse | envoi testé dans le lot A (README.md → /tmp) |
+| Intégration | onglet **Files** de la fiche de conteneur ; section Volumes : bouton « Files » ou clic sur le nom → explorateur du volume avec retour | captures `f2`, `f3`, `f5`–`f8` |
+
+Reste à faire de la demande : **1** (machines Linux complètes, proposition « conteneurs système » en attente de
+validation) et la seconde étape du **3** (lecteur réseau `\solon\` dans l'Explorateur, si l'usage le justifie).
 

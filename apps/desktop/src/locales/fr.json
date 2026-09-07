@@ -126,7 +126,8 @@
       "logs": "Journaux",
       "terminal": "Terminal",
       "debug": "Shell de débogage",
-      "inspect": "Inspecter"
+      "inspect": "Inspecter",
+      "files": "Fichiers"
     },
     "back": "Retour aux conteneurs",
     "logs": {
@@ -275,13 +276,15 @@
     },
     "actions": {
       "inspect": "Inspecter",
-      "remove": "Supprimer"
+      "remove": "Supprimer",
+      "files": "Fichiers"
     },
     "remove_confirm": {
       "title": "Supprimer le volume {{name}} ?",
       "body": "Toutes les données de ce volume seront définitivement effacées. Cette action est irréversible.",
       "confirm": "Supprimer"
-    }
+    },
+    "files_hint": "Fichiers stockés dans le volume"
   },
   "networks": {
     "title": "Réseaux",
@@ -421,6 +424,39 @@
       "memory": "Mémoire",
       "network": "Réseau",
       "trend": "Processeur, dernière minute"
+    }
+  },
+  "files": {
+    "path": "Chemin",
+    "root": "racine",
+    "up": "Remonter",
+    "refresh": "Actualiser",
+    "new_folder": "Nouveau dossier",
+    "new_folder_name": "Nom du dossier",
+    "create": "Créer",
+    "send_files": "Envoyer des fichiers…",
+    "send_folder": "Envoyer un dossier…",
+    "download_here": "Copier ce dossier vers Windows…",
+    "download": "Copier vers Windows",
+    "delete": "Supprimer",
+    "pick_source": "Choisir ce qu'il faut envoyer",
+    "pick_dest": "Choisir le dossier de destination",
+    "drop_hint": "Déposez ici des fichiers depuis Windows pour les envoyer dans ce dossier.",
+    "working": "En cours…",
+    "empty": "Dossier vide.",
+    "not_running": "Démarrez le conteneur pour parcourir ses fichiers.",
+    "downloaded": "{{name}} copié dans {{dest}}",
+    "uploaded": "{{name}} envoyé",
+    "columns": {
+      "name": "Nom",
+      "size": "Taille",
+      "modified": "Modifié",
+      "mode": "Droits"
+    },
+    "delete_confirm": {
+      "title": "Supprimer {{name}} ?",
+      "body": "Un dossier est supprimé avec tout son contenu. Irréversible.",
+      "confirm": "Supprimer"
     }
   }
 }

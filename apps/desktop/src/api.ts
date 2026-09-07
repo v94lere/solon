@@ -262,6 +262,23 @@ export const diagnostic = {
 };
 
 // ---- Terminal dans la machine ----
+// ---- Fichiers (conteneur en marche ou volume) ----
+export type FilesTarget = { kind: "container"; id: string } | { kind: "volume"; name: string };
+export interface FileEntry {
+  name: string;
+  kind: "dir" | "file" | "link" | "other";
+  size: number;
+  mtime: number;
+  mode: string;
+}
+export const files = {
+  list: (target: FilesTarget, path: string) => invoke<FileEntry[]>("files_list", { target, path }),
+  mkdir: (target: FilesTarget, path: string) => invoke<void>("files_mkdir", { target, path }),
+  remove: (target: FilesTarget, path: string) => invoke<void>("files_delete", { target, path }),
+  download: (target: FilesTarget, path: string, destDir: string) => invoke<string>("files_download", { target, path, destDir }),
+  upload: (target: FilesTarget, destPath: string, source: string) => invoke<void>("files_upload", { target, destPath, source }),
+};
+
 export const machineShell = {
   /** `command` : lancée dans le pseudo-terminal à la place du shell interactif (`sh -lc`). */
   open: (cols: number, rows: number, onOutput: (o: ExecOutput) => void, command?: string) => {

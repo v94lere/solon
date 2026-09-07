@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { volumes, type Volume } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { JsonDialog } from "../components/JsonDialog";
+import { FilesPanel } from "../components/FilesPanel";
 
 export function VolumesView() {
   const { t } = useTranslation();
@@ -12,6 +13,7 @@ export function VolumesView() {
   const [newName, setNewName] = useState("");
   const [removing, setRemoving] = useState<Volume | null>(null);
   const [inspecting, setInspecting] = useState<string | null>(null);
+  const [browsing, setBrowsing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const query = useQuery({ queryKey: ["volumes"], queryFn: volumes.list });
 
@@ -29,6 +31,23 @@ export function VolumesView() {
     } catch (e) {
       setError(String(e));
     }
+  }
+
+  if (browsing) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center gap-3 px-4 pt-3 pb-2">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setBrowsing(null)}>
+            ← {t("volumes.title")}
+          </button>
+          <h1 className="text-base font-semibold">{browsing}</h1>
+          <span className="kbd-hint">{t("volumes.files_hint")}</span>
+        </div>
+        <div className="min-h-0 flex-1 px-4 pb-4">
+          <FilesPanel target={{ kind: "volume", name: browsing }} />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -70,12 +89,15 @@ export function VolumesView() {
             <tbody>
               {rows.map((v) => (
                 <tr key={v.Name} tabIndex={0}>
-                  <td className="font-medium">{v.Name}</td>
+                  <td>
+                    <button type="button" className="font-medium hover:underline" style={{ color: "var(--ink)" }} onClick={() => setBrowsing(v.Name)}>{v.Name}</button>
+                  </td>
                   <td>{v.Driver}</td>
                   <td>{v.CreatedAt ? new Date(v.CreatedAt).toLocaleString() : "—"}</td>
                   <td className="mono max-w-[320px] truncate" title={v.Mountpoint}>{v.Mountpoint}</td>
                   <td>
                     <div className="flex justify-end gap-1">
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setBrowsing(v.Name)}>{t("volumes.actions.files")}</button>
                       <button type="button" className="btn btn-ghost btn-sm" onClick={() => setInspecting(v.Name)}>{t("volumes.actions.inspect")}</button>
                       <button type="button" className="btn btn-ghost btn-sm" style={{ color: "var(--bad)" }} onClick={() => setRemoving(v)}>{t("volumes.actions.remove")}</button>
                     </div>

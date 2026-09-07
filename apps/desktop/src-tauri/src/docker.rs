@@ -52,7 +52,7 @@ pub struct TrayContainer {
 }
 
 impl DockerState {
-    async fn docker(&self) -> Result<Docker, String> {
+    pub(crate) async fn docker(&self) -> Result<Docker, String> {
         let mut guard = self.client.lock().await;
         if let Some(d) = guard.as_ref() {
             return Ok(d.clone());
@@ -789,14 +789,14 @@ pub async fn network_inspect(
 // Copie de fichiers (docker cp) : archive tar via l'API, extraite ou construite avec tar.exe de Windows.
 // ---------------------------------------------------------------------------------------------
 
-fn windows_tar() -> std::path::PathBuf {
+pub(crate) fn windows_tar() -> std::path::PathBuf {
     let root = std::env::var_os("SystemRoot")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::path::PathBuf::from(r"C:\Windows"));
     root.join("System32").join("tar.exe")
 }
 
-fn temp_tar() -> std::path::PathBuf {
+pub(crate) fn temp_tar() -> std::path::PathBuf {
     std::env::temp_dir().join(format!(
         "solon-copy-{}-{}.tar",
         std::process::id(),

@@ -7,8 +7,9 @@ import { containers } from "../api";
 import { LogsPanel } from "../components/LogsPanel";
 import { TerminalPanel } from "../components/TerminalPanel";
 import { DebugPanel } from "../components/DebugPanel";
+import { FilesPanel } from "../components/FilesPanel";
 
-type Tab = "overview" | "logs" | "terminal" | "debug" | "inspect";
+type Tab = "overview" | "logs" | "files" | "terminal" | "debug" | "inspect";
 
 interface Inspect {
   Id?: string;
@@ -34,7 +35,7 @@ export function ContainerDetail({ id, onBack }: { id: string; onBack: () => void
   const inspect = useQuery({ queryKey: ["container", id], queryFn: () => containers.inspect(id) as Promise<Inspect>, refetchInterval: 5000 });
   const name = inspect.data?.Name?.replace(/^\//, "") ?? id.slice(0, 12);
   const running = inspect.data?.State?.Running ?? false;
-  const tabs: Tab[] = ["overview", "logs", "terminal", "debug", "inspect"];
+  const tabs: Tab[] = ["overview", "logs", "files", "terminal", "debug", "inspect"];
 
   return (
     <div className="flex h-full flex-col">
@@ -64,6 +65,7 @@ export function ContainerDetail({ id, onBack }: { id: string; onBack: () => void
       <div className="min-h-0 flex-1 p-4" role="tabpanel">
         {tab === "overview" && <OverviewPanel id={id} data={inspect.data} running={running} />}
         {tab === "logs" && <LogsPanel id={id} />}
+        {tab === "files" && <FilesPanel target={{ kind: "container", id }} />}
         {tab === "terminal" && <TerminalPanel id={id} running={running} />}
         {tab === "debug" && <DebugPanel id={id} running={running} />}
         {tab === "inspect" && <InspectPanel data={inspect.data} />}

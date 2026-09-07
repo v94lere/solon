@@ -345,3 +345,8 @@ select {
 .kv-mono dt { color: var(--accent-ink); }
 .chip-mini { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--surface-3); color: var(--ink-2); font-size: 11px; font-family: var(--font-sans); vertical-align: 1px; }
 .select-text { user-select: text; }
+
+/* Explorateur de fichiers */
+.crumb { padding: 2px 6px; border-radius: 4px; color: var(--ink-2); font: inherit; }
+.crumb:hover { background: var(--surface-3); color: var(--ink); }
+.is-dropping { outline: 2px dashed var(--accent); outline-offset: -4px; }

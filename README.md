@@ -91,6 +91,10 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
 - **Fiche d'un conteneur** (clic sur son nom) : onglet **Overview** avec image, commande, dates, politique de
   redémarrage, réseaux (adresse, passerelle, alias), ports, montages, variables d'environnement, étiquettes, et
   **copie de fichiers** dans les deux sens (`docker cp` sans ligne de commande). Onglets Logs, Terminal, Inspect.
+- **Fichiers** (onglet de la fiche d'un conteneur, et bouton « Files » ou clic sur le nom d'un volume) : un
+  explorateur des fichiers du conteneur ou du volume : parcourir, copier vers Windows, envoyer des fichiers ou un
+  dossier (bouton ou **glisser-déposer** depuis l'Explorateur), créer un dossier, supprimer. Fonctionne sans shell
+  dans l'image ; les conteneurs doivent être en marche pour être parcourus, les volumes toujours.
 - **Debug shell** (onglet de la fiche) : un shell d'outils (bash, curl, dig, ps, strace, tcpdump, jq, vim…) qui
   partage les processus, le réseau et les volumes du conteneur **même si son image n'a aucun shell** (images
   « distroless », Go, .NET). Le système de fichiers du conteneur est visible sous `/proc/1/root`. Rien n'est

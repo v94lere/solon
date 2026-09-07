@@ -126,7 +126,8 @@
       "logs": "Logs",
       "terminal": "Terminal",
       "debug": "Debug shell",
-      "inspect": "Inspect"
+      "inspect": "Inspect",
+      "files": "Files"
     },
     "back": "Back to containers",
     "logs": {
@@ -275,13 +276,15 @@
     },
     "actions": {
       "inspect": "Inspect",
-      "remove": "Remove"
+      "remove": "Remove",
+      "files": "Files"
     },
     "remove_confirm": {
       "title": "Remove volume {{name}}?",
       "body": "All data stored in this volume will be permanently deleted. This cannot be undone.",
       "confirm": "Remove"
-    }
+    },
+    "files_hint": "Files stored in the volume"
   },
   "networks": {
     "title": "Networks",
@@ -421,6 +424,39 @@
       "memory": "Memory",
       "network": "Network",
       "trend": "CPU, last minute"
+    }
+  },
+  "files": {
+    "path": "Path",
+    "root": "root",
+    "up": "Up",
+    "refresh": "Refresh",
+    "new_folder": "New folder",
+    "new_folder_name": "Folder name",
+    "create": "Create",
+    "send_files": "Send files…",
+    "send_folder": "Send a folder…",
+    "download_here": "Copy this folder to Windows…",
+    "download": "Copy to Windows",
+    "delete": "Delete",
+    "pick_source": "Choose what to send",
+    "pick_dest": "Choose the destination folder",
+    "drop_hint": "Drop files from Windows here to send them to this folder.",
+    "working": "Working…",
+    "empty": "Empty folder.",
+    "not_running": "Start the container to browse its files.",
+    "downloaded": "{{name}} copied to {{dest}}",
+    "uploaded": "{{name}} sent",
+    "columns": {
+      "name": "Name",
+      "size": "Size",
+      "modified": "Modified",
+      "mode": "Mode"
+    },
+    "delete_confirm": {
+      "title": "Delete {{name}}?",
+      "body": "Folders are deleted with everything inside. This cannot be undone.",
+      "confirm": "Delete"
     }
   }
 }
