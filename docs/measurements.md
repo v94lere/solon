@@ -621,3 +621,14 @@ internes, non retenu). Aucun changement côté service ou agent ; application se
 | 7 | Activity | courbes plus hautes avec dégradé, couleur ambre au-delà de 70 % et rouge au-delà de 90 % (`Spark` partagée), même courbe miniature dans la colonne CPU de la liste ; les points s'étalent sur toute la largeur tant que la minute d'historique n'est pas pleine | `v1`, `v2` |
 | 8 | Finitions | transition entre sections (`page-in`, 160 ms), taille et position de fenêtre mémorisées (`tauri-plugin-window-state`), icône de la barre des tâches avec point d'état (`make-state.py`, `tray_icon`), option **couleur d'accent de Windows** (registre `DWM\AccentColor`, déclinaisons par `color-mix`) | `v8`, `v9` : accent violet de Windows appliqué partout, en clair et en sombre |
 
+### Palette noir, blanc, bleu `#3C82C3` (7 septembre 2026, soir)
+
+Demande : « les couleurs principales doivent être le noir, le blanc et le 3C82C3 ». Réalisation : jetons clairs
+(fond et cartes blancs, texte `#0a0a0a`, gris dérivés, accent `#3c82c3`, texte accentué `#2b6aa6`) et sombres (fond
+`#000000`, cartes `#121212`, texte blanc, accent `#3c82c3`, texte accentué `#7db3e4`) ; logo cube recoloré à
+luminosité égale (teinte du bleu, `palette.py`) et toutes les icônes régénérées par `tauri icon` ; curseur des
+terminaux et première couleur des journaux mêlés en bleu ; vert néon d'état remplacé par `#34c759`. Vérifié en clair
+(Conteneurs, Réseaux, fiche) ; le thème sombre n'a pas pu être capturé, Valère utilisait le PC pendant le test.
+Défaut trouvé : le module d'état de fenêtre restaurait aussi la **visibilité** ; fermée dans la barre des tâches, la
+fenêtre serait restée masquée au lancement suivant → drapeau `VISIBLE` exclu.
+

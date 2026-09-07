@@ -20,79 +20,79 @@
 
 :root {
   color-scheme: light dark;
-  --bg: #f1f1f1;
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f7f7f7;
-  --surface-3: #e9e9e9;
-  --sidebar: #e9e9e9;
-  --ink: #222222;
-  --ink-2: #5a5a5a;
-  --ink-3: #737373;
-  --line: #e2e2e2;
-  --line-strong: #cfcfcf;
-  --accent: #ff7a47;
-  --accent-ink: #d4531f;
-  --accent-soft: #ffe9df;
-  --ok: #2e9e1b;
-  --ok-dot: #66ff4c;
-  --ok-soft: #e4ffdf;
+  --surface-2: #f6f7f9;
+  --surface-3: #eceef1;
+  --sidebar: #f3f4f6;
+  --ink: #0a0a0a;
+  --ink-2: #4b4f56;
+  --ink-3: #737780;
+  --line: #e3e5e8;
+  --line-strong: #cfd3d8;
+  --accent: #3c82c3;
+  --accent-ink: #2b6aa6;
+  --accent-soft: #e3eef8;
+  --ok: #1f8a3a;
+  --ok-dot: #34c759;
+  --ok-soft: #e3f6e8;
   --warn: #9a6700;
   --warn-soft: #fbf1d3;
   --bad: #c62828;
   --bad-soft: #fde5e3;
-  --focus: #ff7a47;
+  --focus: #3c82c3;
   --radius: 8px;
   --radius-lg: 12px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #1a1a1a;
-    --surface: #222222;
-    --surface-2: #282828;
-    --surface-3: #303030;
-    --sidebar: #151515;
-    --ink: #f1f1f1;
-    --ink-2: #b4b4b4;
-    --ink-3: #8c8c8c;
-    --line: #333333;
-    --line-strong: #444444;
-    --accent: #ff7a47;
-    --accent-ink: #ff9a72;
-    --accent-soft: #3a2a22;
-    --ok: #7dff66;
-    --ok-dot: #66ff4c;
-    --ok-soft: #1f3a1a;
+    --bg: #000000;
+    --surface: #121212;
+    --surface-2: #181818;
+    --surface-3: #222222;
+    --sidebar: #0a0a0a;
+    --ink: #ffffff;
+    --ink-2: #b5b8be;
+    --ink-3: #868a92;
+    --line: #262626;
+    --line-strong: #363636;
+    --accent: #3c82c3;
+    --accent-ink: #7db3e4;
+    --accent-soft: #142e47;
+    --ok: #5fd37a;
+    --ok-dot: #34c759;
+    --ok-soft: #12321c;
     --warn: #e0b060;
     --warn-soft: #3a2f12;
     --bad: #f08a80;
     --bad-soft: #3d1f1c;
-    --focus: #ff9a72;
+    --focus: #7db3e4;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #1a1a1a;
-  --surface: #222222;
-  --surface-2: #282828;
-  --surface-3: #303030;
-  --sidebar: #151515;
-  --ink: #f1f1f1;
-  --ink-2: #b4b4b4;
-  --ink-3: #8c8c8c;
-  --line: #333333;
-  --line-strong: #444444;
-  --accent: #ff7a47;
-  --accent-ink: #ff9a72;
-  --accent-soft: #3a2a22;
-  --ok: #7dff66;
-  --ok-dot: #66ff4c;
-  --ok-soft: #1f3a1a;
+  --bg: #000000;
+  --surface: #121212;
+  --surface-2: #181818;
+  --surface-3: #222222;
+  --sidebar: #0a0a0a;
+  --ink: #ffffff;
+  --ink-2: #b5b8be;
+  --ink-3: #868a92;
+  --line: #262626;
+  --line-strong: #363636;
+  --accent: #3c82c3;
+  --accent-ink: #7db3e4;
+  --accent-soft: #142e47;
+  --ok: #5fd37a;
+  --ok-dot: #34c759;
+  --ok-soft: #12321c;
   --warn: #e0b060;
   --warn-soft: #3a2f12;
   --bad: #f08a80;
   --bad-soft: #3d1f1c;
-  --focus: #ff9a72;
+  --focus: #7db3e4;
 }
 
 html,
@@ -152,7 +152,7 @@ select {
 }
 .btn:hover { background: var(--surface-2); }
 .btn:disabled { opacity: 0.5; cursor: default; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(255, 122, 71, 0.3); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(60, 130, 195, 0.3); }
 .btn-primary:hover { filter: brightness(1.06); background: var(--accent); }
 .btn-danger { color: var(--bad); border-color: var(--bad); }
 .btn-ghost { border-color: transparent; background: transparent; }
@@ -174,7 +174,7 @@ select {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: 0 1px 2px rgba(20, 30, 60, 0.04);
+  box-shadow: 0 1px 2px rgba(10, 20, 40, 0.05);
 }
 
 .pill {
@@ -191,7 +191,7 @@ select {
 }
 .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .pill-ok { color: var(--ok); background: var(--ok-soft); }
-.pill-ok::before { background: var(--ok-dot); box-shadow: 0 0 0 2px rgba(102, 255, 76, 0.25); }
+.pill-ok::before { background: var(--ok-dot); box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.25); }
 .pill-warn { color: var(--warn); background: var(--warn-soft); }
 .pill-bad { color: var(--bad); background: var(--bad-soft); }
 .pill-muted { color: var(--ink-2); background: var(--surface-3); }

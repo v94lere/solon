@@ -143,7 +143,16 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(
+            // Taille et position mémorisées ; pas la visibilité (la fenêtre se ferme dans la barre
+            // des tâches : la restaurer masquée laisserait l'application sans fenêtre au lancement).
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::all()
+                        - tauri_plugin_window_state::StateFlags::VISIBLE,
+                )
+                .build(),
+        )
         .manage(Arc::new(docker::DockerState::default()))
         .manage(Arc::new(shell::ShellState::default()))
         .setup(|app| {
