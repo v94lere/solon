@@ -66,6 +66,28 @@ async fn settings_set(settings: Settings) -> Result<(), String> {
         .map(|_| ())
 }
 
+/// Couleur d'accent de Windows (`#rrggbb`), lue dans le registre (DWM\AccentColor, ABGR).
+#[tauri::command]
+fn system_accent_color() -> Option<String> {
+    let out = std::process::Command::new("reg.exe")
+        .args([
+            "query",
+            r"HKCU\Software\Microsoft\Windows\DWM",
+            "/v",
+            "AccentColor",
+        ])
+        .output()
+        .ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let hex = text
+        .split_whitespace()
+        .find(|w| w.starts_with("0x"))?
+        .trim_start_matches("0x");
+    let v = u32::from_str_radix(hex, 16).ok()?;
+    let (r, g, b) = (v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff);
+    Some(format!("#{r:02x}{g:02x}{b:02x}"))
+}
+
 /// Compteurs de la machine pour l'écran Activité.
 #[tauri::command]
 async fn engine_metrics() -> Result<Value, String> {
@@ -121,6 +143,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(Arc::new(docker::DockerState::default()))
         .manage(Arc::new(shell::ShellState::default()))
         .setup(|app| {
@@ -136,6 +159,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             engine_metrics,
+            system_accent_color,
             compose::compose_detect,
             compose::compose_run,
             compose::compose_stream,

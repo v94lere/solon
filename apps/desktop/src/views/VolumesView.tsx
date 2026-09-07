@@ -5,6 +5,7 @@ import { volumes, type Volume } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { JsonDialog } from "../components/JsonDialog";
 import { FilesPanel } from "../components/FilesPanel";
+import { EmptyState, IconDisk, PageHeader, SkeletonRows } from "../components/ui";
 
 export function VolumesView() {
   const { t } = useTranslation();
@@ -52,29 +53,30 @@ export function VolumesView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 px-4 pt-4 pb-2">
-        <h1 className="text-lg font-semibold">{t("volumes.title")}</h1>
-        <span className="kbd-hint">{t("volumes.count", { count: rows.length })}</span>
-        <div className="flex-1" />
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const n = newName.trim();
-            if (n) void act(() => volumes.create(n)).then(() => setNewName(""));
-          }}
-        >
-          <input className="input w-56" placeholder={t("volumes.new_name")} value={newName} onChange={(e) => setNewName(e.target.value)} aria-label={t("volumes.new_name")} />
-          <button type="submit" className="btn btn-primary" disabled={!newName.trim()}>{t("volumes.create")}</button>
-        </form>
-        <input type="search" className="input w-56" placeholder={t("volumes.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("volumes.search")} />
-      </div>
+      <PageHeader
+        title={t("volumes.title")}
+        count={t("volumes.count", { count: rows.length })}
+        actions={
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const n = newName.trim();
+              if (n) void act(() => volumes.create(n)).then(() => setNewName(""));
+            }}
+          >
+            <input className="input input-sm w-52" placeholder={t("volumes.new_name")} value={newName} onChange={(e) => setNewName(e.target.value)} aria-label={t("volumes.new_name")} />
+            <button type="submit" className="btn btn-primary btn-sm" disabled={!newName.trim()}>{t("volumes.create")}</button>
+          </form>
+        }
+        search={<input type="search" className="input w-56" placeholder={t("volumes.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("volumes.search")} />}
+      />
       {error && <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>}
       <div className="card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
         {query.isLoading ? (
-          <p className="p-4" style={{ color: "var(--ink-2)" }}>{t("common.loading")}</p>
+          <SkeletonRows rows={4} cols={4} />
         ) : rows.length === 0 ? (
-          <p className="p-6 text-center" style={{ color: "var(--ink-2)" }}>{t("volumes.empty")}</p>
+          <EmptyState icon={<IconDisk />} title={filter ? t("containers.no_match") : t("volumes.empty_title")} hint={filter ? t("containers.no_match_hint") : t("volumes.empty")} />
         ) : (
           <table className="table">
             <thead>

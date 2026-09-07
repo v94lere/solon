@@ -79,6 +79,10 @@ cd apps\desktop; npm run tauri dev
 
 ## Utilisation
 
+Le bloc en bas du menu montre l'état du moteur, son temps de fonctionnement et deux mini-jauges (processeur, mémoire).
+L'icône de la barre des tâches porte un point vert, orange, rouge ou gris selon l'état. La taille et la position de la
+fenêtre sont mémorisées.
+
 Le menu de gauche a deux parties : **Docker** (Containers, Volumes, Images, Networks) et **General** (Activity,
 Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icônes seules ; le choix est mémorisé.
 
@@ -121,7 +125,8 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
   `dmesg`… La session reste ouverte quand on change de section ; « Nouvelle session » en relance une.
 - **Recherche globale `Ctrl+K`** : conteneurs, images, volumes, réseaux, projets, actions du moteur, sections.
   `Ctrl+1` à `Ctrl+7` changent de section dans l'ordre du menu.
-- **Réglages** : langue (anglais par défaut, français), apparence, mémoire et processeurs du moteur (par défaut
+- **Réglages** : langue (anglais par défaut, français), apparence (clair, sombre, Windows), couleur d'accent (orange
+  Solon ou couleur de Windows), mémoire et processeurs du moteur (par défaut
   tous les cœurs moins deux), limite de stockage, démarrage à l'ouverture de session.
 - **Barre des tâches** : un clic sur l'icône ouvre le menu : état du moteur, nombre de conteneurs en
   marche, **chaque conteneur avec Démarrer / Redémarrer / Arrêter**, ouvrir Solon, démarrer ou arrêter le

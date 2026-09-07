@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { networks, type Network } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { JsonDialog } from "../components/JsonDialog";
+import { EmptyState, IconGlobe, PageHeader, SkeletonRows } from "../components/ui";
 
 const BUILTIN = new Set(["bridge", "host", "none"]);
 
@@ -35,20 +36,23 @@ export function NetworksView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 px-4 pt-4 pb-2">
-        <h1 className="text-lg font-semibold">{t("networks.title")}</h1>
-        <span className="kbd-hint">{t("networks.count", { count: rows.length })}</span>
-        <div className="flex-1" />
-        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const n = newName.trim(); if (n) void act(() => networks.create(n)).then(() => setNewName("")); }}>
-          <input className="input w-56" placeholder={t("networks.new_name")} value={newName} onChange={(e) => setNewName(e.target.value)} aria-label={t("networks.new_name")} />
-          <button type="submit" className="btn btn-primary" disabled={!newName.trim()}>{t("networks.create")}</button>
-        </form>
-        <input type="search" className="input w-56" placeholder={t("networks.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("networks.search")} />
-      </div>
+      <PageHeader
+        title={t("networks.title")}
+        count={t("networks.count", { count: rows.length })}
+        actions={
+          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const n = newName.trim(); if (n) void act(() => networks.create(n)).then(() => setNewName("")); }}>
+            <input className="input input-sm w-52" placeholder={t("networks.new_name")} value={newName} onChange={(e) => setNewName(e.target.value)} aria-label={t("networks.new_name")} />
+            <button type="submit" className="btn btn-primary btn-sm" disabled={!newName.trim()}>{t("networks.create")}</button>
+          </form>
+        }
+        search={<input type="search" className="input w-56" placeholder={t("networks.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("networks.search")} />}
+      />
       {error && <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>}
       <div className="card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
         {query.isLoading ? (
-          <p className="p-4" style={{ color: "var(--ink-2)" }}>{t("common.loading")}</p>
+          <SkeletonRows rows={4} cols={4} />
+        ) : rows.length === 0 ? (
+          <EmptyState icon={<IconGlobe />} title={filter ? t("containers.no_match") : t("networks.empty_title")} hint={filter ? t("containers.no_match_hint") : t("networks.empty")} />
         ) : (
           <table className="table">
             <thead>

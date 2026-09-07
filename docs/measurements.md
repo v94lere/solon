@@ -606,3 +606,18 @@ Demande : « fait le 1, 2, 3, 10 » de la liste des fonctionnalités d'OrbStack 
 Reste à faire de la demande : **1** (machines Linux complètes, proposition « conteneurs système » en attente de
 validation) et la seconde étape du **3** (lecteur réseau `\\solon\` dans l'Explorateur, si l'usage le justifie).
 
+## Lot « visuel » (7 septembre 2026, soir)
+
+Demande : « fait la 1, 2, 3, 4, 5, 7, 8 » de la liste des améliorations visuelles proposées (le 6, notifications
+internes, non retenu). Aucun changement côté service ou agent ; application seule.
+
+| # | Élément | Réalisation | Vérification (captures `.local/build/v*.png`) |
+|---|---|---|---|
+| 1 | Hiérarchie du menu | barre latérale plus foncée que le fond (`#e9e9e9` / `#151515`), élément actif sur fond surélevé avec barre d'accent à gauche ; **bloc moteur** en bas : état, temps de fonctionnement, mini-jauges CPU et RAM (relevé `engine_metrics` toutes les 3 s, `metrics.ts`), commandes | `v1` : « Running · CPU 0 % · RAM 25 % · up 42 min » |
+| 2 | En-tête unifié | composant `PageHeader` (titre, compteur, actions, recherche) sur Conteneurs, Volumes, Images, Réseaux, Activity ; la carte Compose devient une rangée d'outils (« Open a project… », projets récents) ; un seul bouton orange par écran | `v1`, `v3` |
+| 3 | Pastilles d'initiale | `Avatar` : couleur stable dérivée du nom de l'image (`hueOf`), déclinée clair / sombre ; dans la liste et l'en-tête de la fiche | `v1` : P (postgres), O (odoo), W (warpgate), B (busybox) |
+| 4 | États vides et chargements | `EmptyState` (pictogramme, titre, aide, action), squelettes animés (`SkeletonRows`) ; Conteneurs sans rien : trois cartes de démarrage (hello-world lancé dans la machine, projet Compose, commande docker) ; filtre sans résultat : « Clear filter » ; « Show stopped » décoché sans conteneur en marche : état dédié | `v7` |
+| 5 | Fiche de conteneur | actions (démarrer, arrêter, redémarrer, supprimer avec confirmation) dans l'en-tête, pastille d'image, onglets avec icônes ; journaux : recherche, retour à la ligne, couleurs (erreurs rouges, avertissements et sortie d'erreur ambre) | `v5`, `v6` |
+| 7 | Activity | courbes plus hautes avec dégradé, couleur ambre au-delà de 70 % et rouge au-delà de 90 % (`Spark` partagée), même courbe miniature dans la colonne CPU de la liste ; les points s'étalent sur toute la largeur tant que la minute d'historique n'est pas pleine | `v1`, `v2` |
+| 8 | Finitions | transition entre sections (`page-in`, 160 ms), taille et position de fenêtre mémorisées (`tauri-plugin-window-state`), icône de la barre des tâches avec point d'état (`make-state.py`, `tray_icon`), option **couleur d'accent de Windows** (registre `DWM\AccentColor`, déclinaisons par `color-mix`) | `v8`, `v9` : accent violet de Windows appliqué partout, en clair et en sombre |
+

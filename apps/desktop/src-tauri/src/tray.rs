@@ -84,6 +84,16 @@ fn engine_dot(state: &str) -> &'static [u8] {
     }
 }
 
+/// Icône de la barre des tâches : le cube avec un point coloré selon l'état.
+fn tray_icon(state: &str) -> &'static [u8] {
+    match state {
+        "ready" => png!("tray-ready"),
+        "starting" | "stopping" | "degraded" => png!("tray-busy"),
+        "failed" | "service_unavailable" => png!("tray-failed"),
+        _ => png!("tray-stopped"),
+    }
+}
+
 fn containers_label(l: &Value, count: u64) -> String {
     match count {
         0 => label(l, "containers_zero"),
@@ -320,6 +330,7 @@ async fn follow_state<R: Runtime>(
         }
         let status = engine_label(&l, &state);
         let _ = tray.set_tooltip(Some(format!("Solon — {status}")));
+        let _ = tray.set_icon(icon(tray_icon(&state)));
         match build_menu(&app, &l, &state, containers.as_deref()) {
             Ok(menu) => {
                 let _ = tray.set_menu(Some(menu));
@@ -355,6 +366,10 @@ mod tests {
     #[test]
     fn icones_png_decodables() {
         let all: [&[u8]; 11] = [
+            png!("tray-ready"),
+            png!("tray-busy"),
+            png!("tray-failed"),
+            png!("tray-stopped"),
             png!("dot-green"),
             png!("dot-grey"),
             png!("dot-orange"),

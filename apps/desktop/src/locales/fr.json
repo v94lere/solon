@@ -53,7 +53,8 @@
       "failed": "En échec",
       "stopped": "Arrêté",
       "service_unavailable": "Service arrêté"
-    }
+    },
+    "uptime": "en marche depuis {{value}}"
   },
   "error": {
     "title": "Une action est nécessaire",
@@ -118,7 +119,25 @@
     "compose": "Projet Compose",
     "count_one": "{{count}} conteneur",
     "count_other": "{{count}} conteneurs",
-    "open_port": "Ouvrir {{url}} dans le navigateur"
+    "open_port": "Ouvrir {{url}} dans le navigateur",
+    "no_match": "Rien ne correspond au filtre.",
+    "no_match_hint": "Essayez un autre nom, une image ou un état.",
+    "clear_filter": "Effacer le filtre",
+    "start": {
+      "title": "Aucun conteneur pour l'instant",
+      "hint": "Trois façons de commencer.",
+      "hello_title": "Lancer un premier conteneur",
+      "hello_body": "Télécharge la minuscule image hello-world et l'exécute une fois. Elle apparaît ici, arrêtée, en quelques secondes.",
+      "hello_action": "Lancer hello-world",
+      "hello_running": "En cours…",
+      "compose_title": "Ouvrir un projet Compose",
+      "compose_body": "Choisissez un dossier contenant compose.yaml : Solon montre ses services, les journaux mêlés et les boutons Up / Down.",
+      "cli_title": "Utiliser la commande docker",
+      "cli_body": "La commande docker est déjà dans votre PATH et parle à Solon. Tout ce que vous lancez apparaît ici.",
+      "cli_hint": "Chaque conteneur en marche reçoit aussi https://<nom>.solon.local, avec ou sans port publié."
+    },
+    "none_running": "Aucun conteneur en marche",
+    "none_running_hint": "Les conteneurs arrêtés sont masqués."
   },
   "detail": {
     "tabs": {
@@ -134,7 +153,12 @@
       "follow": "Suivre",
       "clear": "Effacer",
       "timestamps": "Horodatage",
-      "empty": "Aucune sortie pour l'instant."
+      "empty": "Aucune sortie pour l'instant.",
+      "wrap": "Retour à la ligne",
+      "search": "Rechercher dans les journaux",
+      "matches_one": "{{count}} ligne",
+      "matches_other": "{{count}} lignes",
+      "no_match": "Aucune ligne ne correspond."
     },
     "terminal": {
       "shell": "Shell",
@@ -225,7 +249,10 @@
     "diagnostic_done": "{{count}} fichiers écrits dans {{path}}",
     "diagnostic_open": "Ouvrir le dossier",
     "legacy_fs": "Utiliser l'ancien partage de fichiers Windows (9P) pour les dossiers montés",
-    "legacy_fs_help": "Repli si un conteneur se comporte mal avec le système de fichiers Solon. Plus lent. Appliqué au prochain démarrage du moteur."
+    "legacy_fs_help": "Repli si un conteneur se comporte mal avec le système de fichiers Solon. Plus lent. Appliqué au prochain démarrage du moteur.",
+    "accent": "Couleur d'accent",
+    "accent_solon": "Orange Solon",
+    "accent_windows": "Couleur d'accent de Windows"
   },
   "images": {
     "title": "Images",
@@ -258,7 +285,8 @@
       "cmd_hint": "vide = commande par défaut de l'image",
       "start": "Démarrer",
       "bad_port": "Publication de port invalide : {{value}}"
-    }
+    },
+    "empty_title": "Aucune image pour l'instant"
   },
   "volumes": {
     "title": "Volumes",
@@ -284,7 +312,8 @@
       "body": "Toutes les données de ce volume seront définitivement effacées. Cette action est irréversible.",
       "confirm": "Supprimer"
     },
-    "files_hint": "Fichiers stockés dans le volume"
+    "files_hint": "Fichiers stockés dans le volume",
+    "empty_title": "Aucun volume pour l'instant"
   },
   "networks": {
     "title": "Réseaux",
@@ -307,7 +336,8 @@
       "title": "Supprimer le réseau {{name}} ?",
       "body": "Les conteneurs attachés à ce réseau doivent d'abord en être détachés.",
       "confirm": "Supprimer"
-    }
+    },
+    "empty_title": "Seulement les réseaux par défaut"
   },
   "compose": {
     "title": "Compose",
@@ -424,7 +454,8 @@
       "memory": "Mémoire",
       "network": "Réseau",
       "trend": "Processeur, dernière minute"
-    }
+    },
+    "empty_hint": "Démarrez un conteneur pour voir ici son processeur, sa mémoire et son réseau."
   },
   "files": {
     "path": "Chemin",

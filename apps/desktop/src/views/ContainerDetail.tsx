@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
@@ -8,6 +8,11 @@ import { LogsPanel } from "../components/LogsPanel";
 import { TerminalPanel } from "../components/TerminalPanel";
 import { DebugPanel } from "../components/DebugPanel";
 import { FilesPanel } from "../components/FilesPanel";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { IconLogs, IconPlay, IconRestart, IconStop, IconTerminal, IconTrash } from "../components/Icons";
+import { Avatar, imageBase } from "../components/ui";
+import { markUserAction } from "../engine";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Tab = "overview" | "logs" | "files" | "terminal" | "debug" | "inspect";
 
@@ -29,13 +34,50 @@ interface Inspect {
   };
 }
 
+const TAB_ICONS: Record<Tab, JSX.Element> = {
+  overview: (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+  ),
+  logs: <IconLogs />,
+  files: (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></svg>
+  ),
+  terminal: <IconTerminal />,
+  debug: (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 9a4 4 0 0 1 8 0v5a4 4 0 0 1-8 0Z" /><path d="M4 13h4M16 13h4M5 19l3-2M19 19l-3-2M5 7l3 2M19 7l-3 2M10 5l2-2 2 2" /></svg>
+  ),
+  inspect: (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14" /></svg>
+  ),
+};
+
 export function ContainerDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("overview");
+  const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inspect = useQuery({ queryKey: ["container", id], queryFn: () => containers.inspect(id) as Promise<Inspect>, refetchInterval: 5000 });
   const name = inspect.data?.Name?.replace(/^\//, "") ?? id.slice(0, 12);
   const running = inspect.data?.State?.Running ?? false;
+  const image = inspect.data?.Config?.Image;
   const tabs: Tab[] = ["overview", "logs", "files", "terminal", "debug", "inspect"];
+
+  async function act(action: () => Promise<void>) {
+    markUserAction(id);
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      await queryClient.invalidateQueries({ queryKey: ["container", id] });
+      await queryClient.invalidateQueries({ queryKey: ["containers"] });
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -43,21 +85,30 @@ export function ContainerDetail({ id, onBack }: { id: string; onBack: () => void
         <button type="button" className="btn btn-ghost btn-sm" onClick={onBack}>
           ← {t("detail.back")}
         </button>
+        <Avatar label={imageBase(image)} seed={imageBase(image)} size={30} title={image} />
         <h1 className="text-base font-semibold">{name}</h1>
-        {inspect.data?.Config?.Image && <span className="mono kbd-hint">{inspect.data.Config.Image}</span>}
+        {image && <span className="mono kbd-hint max-w-[320px] truncate" title={image}>{image}</span>}
         <span className={`pill ${running ? "pill-ok" : "pill-muted"}`}>{t(`containers.state.${inspect.data?.State?.Status ?? "created"}`, { defaultValue: inspect.data?.State?.Status })}</span>
+        <span className="flex-1" />
+        <div className="flex items-center gap-0.5">
+          {running ? (
+            <>
+              <button type="button" className="icon-btn" title={t("containers.actions.stop")} aria-label={t("containers.actions.stop")} disabled={busy} onClick={() => void act(() => containers.stop(id))}><IconStop /></button>
+              <button type="button" className="icon-btn" title={t("containers.actions.restart")} aria-label={t("containers.actions.restart")} disabled={busy} onClick={() => void act(() => containers.restart(id))}><IconRestart /></button>
+            </>
+          ) : (
+            <button type="button" className="icon-btn" title={t("containers.actions.start")} aria-label={t("containers.actions.start")} disabled={busy} onClick={() => void act(() => containers.start(id))}><IconPlay /></button>
+          )}
+          <button type="button" className="icon-btn icon-btn-danger" title={t("containers.actions.remove")} aria-label={t("containers.actions.remove")} disabled={busy} onClick={() => setRemoving(true)}><IconTrash /></button>
+        </div>
       </div>
-      <div role="tablist" className="flex gap-1 border-b px-4" style={{ borderColor: "var(--line)" }}>
+      {error && (
+        <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>
+      )}
+      <div role="tablist" className="tabs px-4">
         {tabs.map((tb) => (
-          <button
-            key={tb}
-            role="tab"
-            type="button"
-            aria-selected={tab === tb}
-            onClick={() => setTab(tb)}
-            className="px-3 py-2"
-            style={{ borderBottom: tab === tb ? "2px solid var(--accent)" : "2px solid transparent", color: tab === tb ? "var(--accent-ink)" : "var(--ink-2)", fontWeight: tab === tb ? 600 : 400 }}
-          >
+          <button key={tb} role="tab" type="button" aria-selected={tab === tb} onClick={() => setTab(tb)} className="tab">
+            {TAB_ICONS[tb]}
             {t(`detail.tabs.${tb}`)}
           </button>
         ))}
@@ -70,6 +121,20 @@ export function ContainerDetail({ id, onBack }: { id: string; onBack: () => void
         {tab === "debug" && <DebugPanel id={id} running={running} />}
         {tab === "inspect" && <InspectPanel data={inspect.data} />}
       </div>
+      <ConfirmDialog
+        open={removing}
+        title={t("containers.remove_confirm.title", { name })}
+        confirmLabel={t("containers.remove_confirm.confirm")}
+        cancelLabel={t("containers.remove_confirm.cancel")}
+        danger
+        onCancel={() => setRemoving(false)}
+        onConfirm={() => {
+          setRemoving(false);
+          void act(() => containers.remove(id, true, false)).then(onBack);
+        }}
+      >
+        <p>{t("containers.remove_confirm.body")}</p>
+      </ConfirmDialog>
     </div>
   );
 }

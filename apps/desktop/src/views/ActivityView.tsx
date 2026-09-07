@@ -2,33 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { containers, engine, formatBytes, type ContainerSummary, type MachineMetrics, type StatSample } from "../api";
+import { EmptyState, IconPulse, PageHeader, Spark, pushHistory } from "../components/ui";
 
 const ENGINE_PERIOD_MS = 2000;
-const HISTORY = 60;
-
-/** Petite courbe glissante : `values` de gauche (ancien) à droite (récent), bornée par `max`. */
-function Spark({ values, max, className }: { values: number[]; max: number; className?: string }) {
-  const w = 240;
-  const h = 40;
-  if (values.length < 2) return <svg className={`spark ${className ?? ""}`} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true" />;
-  const m = Math.max(max, 1e-9);
-  const step = w / (HISTORY - 1);
-  const x0 = w - (values.length - 1) * step;
-  const pts = values.map((v, i) => `${(x0 + i * step).toFixed(1)},${(h - 2 - (Math.min(v, m) / m) * (h - 4)).toFixed(1)}`);
-  const area = `${x0.toFixed(1)},${h} ${pts.join(" ")} ${w},${h}`;
-  return (
-    <svg className={`spark ${className ?? ""}`} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
-      <polygon className="spark-area" points={area} />
-      <polyline className="spark-line" points={pts.join(" ")} />
-    </svg>
-  );
-}
-
-function pushHistory(list: number[], v: number): number[] {
-  const next = list.length >= HISTORY ? list.slice(list.length - HISTORY + 1) : list.slice();
-  next.push(v);
-  return next;
-}
 
 interface EngineSeries {
   cpu: number[];
@@ -162,10 +138,9 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 px-4 pt-4 pb-2">
-        <h1 className="text-lg font-semibold">{t("activity.title")}</h1>
+      <PageHeader title={t("activity.title")}>
         <span className="kbd-hint">{t("activity.subtitle")}</span>
-      </div>
+      </PageHeader>
 
       {unavailable && (
         <div className="mx-4 mb-3 rounded px-3 py-2" role="status" style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>
@@ -181,7 +156,7 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
           </div>
           <div className="metric-value">{now && series.cpu.length ? `${now.cpuPct.toFixed(0)} %` : "—"}</div>
           <div className="metric-sub">{now ? t("activity.load", { value: now.load1.toFixed(2) }) : t("activity.waiting")}</div>
-          <Spark values={series.cpu} max={100} />
+          <Spark values={series.cpu} max={100} warn={70} bad={90} className="spark-lg" />
         </section>
         <section className="card metric">
           <div className="metric-head">
@@ -190,7 +165,7 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
           </div>
           <div className="metric-value">{now ? formatBytes(now.memUsed) : "—"}</div>
           <div className="metric-sub">{now ? t("activity.of", { total: formatBytes(now.memTotal) }) : t("activity.waiting")}</div>
-          <Spark values={series.mem} max={now?.memTotal ?? 1} />
+          <Spark values={series.mem} max={now?.memTotal ?? 1} warn={(now?.memTotal ?? 0) * 0.7} bad={(now?.memTotal ?? 0) * 0.9} className="spark-lg" />
         </section>
         <section className="card metric">
           <div className="metric-head">
@@ -210,15 +185,13 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
           </div>
           <div className="metric-value">{now && series.net.length ? `↓ ${formatBytes(now.rxRate)}/s` : "—"}</div>
           <div className="metric-sub">{now && series.net.length ? `↑ ${formatBytes(now.txRate)}/s` : t("activity.waiting")}</div>
-          <Spark values={series.net} max={Math.max(...series.net, 1)} />
+          <Spark values={series.net} max={Math.max(...series.net, 1)} className="spark-lg" />
         </section>
       </div>
 
       <div className="card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
         {rows.length === 0 ? (
-          <p className="p-6 text-center" style={{ color: "var(--ink-2)" }}>
-            {t("activity.empty")}
-          </p>
+          <EmptyState icon={<IconPulse />} title={t("activity.empty")} hint={t("activity.empty_hint")} />
         ) : (
           <table className="table">
             <thead>
@@ -242,7 +215,7 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
                   <td className="mono text-right whitespace-nowrap">{st ? `${formatBytes(st.sample.mem_usage)}${st.sample.mem_limit ? ` / ${formatBytes(st.sample.mem_limit)}` : ""}` : "—"}</td>
                   <td className="mono text-right whitespace-nowrap">{st ? `↓ ${formatBytes(st.rxRate)}/s  ↑ ${formatBytes(st.txRate)}/s` : "—"}</td>
                   <td className="w-40">
-                    <Spark values={st?.cpuHistory ?? []} max={Math.max(100, ...(st?.cpuHistory ?? [0]))} className="spark-row" />
+                    <Spark values={st?.cpuHistory ?? []} max={Math.max(100, ...(st?.cpuHistory ?? [0]))} className="spark-row" warn={70} bad={90} />
                   </td>
                 </tr>
               ))}

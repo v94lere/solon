@@ -5,6 +5,7 @@ import { engine, type Settings } from "../api";
 import { setLanguage } from "../i18n";
 import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { openPath } from "@tauri-apps/plugin-opener";
+import { applyAccent, loadAccent, type Accent } from "../accent";
 import { diagnostic } from "../api";
 
 export function SettingsView() {
@@ -12,6 +13,7 @@ export function SettingsView() {
   const [diagDir, setDiagDir] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(loadTheme());
   const { t, i18n } = useTranslation();
+  const [accent, setAccent] = useState<Accent>(loadAccent);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +55,11 @@ export function SettingsView() {
           <option value="light">{t("settings.theme_light")}</option>
           <option value="dark">{t("settings.theme_dark")}</option>
           <option value="system">{t("settings.theme_system")}</option>
+        </select>
+        <h2 className="mt-4 font-semibold">{t("settings.accent")}</h2>
+        <select className="input mt-2" value={accent} onChange={(e) => { const a = e.target.value as Accent; setAccent(a); void applyAccent(a); }} aria-label={t("settings.accent")}>
+          <option value="solon">{t("settings.accent_solon")}</option>
+          <option value="windows">{t("settings.accent_windows")}</option>
         </select>
       </section>
       <section className="card mt-4 p-4">

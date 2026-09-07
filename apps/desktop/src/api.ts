@@ -79,6 +79,14 @@ export interface Settings {
 }
 
 // ---- moteur / service ----
+export interface ExecResult {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+  ms: number;
+  timed_out?: boolean;
+}
+
 export interface MachineMetrics {
   uptime_s: number;
   cpu_busy_ticks: number;
@@ -97,6 +105,8 @@ export interface MachineMetrics {
 export const engine = {
   status: () => invoke<EngineSnapshot>("engine_status"),
   metrics: () => invoke<MachineMetrics>("engine_metrics"),
+  /** Commande shell dans la machine (sortie capturée). */
+  exec: (command: string, timeoutS = 120) => invoke<ExecResult>("service_exec", { command, timeoutS }),
   start: () => invoke<void>("engine_start"),
   stop: (force = false) => invoke<void>("engine_stop", { force }),
   restart: () => invoke<void>("engine_restart"),

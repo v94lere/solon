@@ -20,6 +20,7 @@ tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2"
+tauri-plugin-window-state = "2"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 serde = { workspace = true }
 serde_json = { workspace = true }

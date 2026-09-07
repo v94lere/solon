@@ -53,7 +53,8 @@
       "failed": "Failed",
       "stopped": "Stopped",
       "service_unavailable": "Service not running"
-    }
+    },
+    "uptime": "up {{value}}"
   },
   "error": {
     "title": "Something needs your attention",
@@ -118,7 +119,25 @@
     "compose": "Compose project",
     "count_one": "{{count}} container",
     "count_other": "{{count}} containers",
-    "open_port": "Open {{url}} in the browser"
+    "open_port": "Open {{url}} in the browser",
+    "no_match": "Nothing matches your filter.",
+    "no_match_hint": "Try another name, image or status.",
+    "clear_filter": "Clear filter",
+    "start": {
+      "title": "No container yet",
+      "hint": "Three ways to get started.",
+      "hello_title": "Run your first container",
+      "hello_body": "Pulls the tiny hello-world image and runs it once. It appears in this list, stopped, in a few seconds.",
+      "hello_action": "Run hello-world",
+      "hello_running": "Running…",
+      "compose_title": "Open a Compose project",
+      "compose_body": "Pick a folder containing compose.yaml: Solon shows its services, merged logs and Up / Down buttons.",
+      "cli_title": "Use the docker command",
+      "cli_body": "The docker CLI is already on your PATH and talks to Solon. Anything you start shows up here.",
+      "cli_hint": "Every running container also gets https://<name>.solon.local, with or without published ports."
+    },
+    "none_running": "No running container",
+    "none_running_hint": "Stopped containers are hidden."
   },
   "detail": {
     "tabs": {
@@ -134,7 +153,12 @@
       "follow": "Follow",
       "clear": "Clear",
       "timestamps": "Timestamps",
-      "empty": "No output yet."
+      "empty": "No output yet.",
+      "wrap": "Wrap",
+      "search": "Search in logs",
+      "matches_one": "{{count}} line",
+      "matches_other": "{{count}} lines",
+      "no_match": "No line matches."
     },
     "terminal": {
       "shell": "Shell",
@@ -225,7 +249,10 @@
     "diagnostic_done": "{{count}} files written to {{path}}",
     "diagnostic_open": "Open folder",
     "legacy_fs": "Use the legacy Windows file sharing (9P) for mounted folders",
-    "legacy_fs_help": "Fallback if a container misbehaves with the Solon file system. Slower. Applies at the next engine start."
+    "legacy_fs_help": "Fallback if a container misbehaves with the Solon file system. Slower. Applies at the next engine start.",
+    "accent": "Accent color",
+    "accent_solon": "Solon orange",
+    "accent_windows": "Windows accent color"
   },
   "images": {
     "title": "Images",
@@ -258,7 +285,8 @@
       "cmd_hint": "leave empty for the image default",
       "start": "Start",
       "bad_port": "Invalid port mapping: {{value}}"
-    }
+    },
+    "empty_title": "No image yet"
   },
   "volumes": {
     "title": "Volumes",
@@ -284,7 +312,8 @@
       "body": "All data stored in this volume will be permanently deleted. This cannot be undone.",
       "confirm": "Remove"
     },
-    "files_hint": "Files stored in the volume"
+    "files_hint": "Files stored in the volume",
+    "empty_title": "No volume yet"
   },
   "networks": {
     "title": "Networks",
@@ -307,7 +336,8 @@
       "title": "Remove network {{name}}?",
       "body": "Containers attached to this network must be disconnected first.",
       "confirm": "Remove"
-    }
+    },
+    "empty_title": "Only the default networks"
   },
   "compose": {
     "title": "Compose",
@@ -424,7 +454,8 @@
       "memory": "Memory",
       "network": "Network",
       "trend": "CPU, last minute"
-    }
+    },
+    "empty_hint": "Start a container to see its CPU, memory and network here."
   },
   "files": {
     "path": "Path",

@@ -5,6 +5,7 @@ import { formatBytes, images, type ImageSummary } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { JsonDialog } from "../components/JsonDialog";
 import { RunImageDialog } from "../components/RunImageDialog";
+import { EmptyState, IconLayers, PageHeader, SkeletonRows } from "../components/ui";
 
 export function ImagesView() {
   const { t } = useTranslation();
@@ -37,12 +38,7 @@ export function ImagesView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 px-4 pt-4 pb-2">
-        <h1 className="text-lg font-semibold">{t("images.title")}</h1>
-        <span className="kbd-hint">{t("images.count", { count: rows.length })}</span>
-        <div className="flex-1" />
-        <input type="search" className="input w-72" placeholder={t("images.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("images.search")} />
-      </div>
+      <PageHeader title={t("images.title")} count={t("images.count", { count: rows.length })} search={<input type="search" className="input w-64" placeholder={t("images.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("images.search")} />} />
       {error && (
         <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>
           {error}
@@ -50,9 +46,11 @@ export function ImagesView() {
       )}
       <div className="card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
         {query.isLoading ? (
-          <p className="p-4" style={{ color: "var(--ink-2)" }}>{t("common.loading")}</p>
+          <SkeletonRows rows={5} cols={4} />
         ) : rows.length === 0 ? (
-          <p className="p-6 text-center" style={{ color: "var(--ink-2)" }}>{t("images.empty")}</p>
+          <EmptyState icon={<IconLayers />} title={filter ? t("containers.no_match") : t("images.empty_title")} hint={filter ? t("containers.no_match_hint") : t("images.empty")}>
+            {!filter && <code className="start-code">docker pull nginx</code>}
+          </EmptyState>
         ) : (
           <table className="table">
             <thead>

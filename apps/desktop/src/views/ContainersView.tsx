@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { IconLogs, IconPlay, IconRestart, IconStop, IconTrash } from "../components/Icons";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { containers, formatBytes, type ContainerSummary, type StatSample } from "../api";
+import { IconLogs, IconPlay, IconRestart, IconStop, IconTrash } from "../components/Icons";
+import { compose, containers, engine, formatBytes, type ContainerSummary, type StatSample } from "../api";
 import { markUserAction } from "../engine";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { ComposePanel } from "../components/ComposePanel";
 import { PortLinks } from "../components/PortLinks";
-import { projectDirOf } from "../projects";
+import { Avatar, EmptyState, IconBox, IconFolderOpen, IconGlobe, PageHeader, SkeletonRows, Spark, imageBase, pushHistory } from "../components/ui";
+import { loadRecentProjects, projectBaseName, projectDirOf, rememberProject } from "../projects";
 
 const COMPOSE_LABEL = "com.docker.compose.project";
+const HELLO_IMAGE = "public.ecr.aws/docker/library/hello-world";
 
 /** Nom court d'une image : dernier segment du dépôt, tag conservé (`…/library/busybox:1.36` → `busybox:1.36`). */
 function shortImage(image: string | undefined): string {
@@ -39,19 +41,25 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
   const [showStopped, setShowStopped] = useState(true);
   const [filter, setFilter] = useState("");
   const [stats, setStats] = useState<Record<string, StatSample>>({});
+  const [history, setHistory] = useState<Record<string, number[]>>({});
   const [removing, setRemoving] = useState<ContainerSummary | null>(null);
   const [removeVolumes, setRemoveVolumes] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recent] = useState<string[]>(loadRecentProjects);
+  const [hello, setHello] = useState<"idle" | "running" | "done">("idle");
 
   const query = useQuery({ queryKey: ["containers", showStopped], queryFn: () => containers.list(showStopped) });
 
-  // Statistiques en flux : un seul canal pour tous les conteneurs en marche.
+  // Statistiques en flux : un seul canal pour tous les conteneurs en marche ; historique court pour la courbe.
   useEffect(() => {
     let streamId: number | null = null;
     let cancelled = false;
     containers
-      .statsOpen((s) => setStats((prev) => ({ ...prev, [s.id]: s })))
+      .statsOpen((s) => {
+        setStats((prev) => ({ ...prev, [s.id]: s }));
+        setHistory((prev) => ({ ...prev, [s.id]: pushHistory(prev[s.id] ?? [], s.cpu_percent, 30) }));
+      })
       .then((id) => {
         if (cancelled) void containers.streamClose(id);
         else streamId = id;
@@ -96,19 +104,68 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
     }
   }
 
+  async function pickProject() {
+    setError(null);
+    const chosen = (await openDialog({ directory: true, multiple: false, title: t("compose.pick") })) as string | null;
+    if (!chosen) return;
+    try {
+      const p = await compose.detect(chosen);
+      if (!p) {
+        setError(t("compose.not_found", { dir: chosen }));
+        return;
+      }
+      rememberProject(chosen);
+      onOpenProject(chosen);
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
+  /** Premier conteneur : hello-world tiré du miroir public, lancé dans la machine. */
+  async function runHello() {
+    setHello("running");
+    setError(null);
+    try {
+      const r = await engine.exec(`docker pull -q ${HELLO_IMAGE} >/dev/null && docker run --name hello-world ${HELLO_IMAGE}`, 180);
+      if (r.code !== 0) throw new Error(r.stderr.trim() || r.stdout.trim() || `exit ${r.code}`);
+      await queryClient.invalidateQueries({ queryKey: ["containers"] });
+      setHello("done");
+    } catch (e) {
+      setError(String(e));
+      setHello("idle");
+    }
+  }
+
+  // Écran de démarrage seulement quand il n'existe vraiment aucun conteneur (arrêtés compris).
+  const noContainersAtAll = !query.isLoading && showStopped && (query.data ?? []).length === 0 && !filter.trim();
+  const noRunning = !query.isLoading && !showStopped && (query.data ?? []).length === 0 && !filter.trim();
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 px-4 pt-4 pb-2">
-        <h1 className="text-lg font-semibold">{t("containers.title")}</h1>
-        <span className="kbd-hint">{t("containers.count", { count: rows.length })}</span>
-        <div className="flex-1" />
-        <label className="flex items-center gap-2">
+      <PageHeader
+        title={t("containers.title")}
+        count={t("containers.count", { count: rows.length })}
+        actions={
+          <>
+            <button type="button" className="btn btn-sm" onClick={() => void pickProject()}>
+              <IconFolderOpen />
+              {t("compose.open")}
+            </button>
+            {recent.length > 0 && (
+              <select className="input input-sm max-w-64" value="" onChange={(e) => { if (e.target.value) onOpenProject(e.target.value); }} aria-label={t("compose.recent")}>
+                <option value="">{t("compose.recent")}</option>
+                {recent.map((r) => <option key={r} value={r}>{projectBaseName(r)}</option>)}
+              </select>
+            )}
+          </>
+        }
+        search={<input type="search" className="input w-64" placeholder={t("containers.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("containers.search")} />}
+      >
+        <label className="flex items-center gap-2 text-[13px]" style={{ color: "var(--ink-2)" }}>
           <input type="checkbox" checked={showStopped} onChange={(e) => setShowStopped(e.target.checked)} />
           {t("containers.show_stopped")}
         </label>
-        <input type="search" className="input w-72" placeholder={t("containers.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("containers.search")} />
-      </div>
-      <ComposePanel onOpenProject={onOpenProject} />
+      </PageHeader>
       {error && (
         <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>
           {error}
@@ -116,13 +173,37 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
       )}
       <div className="card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
         {query.isLoading ? (
-          <p className="p-4" style={{ color: "var(--ink-2)" }}>
-            {t("common.loading")}
-          </p>
+          <SkeletonRows rows={5} cols={6} />
+        ) : noContainersAtAll ? (
+          <EmptyState icon={<IconBox />} title={t("containers.start.title")} hint={t("containers.start.hint")}>
+            <div className="start-grid">
+              <div className="start-card">
+                <div className="start-icon"><IconBox /></div>
+                <h4>{t("containers.start.hello_title")}</h4>
+                <p>{t("containers.start.hello_body")}</p>
+                <button type="button" className="btn btn-primary btn-sm" disabled={hello !== "idle"} onClick={() => void runHello()}>
+                  {hello === "running" ? t("containers.start.hello_running") : t("containers.start.hello_action")}
+                </button>
+              </div>
+              <div className="start-card">
+                <div className="start-icon"><IconFolderOpen /></div>
+                <h4>{t("containers.start.compose_title")}</h4>
+                <p>{t("containers.start.compose_body")}</p>
+                <button type="button" className="btn btn-sm" onClick={() => void pickProject()}>{t("compose.open")}</button>
+              </div>
+              <div className="start-card">
+                <div className="start-icon"><IconGlobe /></div>
+                <h4>{t("containers.start.cli_title")}</h4>
+                <p>{t("containers.start.cli_body")}</p>
+                <code className="start-code">docker run -d --name web nginx</code>
+                <p className="kbd-hint">{t("containers.start.cli_hint")}</p>
+              </div>
+            </div>
+          </EmptyState>
+        ) : noRunning ? (
+          <EmptyState icon={<IconBox />} title={t("containers.none_running")} hint={t("containers.none_running_hint")} action={<button type="button" className="btn btn-sm" onClick={() => setShowStopped(true)}>{t("containers.show_stopped")}</button>} />
         ) : rows.length === 0 ? (
-          <p className="p-6 text-center" style={{ color: "var(--ink-2)" }}>
-            {t("containers.empty")}
-          </p>
+          <EmptyState title={t("containers.no_match")} hint={t("containers.no_match_hint")} action={<button type="button" className="btn btn-sm" onClick={() => setFilter("")}>{t("containers.clear_filter")}</button>} />
         ) : (
           <table className="table">
             <thead>
@@ -143,6 +224,7 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
                   project={project}
                   list={list}
                   stats={stats}
+                  history={history}
                   busy={busy}
                   onOpen={onOpen}
                   onOpenProject={onOpenProject}
@@ -185,6 +267,7 @@ function GroupRows({
   project,
   list,
   stats,
+  history,
   busy,
   onOpen,
   onAct,
@@ -194,6 +277,7 @@ function GroupRows({
   project: string;
   list: ContainerSummary[];
   stats: Record<string, StatSample>;
+  history: Record<string, number[]>;
   busy: string | null;
   onOpen: (id: string) => void;
   onAct: (id: string, action: () => Promise<void>) => Promise<void>;
@@ -204,12 +288,12 @@ function GroupRows({
   return (
     <>
       {project && (
-        <tr>
-          <td colSpan={7} className="!py-1 text-[11.5px] font-semibold uppercase tracking-wide" style={{ color: "var(--accent-ink)", background: "var(--surface-2)" }}>
+        <tr className="group-row">
+          <td colSpan={7}>
             {(() => {
               const dir = list.map(projectDirOf).find((d) => d);
               return dir ? (
-                <button type="button" className="hover:underline" style={{ color: "inherit", font: "inherit", textTransform: "inherit" }} title={dir} onClick={() => onOpenProject(dir)}>
+                <button type="button" className="group-link" title={dir} onClick={() => onOpenProject(dir)}>
                   {t("containers.compose")} · {project} →
                 </button>
               ) : (
@@ -223,6 +307,7 @@ function GroupRows({
         const name = (c.Names?.[0] ?? c.Id.slice(0, 12)).replace(/^\//, "");
         const s = stats[c.Id];
         const running = c.State === "running";
+        const cpuHist = history[c.Id] ?? [];
         return (
           <tr
             key={c.Id}
@@ -233,11 +318,14 @@ function GroupRows({
             }}
           >
             <td>
-              <button type="button" className="font-medium hover:underline" onClick={() => onOpen(c.Id)} style={{ color: "var(--ink)" }}>
-                {name}
-              </button>
+              <span className="flex items-center gap-2.5">
+                <Avatar label={imageBase(c.Image)} seed={imageBase(c.Image)} title={c.Image} />
+                <button type="button" className="font-medium hover:underline" onClick={() => onOpen(c.Id)} style={{ color: running ? "var(--ink)" : "var(--ink-2)" }}>
+                  {name}
+                </button>
+              </span>
             </td>
-            <td className="mono max-w-[220px] truncate" title={c.Image}>
+            <td className="mono max-w-[220px] truncate" title={c.Image} style={{ color: "var(--ink-2)" }}>
               {shortImage(c.Image)}
             </td>
             <td>
@@ -251,7 +339,16 @@ function GroupRows({
             <td className="mono">
               <PortLinks c={c} running={running} />
             </td>
-            <td className="mono text-right whitespace-nowrap">{running && s ? `${s.cpu_percent.toFixed(1)} %` : "—"}</td>
+            <td className="text-right whitespace-nowrap">
+              {running && s ? (
+                <span className="inline-flex items-center justify-end gap-2">
+                  <Spark values={cpuHist} max={Math.max(100, ...cpuHist)} className="spark-row spark-cell" warn={70} bad={90} history={30} />
+                  <span className="mono">{s.cpu_percent.toFixed(1)} %</span>
+                </span>
+              ) : (
+                <span className="mono">—</span>
+              )}
+            </td>
             <td className="mono text-right whitespace-nowrap">{running && s ? formatBytes(s.mem_usage) : "—"}</td>
             <td>
               <div className="flex justify-end gap-0.5">
