@@ -53,6 +53,8 @@ struct Inner {
     stopping: std::sync::atomic::AtomicBool,
     /// Domaines locaux `*.solon.local` → port hôte (partagé avec le mandataire HTTP).
     domains: crate::domains::SharedDomains,
+    /// Réveil à la demande (pause des conteneurs inactifs, réveil à la connexion).
+    sleeper: Arc<crate::sleep::Sleeper>,
 }
 
 #[derive(Clone)]
@@ -62,6 +64,7 @@ pub struct Engine {
 
 impl Engine {
     pub fn new(cfg: EngineConfig) -> Self {
+        let sleeper = crate::sleep::Sleeper::new(sleep_settings(&cfg.settings));
         let (snapshot, _) = watch::channel(EngineSnapshot {
             state: Some(EngineState::Stopped),
             ..Default::default()
@@ -76,6 +79,7 @@ impl Engine {
                 op: Mutex::new(()),
                 stopping: Default::default(),
                 domains: Default::default(),
+                sleeper,
             }),
         }
     }
@@ -94,6 +98,14 @@ impl Engine {
 
     pub fn settings(&self) -> Settings {
         self.inner.cfg.settings.clone()
+    }
+
+    /// Réglages du réveil à la demande, appliqués immédiatement (sans redémarrer le moteur).
+    pub async fn apply_sleep_settings(&self, settings: &Settings) {
+        self.inner
+            .sleeper
+            .set_settings(sleep_settings(settings))
+            .await;
     }
 
     fn set(&self, f: impl FnOnce(&mut EngineSnapshot)) {
@@ -415,7 +427,8 @@ impl Engine {
         self.step(ProvisionStep::WaitingEngine);
         let mut events = AgentEvents::connect(&guid, Duration::from_secs(10)).await?;
         let deadline = Instant::now() + Duration::from_secs(90);
-        let mut ports = PortRelays::default();
+        let mut ports = PortRelays::new(self.inner.sleeper.clone());
+        self.inner.sleeper.set_agent(Some(agent.clone())).await;
         let mut initial_ports = Vec::new();
         loop {
             let remaining = deadline.saturating_duration_since(Instant::now());
@@ -447,13 +460,34 @@ impl Engine {
         self.update_domains(&[]).await;
 
         let mut tasks = Vec::new();
+
+        tasks.push(tokio::spawn(self.inner.sleeper.clone().run()));
+
+        {
+            let engine = self.clone();
+
+            tasks.push(tokio::spawn(async move {
+                loop {
+                    engine.inner.sleeper.changed().await;
+
+                    let sleeping = engine.inner.sleeper.sleeping().await;
+
+                    engine.inner.snapshot.send_modify(|s| s.sleeping = sleeping);
+
+                    let snap = engine.snapshot();
+
+                    let _ = engine.inner.events.send(ServiceEvent::State(snap));
+                }
+            }));
+        }
         // Domaines locaux : mandataire HTTP sur 127.0.0.1:80 (si le port est libre).
         match crate::domains::bind_proxy().await {
             Ok(listener) => {
                 self.set(|s| s.local_domains = true);
                 let domains = self.inner.domains.clone();
+                let sleeper = self.inner.sleeper.clone();
                 tasks.push(tokio::spawn(async move {
-                    if let Err(e) = crate::domains::serve_proxy(listener, domains).await {
+                    if let Err(e) = crate::domains::serve_proxy(listener, domains, sleeper).await {
                         tracing::warn!("mandataire des domaines locaux arrêté : {e}");
                     }
                 }));
@@ -473,8 +507,10 @@ impl Engine {
                 Ok(listener) => {
                     self.set(|s| s.local_domains_tls = true);
                     let domains = self.inner.domains.clone();
+                    let sleeper = self.inner.sleeper.clone();
                     tasks.push(tokio::spawn(async move {
-                        if let Err(e) = crate::domains::serve_tls_proxy(listener, domains, ca).await
+                        if let Err(e) =
+                            crate::domains::serve_tls_proxy(listener, domains, ca, sleeper).await
                         {
                             tracing::warn!("mandataire HTTPS arrêté : {e}");
                         }
@@ -562,9 +598,11 @@ impl Engine {
                         engine.emit(ServiceEvent::Ports { bindings });
                     }
                     Ok(Some(AgentEvent::Container { action, id, name })) => {
+                        engine.inner.sleeper.on_container_event(&action, &id).await;
                         engine.emit(ServiceEvent::Container { action, id, name })
                     }
                     Ok(Some(AgentEvent::EndpointsChanged { endpoints })) => {
+                        engine.inner.sleeper.update_endpoints(&endpoints).await;
                         engine.update_domains(&endpoints).await;
                     }
                     Ok(Some(AgentEvent::DiskPressure { used_pct, free_mb })) => {
@@ -696,12 +734,14 @@ impl Engine {
         st.updated_unix_ms = settings::now_unix_ms();
         let _ = settings::save_state(&state_path, &st);
         self.update_domains(&[]).await;
+        self.inner.sleeper.set_agent(None).await;
         let _ = tokio::task::spawn_blocking(crate::domains::remove_route).await;
         self.set(|s| {
             s.state = Some(EngineState::Stopped);
             s.step = None;
             s.local_domains = false;
             s.local_domains_tls = false;
+            s.sleeping.clear();
             s.published_ports.clear();
             s.guest_address = None;
             s.ready_since_unix_ms = None;
@@ -937,4 +977,13 @@ fn boot_shares(drives: &[String]) -> Vec<solon_core::vm::HostShare> {
             })
         })
         .collect()
+}
+
+/// Réglages du réveil à la demande, dérivés des réglages utilisateur.
+fn sleep_settings(s: &Settings) -> crate::sleep::SleepSettings {
+    crate::sleep::SleepSettings {
+        enabled: s.sleep_enabled,
+        idle: std::time::Duration::from_secs(u64::from(s.sleep_idle_minutes.max(1)) * 60),
+        never: s.sleep_never.iter().cloned().collect(),
+    }
 }

@@ -38,7 +38,8 @@ export function SettingsView() {
   }
 
   return (
-    <div className="max-w-xl p-6">
+    <div className="h-full overflow-auto p-6">
+      <div className="max-w-xl">
       <h1 className="text-lg font-semibold">{t("settings.title")}</h1>
 
       <section className="card mt-4 p-4">
@@ -113,6 +114,21 @@ export function SettingsView() {
               <input type="checkbox" checked={settings.autostart} onChange={(e) => setSettings({ ...settings, autostart: e.target.checked })} />
               {t("settings.autostart")}
             </label>
+            <div className="col-span-2 mt-1 border-t pt-3" style={{ borderColor: "var(--line)" }}>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={settings.sleep_enabled ?? true} onChange={(e) => setSettings({ ...settings, sleep_enabled: e.target.checked })} />
+                {t("settings.sleep")}
+              </label>
+              <p className="mt-1" style={{ color: "var(--ink-2)" }}>{t("settings.sleep_help")}</p>
+              <label className="mt-2 flex items-center gap-2">
+                {t("settings.sleep_after")}
+                <input type="number" className="input w-24" min={1} max={1440} value={settings.sleep_idle_minutes ?? 10} disabled={!(settings.sleep_enabled ?? true)} onChange={(e) => setSettings({ ...settings, sleep_idle_minutes: Number(e.target.value) })} />
+                {t("settings.sleep_minutes")}
+              </label>
+              {(settings.sleep_never ?? []).length > 0 && (
+                <p className="mt-1 kbd-hint">{t("settings.sleep_never", { names: (settings.sleep_never ?? []).join(", ") })}</p>
+              )}
+            </div>
             <label className="col-span-2 flex items-center gap-2" title={t("settings.legacy_fs_help")}>
               <input type="checkbox" checked={settings.legacy_file_sharing ?? false} onChange={(e) => setSettings({ ...settings, legacy_file_sharing: e.target.checked })} />
               {t("settings.legacy_fs")}
@@ -135,6 +151,7 @@ export function SettingsView() {
           </p>
         )}
       </section>
+      </div>
     </div>
   );
 }

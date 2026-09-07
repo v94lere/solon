@@ -13,6 +13,8 @@ import { IconLogs, IconPlay, IconRestart, IconStop, IconTerminal, IconTrash } fr
 import { Avatar, imageBase } from "../components/ui";
 import { markUserAction } from "../engine";
 import { useQueryClient } from "@tanstack/react-query";
+import { engine } from "../api";
+import { useEngine } from "../engine";
 
 type Tab = "overview" | "logs" | "files" | "terminal" | "debug" | "inspect";
 
@@ -63,6 +65,18 @@ export function ContainerDetail({ id, onBack }: { id: string; onBack: () => void
   const running = inspect.data?.State?.Running ?? false;
   const image = inspect.data?.Config?.Image;
   const tabs: Tab[] = ["overview", "logs", "files", "terminal", "debug", "inspect"];
+  const { snapshot } = useEngine();
+  const asleep = inspect.data?.State?.Status === "paused" && (snapshot?.sleeping ?? []).includes(id);
+  const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: () => engine.settingsGet() });
+  const keepAwake = (settingsQuery.data?.sleep_never ?? []).includes(name);
+  async function toggleKeepAwake() {
+    const current = settingsQuery.data ?? (await engine.settingsGet());
+    const never = new Set(current.sleep_never ?? []);
+    if (never.has(name)) never.delete(name);
+    else never.add(name);
+    await engine.settingsSet({ ...current, sleep_never: [...never] });
+    await queryClient.invalidateQueries({ queryKey: ["settings"] });
+  }
 
   async function act(action: () => Promise<void>) {
     markUserAction(id);
@@ -88,10 +102,17 @@ export function ContainerDetail({ id, onBack }: { id: string; onBack: () => void
         <Avatar label={imageBase(image)} seed={imageBase(image)} size={30} title={image} />
         <h1 className="text-base font-semibold">{name}</h1>
         {image && <span className="mono kbd-hint max-w-[320px] truncate" title={image}>{image}</span>}
-        <span className={`pill ${running ? "pill-ok" : "pill-muted"}`}>{t(`containers.state.${inspect.data?.State?.Status ?? "created"}`, { defaultValue: inspect.data?.State?.Status })}</span>
+        {asleep ? (
+          <span className="pill pill-sleep" title={t("containers.sleeping_hint")}>{t("containers.sleeping")}</span>
+        ) : (
+          <span className={`pill ${running ? "pill-ok" : "pill-muted"}`}>{t(`containers.state.${inspect.data?.State?.Status ?? "created"}`, { defaultValue: inspect.data?.State?.Status })}</span>
+        )}
         <span className="flex-1" />
+        <button type="button" className={`btn btn-ghost btn-sm ${keepAwake ? "is-on" : ""}`} title={t("detail.keep_awake_help")} aria-pressed={keepAwake} onClick={() => void toggleKeepAwake()}>
+          {keepAwake ? t("detail.keep_awake_on") : t("detail.keep_awake")}
+        </button>
         <div className="flex items-center gap-0.5">
-          {running ? (
+          {running || asleep ? (
             <>
               <button type="button" className="icon-btn" title={t("containers.actions.stop")} aria-label={t("containers.actions.stop")} disabled={busy} onClick={() => void act(() => containers.stop(id))}><IconStop /></button>
               <button type="button" className="icon-btn" title={t("containers.actions.restart")} aria-label={t("containers.actions.restart")} disabled={busy} onClick={() => void act(() => containers.restart(id))}><IconRestart /></button>

@@ -21,3 +21,4 @@ pub mod network;
 pub mod paths;
 pub mod ports;
 pub mod settings;
+pub mod sleep;

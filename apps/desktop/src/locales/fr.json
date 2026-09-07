@@ -137,7 +137,9 @@
       "cli_hint": "Chaque conteneur en marche reçoit aussi https://<nom>.solon.local, avec ou sans port publié."
     },
     "none_running": "Aucun conteneur en marche",
-    "none_running_hint": "Les conteneurs arrêtés sont masqués."
+    "none_running_hint": "Les conteneurs arrêtés sont masqués.",
+    "sleeping": "Endormi",
+    "sleeping_hint": "Mis en pause par Solon après une période d'inactivité. Se réveille à la première requête."
   },
   "detail": {
     "tabs": {
@@ -215,7 +217,10 @@
       "copied_from": "{{path}} copié dans {{dest}}",
       "copied_to": "{{src}} envoyé dans {{dest}}",
       "stopped_note": "L'envoi exige un conteneur en marche ; la copie depuis un conteneur arrêté fonctionne."
-    }
+    },
+    "keep_awake": "Garder éveillé",
+    "keep_awake_on": "Toujours éveillé",
+    "keep_awake_help": "Ne jamais endormir ce conteneur, même inactif."
   },
   "common": {
     "loading": "Chargement…",
@@ -251,8 +256,13 @@
     "legacy_fs": "Utiliser l'ancien partage de fichiers Windows (9P) pour les dossiers montés",
     "legacy_fs_help": "Repli si un conteneur se comporte mal avec le système de fichiers Solon. Plus lent. Appliqué au prochain démarrage du moteur.",
     "accent": "Couleur d'accent",
-    "accent_solon": "Orange Solon",
-    "accent_windows": "Couleur d'accent de Windows"
+    "accent_solon": "Bleu Solon",
+    "accent_windows": "Couleur d'accent de Windows",
+    "sleep": "Endormir les conteneurs inactifs",
+    "sleep_help": "Les conteneurs joints via Solon (adresses solon.local ou ports publiés) sont mis en pause quand plus personne ne leur parle ; ils se réveillent à la première requête en une fraction de seconde. Les bases de données et les tâches de fond qui ne parlent qu'en interne ne sont jamais concernées.",
+    "sleep_after": "Après",
+    "sleep_minutes": "minutes sans trafic",
+    "sleep_never": "Toujours éveillés : {{names}}"
   },
   "images": {
     "title": "Images",

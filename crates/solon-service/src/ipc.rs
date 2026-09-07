@@ -126,7 +126,11 @@ async fn handle(
                 Response::ok(id, settings::load_settings(&settings_path))
             }
             ServiceCommand::SetSettings(s) => match settings::save_settings(&settings_path, &s) {
-                Ok(()) => Response::ok(id, serde_json::json!({ "applied_on_next_start": true })),
+                Ok(()) => {
+                    // Le réveil à la demande s'applique tout de suite ; le reste au prochain démarrage.
+                    engine.apply_sleep_settings(&s).await;
+                    Response::ok(id, serde_json::json!({ "applied_on_next_start": true }))
+                }
                 Err(e) => Response::err(id, e.to_string()),
             },
             ServiceCommand::Subscribe => {

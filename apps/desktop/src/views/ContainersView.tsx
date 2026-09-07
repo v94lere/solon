@@ -9,8 +9,15 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { PortLinks } from "../components/PortLinks";
 import { Avatar, EmptyState, IconBox, IconFolderOpen, IconGlobe, PageHeader, SkeletonRows, Spark, imageBase, pushHistory } from "../components/ui";
 import { loadRecentProjects, projectBaseName, projectDirOf, rememberProject } from "../projects";
+import { useEngine } from "../engine";
 
 const COMPOSE_LABEL = "com.docker.compose.project";
+
+const IconMoon = () => (
+  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />
+  </svg>
+);
 const HELLO_IMAGE = "public.ecr.aws/docker/library/hello-world";
 
 /** Nom court d'une image : dernier segment du dépôt, tag conservé (`…/library/busybox:1.36` → `busybox:1.36`). */
@@ -37,6 +44,8 @@ function stateClass(state: string) {
 
 export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string) => void; onOpenProject: (dir: string) => void }) {
   const { t } = useTranslation();
+  const { snapshot } = useEngine();
+  const sleeping = snapshot?.sleeping ?? [];
   const queryClient = useQueryClient();
   const [showStopped, setShowStopped] = useState(true);
   const [filter, setFilter] = useState("");
@@ -225,6 +234,7 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
                   list={list}
                   stats={stats}
                   history={history}
+                  sleeping={sleeping}
                   busy={busy}
                   onOpen={onOpen}
                   onOpenProject={onOpenProject}
@@ -268,6 +278,7 @@ function GroupRows({
   list,
   stats,
   history,
+  sleeping,
   busy,
   onOpen,
   onAct,
@@ -278,6 +289,7 @@ function GroupRows({
   list: ContainerSummary[];
   stats: Record<string, StatSample>;
   history: Record<string, number[]>;
+  sleeping: string[];
   busy: string | null;
   onOpen: (id: string) => void;
   onAct: (id: string, action: () => Promise<void>) => Promise<void>;
@@ -306,7 +318,9 @@ function GroupRows({
       {list.map((c) => {
         const name = (c.Names?.[0] ?? c.Id.slice(0, 12)).replace(/^\//, "");
         const s = stats[c.Id];
+        const asleep = c.State === "paused" && sleeping.includes(c.Id);
         const running = c.State === "running";
+        const reachable = running || asleep;
         const cpuHist = history[c.Id] ?? [];
         return (
           <tr
@@ -329,15 +343,22 @@ function GroupRows({
               {shortImage(c.Image)}
             </td>
             <td>
-              <span
-                className={`pill pill-dot ${stateClass(c.State)}`}
-                role="img"
-                title={`${t(`containers.state.${c.State}`, { defaultValue: c.State })} — ${c.Status ?? ""}`}
-                aria-label={t(`containers.state.${c.State}`, { defaultValue: c.State })}
-              />
+              {asleep ? (
+                <span className="pill pill-sleep" title={t("containers.sleeping_hint")}>
+                  <IconMoon />
+                  {t("containers.sleeping")}
+                </span>
+              ) : (
+                <span
+                  className={`pill pill-dot ${stateClass(c.State)}`}
+                  role="img"
+                  title={`${t(`containers.state.${c.State}`, { defaultValue: c.State })} — ${c.Status ?? ""}`}
+                  aria-label={t(`containers.state.${c.State}`, { defaultValue: c.State })}
+                />
+              )}
             </td>
             <td className="mono">
-              <PortLinks c={c} running={running} />
+              <PortLinks c={c} running={reachable} />
             </td>
             <td className="text-right whitespace-nowrap">
               {running && s ? (
@@ -352,7 +373,7 @@ function GroupRows({
             <td className="mono text-right whitespace-nowrap">{running && s ? formatBytes(s.mem_usage) : "—"}</td>
             <td>
               <div className="flex justify-end gap-0.5">
-                {running ? (
+                {running || asleep ? (
                   <>
                     <button type="button" className="icon-btn" title={t("containers.actions.stop")} aria-label={t("containers.actions.stop")} disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.stop(c.Id))}>
                       <IconStop />

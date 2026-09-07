@@ -137,7 +137,9 @@
       "cli_hint": "Every running container also gets https://<name>.solon.local, with or without published ports."
     },
     "none_running": "No running container",
-    "none_running_hint": "Stopped containers are hidden."
+    "none_running_hint": "Stopped containers are hidden.",
+    "sleeping": "Asleep",
+    "sleeping_hint": "Paused by Solon after a period of inactivity. Wakes up on the first request."
   },
   "detail": {
     "tabs": {
@@ -215,7 +217,10 @@
       "copied_from": "{{path}} copied to {{dest}}",
       "copied_to": "{{src}} sent to {{dest}}",
       "stopped_note": "Sending files requires a running container; copying from a stopped container works."
-    }
+    },
+    "keep_awake": "Keep awake",
+    "keep_awake_on": "Kept awake",
+    "keep_awake_help": "Never put this container to sleep, even when idle."
   },
   "common": {
     "loading": "Loading…",
@@ -251,8 +256,13 @@
     "legacy_fs": "Use the legacy Windows file sharing (9P) for mounted folders",
     "legacy_fs_help": "Fallback if a container misbehaves with the Solon file system. Slower. Applies at the next engine start.",
     "accent": "Accent color",
-    "accent_solon": "Solon orange",
-    "accent_windows": "Windows accent color"
+    "accent_solon": "Solon blue",
+    "accent_windows": "Windows accent color",
+    "sleep": "Put idle containers to sleep",
+    "sleep_help": "Containers reached through Solon (solon.local addresses or published ports) are paused when nobody talks to them; they wake up on the first request in a fraction of a second. Databases and background workers that only talk internally are never affected.",
+    "sleep_after": "After",
+    "sleep_minutes": "minutes without traffic",
+    "sleep_never": "Kept awake: {{names}}"
   },
   "images": {
     "title": "Images",

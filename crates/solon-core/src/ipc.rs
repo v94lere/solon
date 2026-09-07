@@ -170,6 +170,9 @@ pub struct EngineSnapshot {
     /// Le mandataire HTTPS (127.0.0.1:443, autorité locale) est actif.
     #[serde(default)]
     pub local_domains_tls: bool,
+    /// Conteneurs endormis par Solon (identifiants), réveillés à la première connexion.
+    #[serde(default)]
+    pub sleeping: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -182,6 +185,23 @@ pub struct Settings {
     /// Repli : partager les dossiers Windows par le 9P de Windows (ancien mécanisme) au lieu de solonfs.
     #[serde(default)]
     pub legacy_file_sharing: bool,
+    /// Réveil à la demande : endormir (pause) les conteneurs joints via Solon restés inactifs.
+    #[serde(default = "default_true")]
+    pub sleep_enabled: bool,
+    /// Minutes d'inactivité avant l'endormissement.
+    #[serde(default = "default_sleep_minutes")]
+    pub sleep_idle_minutes: u32,
+    /// Noms de conteneurs à ne jamais endormir.
+    #[serde(default)]
+    pub sleep_never: Vec<String>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_sleep_minutes() -> u32 {
+    10
 }
 
 impl Default for Settings {
@@ -192,6 +212,9 @@ impl Default for Settings {
             data_disk_gib: 64,
             autostart: false,
             legacy_file_sharing: false,
+            sleep_enabled: true,
+            sleep_idle_minutes: 10,
+            sleep_never: Vec::new(),
         }
     }
 }

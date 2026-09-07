@@ -358,12 +358,17 @@ pub async fn bind_tls_proxy() -> io::Result<TcpListener> {
 }
 
 /// Sert le mandataire HTTP sur le port réservé par [`bind_proxy`].
-pub async fn serve_proxy(listener: TcpListener, domains: SharedDomains) -> io::Result<()> {
+pub async fn serve_proxy(
+    listener: TcpListener,
+    domains: SharedDomains,
+    sleeper: Arc<crate::sleep::Sleeper>,
+) -> io::Result<()> {
     loop {
         let (client, _) = listener.accept().await?;
         let domains = domains.clone();
+        let sleeper = sleeper.clone();
         tokio::spawn(async move {
-            if let Err(e) = handle(client, domains).await {
+            if let Err(e) = handle(client, domains, sleeper).await {
                 tracing::debug!("domaine local : {e}");
             }
         });
@@ -376,6 +381,7 @@ pub async fn serve_tls_proxy(
     listener: TcpListener,
     domains: SharedDomains,
     ca: Arc<LocalCa>,
+    sleeper: Arc<crate::sleep::Sleeper>,
 ) -> io::Result<()> {
     let config = rustls::ServerConfig::builder()
         .with_no_client_auth()
@@ -385,10 +391,11 @@ pub async fn serve_tls_proxy(
         let (client, _) = listener.accept().await?;
         let domains = domains.clone();
         let acceptor = acceptor.clone();
+        let sleeper = sleeper.clone();
         tokio::spawn(async move {
             match acceptor.accept(client).await {
                 Ok(tls) => {
-                    if let Err(e) = handle(tls, domains).await {
+                    if let Err(e) = handle(tls, domains, sleeper).await {
                         tracing::debug!("domaine local (https) : {e}");
                     }
                 }
@@ -398,7 +405,11 @@ pub async fn serve_tls_proxy(
     }
 }
 
-async fn handle<S>(mut client: S, domains: SharedDomains) -> io::Result<()>
+async fn handle<S>(
+    mut client: S,
+    domains: SharedDomains,
+    sleeper: Arc<crate::sleep::Sleeper>,
+) -> io::Result<()>
 where
     S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
 {
@@ -439,6 +450,8 @@ where
         client.write_all(resp.as_bytes()).await?;
         return Ok(());
     };
+    // Réveille le conteneur s'il dort ; la garde le maintient éveillé le temps de la requête.
+    let _guard = sleeper.on_connection_ip(&target.ip.to_string()).await;
     let mut upstream = match tokio::time::timeout(
         std::time::Duration::from_secs(5),
         tokio::net::TcpStream::connect((target.ip, target.port)),

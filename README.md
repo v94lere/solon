@@ -92,6 +92,11 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
   déroulante rappelle les projets récents, et un clic sur l'en-tête d'un groupe Compose ouvre l'écran du projet :
   services et leur état, **journaux de tous les services mêlés**, Up / Down / Reconstruire avec la **sortie en
   direct**, ouverture du dossier dans l'**Explorateur** ou dans **VS Code**.
+- **Réveil à la demande** : un conteneur joint via Solon (adresse `solon.local` ou port publié) qui ne reçoit plus
+  rien pendant dix minutes (réglable) est **mis en pause** : zéro processeur, mémoire conservée. La première requête
+  suivante le réveille en une fraction de seconde, avant d'être servie. Les bases de données et les tâches de fond
+  qui ne parlent qu'en interne ne sont jamais concernées ; un bouton « Keep awake » dans la fiche exclut un
+  conteneur ; l'état « Asleep » apparaît dans la liste.
 - **Fiche d'un conteneur** (clic sur son nom) : onglet **Overview** avec image, commande, dates, politique de
   redémarrage, réseaux (adresse, passerelle, alias), ports, montages, variables d'environnement, étiquettes, et
   **copie de fichiers** dans les deux sens (`docker cp` sans ligne de commande). Onglets Logs, Terminal, Inspect.

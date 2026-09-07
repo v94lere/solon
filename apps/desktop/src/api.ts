@@ -47,6 +47,7 @@ export interface EngineSnapshot {
   recovered_from_crash: boolean;
   local_domains?: boolean;
   local_domains_tls?: boolean;
+  sleeping?: string[];
   reattached?: boolean;
 }
 
@@ -76,6 +77,9 @@ export interface Settings {
   data_disk_gib: number;
   autostart: boolean;
   legacy_file_sharing?: boolean;
+  sleep_enabled?: boolean;
+  sleep_idle_minutes?: number;
+  sleep_never?: string[];
 }
 
 // ---- moteur / service ----

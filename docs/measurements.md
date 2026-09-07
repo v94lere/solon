@@ -632,3 +632,26 @@ terminaux et première couleur des journaux mêlés en bleu ; vert néon d'état
 Défaut trouvé : le module d'état de fenêtre restaurait aussi la **visibilité** ; fermée dans la barre des tâches, la
 fenêtre serait restée masquée au lancement suivant → drapeau `VISIBLE` exclu.
 
+## Réveil à la demande (7–8 septembre 2026, nuit)
+
+Demande : « fait le 1 » de la liste des plus-values (sommeil automatique et réveil à la demande). Service seul
+(`crates/solon-service/src/sleep.rs`), aucun changement d'image ; réglages appliqués sans redémarrage.
+
+| Élément | Réalisation | Vérification |
+|---|---|---|
+| Éligibilité | seuls les conteneurs ayant déjà reçu une connexion **via Solon** (domaine ou port publié) ; jamais tant qu'une connexion relayée est ouverte ; jamais ceux de « Keep awake » ; jamais si l'état Docker n'est pas `running` (pause manuelle respectée) | `odoo18-db-1` (PostgreSQL, joint seulement par Odoo en interne) **jamais endormi** pendant tout le test |
+| Endormissement | boucle toutes les 15 s, `docker pause` par l'agent, délai par défaut 10 min (réglable 1–1440) | `web` et `odoo18-odoo-1` touchés à 23:53:46 → endormis à 00:03:48 (`idle_s=600`) ; avec 1 min : endormis 71 s après la dernière requête |
+| Réveil | `docker unpause` avant le relais de la première connexion (mandataire des domaines **et** relais de ports) | `web` via `web.solon.local` : réveil 51 ms, réponse complète 115 ms ; Odoo via `localhost:8069` : réveil 31 ms, réponse 355 ms |
+| Interface | pastille « Asleep » avec lune dans la liste et la fiche, liens de domaine conservés (un clic réveille), bouton « Keep awake » dans la fiche (liste `sleep_never`), réglages activer / délai | capture `.local/build/s6.png` : Odoo et web « Asleep », db en marche ; `s7.png` : web de nouveau en marche après une requête |
+| Événements | `unpause` / `stop` / `start` faits par l'utilisateur sortent le conteneur de la liste des endormis | code (`on_container_event`) |
+
+### Défaut trouvé en chemin
+
+| Défaut | Cause | Correction |
+|---|---|---|
+| Bouton « Save » des réglages inaccessible | la page Réglages n'était pas défilable ; les nouveaux réglages l'ont fait dépasser la fenêtre | conteneur défilable (`overflow-auto`) |
+
+Limites connues : un conteneur endormi ne fait plus tourner ses tâches planifiées internes (cron d'Odoo par exemple)
+tant que personne ne l'appelle ; « Keep awake » règle le cas. Les connexions non relayées par Solon (par exemple
+l'accès direct à l'adresse `10.90.x.y`) ne réveillent pas et ne comptent pas comme activité.
+

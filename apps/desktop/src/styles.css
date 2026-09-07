@@ -449,3 +449,9 @@ select {
 .spark.is-bad .spark-stop-a, .spark.is-bad .spark-stop-b { stop-color: var(--bad); }
 .spark-lg { height: 56px; }
 .spark-cell { display: inline-block; width: 64px; height: 18px; margin: 0; }
+
+/* Conteneur endormi (réveil à la demande) */
+.pill-sleep { color: var(--accent-ink); background: var(--accent-soft); }
+.pill-sleep::before { display: none; }
+.pill-sleep svg { flex: none; }
+.btn.is-on { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }

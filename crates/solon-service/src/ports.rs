@@ -19,12 +19,19 @@ struct Key {
     protocol: String,
 }
 
-#[derive(Default)]
 pub struct PortRelays {
     active: HashMap<Key, (PortBinding, JoinHandle<()>)>,
+    sleeper: std::sync::Arc<crate::sleep::Sleeper>,
 }
 
 impl PortRelays {
+    pub fn new(sleeper: std::sync::Arc<crate::sleep::Sleeper>) -> Self {
+        Self {
+            active: HashMap::new(),
+            sleeper,
+        }
+    }
+
     /// Applique l'ensemble complet des liaisons : ouvre les nouvelles, ferme celles disparues,
     /// remplace celles dont la cible a changé.
     pub fn apply(&mut self, bindings: &[PortBinding], vm: GUID) {
@@ -63,7 +70,7 @@ impl PortRelays {
                 continue;
             }
             let binding = b.clone();
-            let task = tokio::spawn(listen(binding.clone(), vm));
+            let task = tokio::spawn(listen(binding.clone(), vm, self.sleeper.clone()));
             self.active.insert(k, (binding, task));
         }
         let udp = bindings.iter().filter(|b| b.protocol == "udp").count();
@@ -96,7 +103,7 @@ fn listen_addr(b: &PortBinding) -> Option<SocketAddr> {
     Some(SocketAddr::new(ip, b.host_port))
 }
 
-async fn listen(binding: PortBinding, vm: GUID) {
+async fn listen(binding: PortBinding, vm: GUID, sleeper: std::sync::Arc<crate::sleep::Sleeper>) {
     let Some(addr) = listen_addr(&binding) else {
         tracing::warn!(?binding, "adresse d'écoute invalide");
         return;
@@ -119,7 +126,10 @@ async fn listen(binding: PortBinding, vm: GUID) {
             }
         };
         let b = binding.clone();
+        let sleeper = sleeper.clone();
         tokio::spawn(async move {
+            // Réveille le conteneur s'il dort ; la garde le maintient éveillé le temps de la connexion.
+            let _guard = sleeper.on_connection_name(&b.container_name).await;
             if let Err(e) = relay_connection(client, &b, vm).await {
                 tracing::debug!(%peer, "relais terminé : {e}");
             }
