@@ -72,6 +72,8 @@ install -m 0755 "$AGENT" "$ROOT/sbin/solon-agent"
 install -d "$ROOT/etc/docker" "$ROOT/etc/solon" "$ROOT/var/lib/docker" "$ROOT/var/lib/containerd" \
            "$ROOT/var/lib/solon" "$ROOT/mnt/host" "$ROOT/run"
 install -m 0644 "$HERE/files/daemon.json" "$ROOT/etc/docker/daemon.json"
+install -d "$ROOT/usr/local/bin"
+install -m 0755 "$HERE/files/solon-debug" "$ROOT/usr/local/bin/solon-debug"
 install -m 0644 "$HERE/files/containerd.toml" "$ROOT/etc/containerd/config.toml" 2>/dev/null || {
     install -d "$ROOT/etc/containerd"; install -m 0644 "$HERE/files/containerd.toml" "$ROOT/etc/containerd/config.toml"; }
 echo "solon" > "$ROOT/etc/hostname"

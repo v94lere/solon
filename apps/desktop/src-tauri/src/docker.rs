@@ -784,3 +784,115 @@ pub async fn network_inspect(
         .await
         .map_err(err)
 }
+
+// ---------------------------------------------------------------------------------------------
+// Copie de fichiers (docker cp) : archive tar via l'API, extraite ou construite avec tar.exe de Windows.
+// ---------------------------------------------------------------------------------------------
+
+fn windows_tar() -> std::path::PathBuf {
+    let root = std::env::var_os("SystemRoot")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from(r"C:\Windows"));
+    root.join("System32").join("tar.exe")
+}
+
+fn temp_tar() -> std::path::PathBuf {
+    std::env::temp_dir().join(format!(
+        "solon-copy-{}-{}.tar",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0)
+    ))
+}
+
+/// Copie `path` (fichier ou dossier du conteneur) dans le dossier Windows `dest_dir` ; renvoie ce dossier.
+#[tauri::command]
+pub async fn container_copy_from(
+    state: State<'_>,
+    id: String,
+    path: String,
+    dest_dir: String,
+) -> Result<String, String> {
+    let docker = state.docker().await?;
+    let opts = bollard::query_parameters::DownloadFromContainerOptionsBuilder::default()
+        .path(&path)
+        .build();
+    let mut stream = docker.download_from_container(&id, Some(opts));
+    let tmp = temp_tar();
+    let mut file = tokio::fs::File::create(&tmp)
+        .await
+        .map_err(|e| e.to_string())?;
+    while let Some(chunk) = stream.next().await {
+        let bytes = chunk.map_err(err)?;
+        file.write_all(&bytes).await.map_err(|e| e.to_string())?;
+    }
+    file.flush().await.map_err(|e| e.to_string())?;
+    drop(file);
+    tokio::fs::create_dir_all(&dest_dir)
+        .await
+        .map_err(|e| e.to_string())?;
+    let (tmp2, dest2) = (tmp.clone(), dest_dir.clone());
+    let out = tokio::task::spawn_blocking(move || {
+        std::process::Command::new(windows_tar())
+            .arg("-xf")
+            .arg(&tmp2)
+            .arg("-C")
+            .arg(&dest2)
+            .output()
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
+    let _ = tokio::fs::remove_file(&tmp).await;
+    if !out.status.success() {
+        return Err(String::from_utf8_lossy(&out.stderr).trim().to_owned());
+    }
+    Ok(dest_dir)
+}
+
+/// Copie le fichier ou dossier Windows `source` dans le dossier `dest` du conteneur.
+#[tauri::command]
+pub async fn container_copy_to(
+    state: State<'_>,
+    id: String,
+    source: String,
+    dest: String,
+) -> Result<(), String> {
+    let docker = state.docker().await?;
+    let src = std::path::PathBuf::from(&source);
+    let parent = src
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .ok_or("invalid source path")?
+        .to_path_buf();
+    let name = src.file_name().ok_or("invalid source path")?.to_os_string();
+    let tmp = temp_tar();
+    let tmp2 = tmp.clone();
+    let out = tokio::task::spawn_blocking(move || {
+        std::process::Command::new(windows_tar())
+            .arg("-cf")
+            .arg(&tmp2)
+            .arg("-C")
+            .arg(&parent)
+            .arg(&name)
+            .output()
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
+    if !out.status.success() {
+        let _ = tokio::fs::remove_file(&tmp).await;
+        return Err(String::from_utf8_lossy(&out.stderr).trim().to_owned());
+    }
+    let bytes = tokio::fs::read(&tmp).await.map_err(|e| e.to_string())?;
+    let _ = tokio::fs::remove_file(&tmp).await;
+    let opts = bollard::query_parameters::UploadToContainerOptionsBuilder::default()
+        .path(&dest)
+        .build();
+    docker
+        .upload_to_container(&id, Some(opts), bollard::body_full(bytes.into()))
+        .await
+        .map_err(err)
+}

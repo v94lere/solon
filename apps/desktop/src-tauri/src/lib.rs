@@ -157,6 +157,8 @@ pub fn run() {
             set_language,
             docker::containers_list,
             docker::container_inspect,
+            docker::container_copy_from,
+            docker::container_copy_to,
             docker::container_start,
             docker::container_stop,
             docker::container_restart,

@@ -1,0 +1,35 @@
+#!/bin/sh
+# solon-debug <container> : shell d'outils dans les espaces de noms d'un conteneur en marche, même
+# quand son image n'a aucun shell (images « distroless », Go, .NET…). Rien n'est modifié dans le
+# conteneur : une boîte à outils (image `solon-debug`, construite au premier usage) partage ses
+# processus, son réseau et ses volumes ; son système de fichiers est visible sous /proc/1/root.
+set -e
+target="$1"
+if [ -z "$target" ]; then
+    echo "usage: solon-debug <container>" >&2
+    exit 2
+fi
+id=$(docker inspect -f '{{.Id}}' "$target") || exit 1
+running=$(docker inspect -f '{{.State.Running}}' "$id")
+if [ "$running" != "true" ]; then
+    echo "solon-debug: the container is not running" >&2
+    exit 1
+fi
+name=$(docker inspect -f '{{.Name}}' "$id" | sed 's|^/||')
+if ! docker image inspect solon-debug >/dev/null 2>&1; then
+    echo "Building the debug toolbox image (first use only, needs internet access)..."
+    printf 'FROM public.ecr.aws/docker/library/alpine:3.24\nRUN apk add -q --no-cache bash curl wget bind-tools procps-ng strace tcpdump jq vim nano less iproute2 net-tools lsof file htop\n' \
+        | docker build -q -t solon-debug - >/dev/null
+fi
+# bash efface PS1 dans un shell non interactif : l'invite passe par un fichier rc lu par le shell final.
+exec docker run --rm -it --name "solon-debug-$$" \
+    --pid="container:$id" --network="container:$id" \
+    --volumes-from "$id" --cap-add SYS_PTRACE \
+    -e "TARGET=$name" \
+    solon-debug bash -c '
+        printf "Solon debug shell for %s\n" "$TARGET"
+        printf "  target filesystem : /proc/1/root  (you start there; cd / is the toolbox)\n"
+        printf "  shared with target: processes (ps aux, top, strace -p PID), network (ss -tlnp, curl, tcpdump), volumes\n\n"
+        printf "PS1=\"debug(%s):\\\\w # \"\n" "$TARGET" > /tmp/.solon-debug.rc
+        cd /proc/1/root 2>/dev/null || true
+        exec bash --rcfile /tmp/.solon-debug.rc -i'

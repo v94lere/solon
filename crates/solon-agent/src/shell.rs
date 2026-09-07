@@ -54,8 +54,11 @@ fn handle(client: File) {
         unsafe { libc::close(client_fd) };
         return;
     }
-    let header: ShellHeader =
-        serde_json::from_str(line.trim()).unwrap_or(ShellHeader { cols: 80, rows: 24 });
+    let header: ShellHeader = serde_json::from_str(line.trim()).unwrap_or(ShellHeader {
+        cols: 80,
+        rows: 24,
+        command: None,
+    });
 
     // Pseudo-terminal.
     let mut master: libc::c_int = -1;
@@ -69,7 +72,14 @@ fn handle(client: File) {
 
     // Environnement et programme préparés avant fork (pas d'allocation dans l'enfant).
     let program = CString::new("/bin/sh").unwrap();
-    let argv: Vec<CString> = vec![CString::new("sh").unwrap(), CString::new("-l").unwrap()];
+    let argv: Vec<CString> = match &header.command {
+        Some(cmd) => vec![
+            CString::new("sh").unwrap(),
+            CString::new("-lc").unwrap(),
+            CString::new(cmd.replace('\0', "")).unwrap(),
+        ],
+        None => vec![CString::new("sh").unwrap(), CString::new("-l").unwrap()],
+    };
     let envp: Vec<CString> = [
         "TERM=xterm-256color",
         "HOME=/root",

@@ -88,6 +88,13 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
   déroulante rappelle les projets récents, et un clic sur l'en-tête d'un groupe Compose ouvre l'écran du projet :
   services et leur état, **journaux de tous les services mêlés**, Up / Down / Reconstruire avec la **sortie en
   direct**, ouverture du dossier dans l'**Explorateur** ou dans **VS Code**.
+- **Fiche d'un conteneur** (clic sur son nom) : onglet **Overview** avec image, commande, dates, politique de
+  redémarrage, réseaux (adresse, passerelle, alias), ports, montages, variables d'environnement, étiquettes, et
+  **copie de fichiers** dans les deux sens (`docker cp` sans ligne de commande). Onglets Logs, Terminal, Inspect.
+- **Debug shell** (onglet de la fiche) : un shell d'outils (bash, curl, dig, ps, strace, tcpdump, jq, vim…) qui
+  partage les processus, le réseau et les volumes du conteneur **même si son image n'a aucun shell** (images
+  « distroless », Go, .NET). Le système de fichiers du conteneur est visible sous `/proc/1/root`. Rien n'est
+  modifié dans le conteneur ; la boîte à outils (`solon-debug`) se construit au premier usage.
 - **Images, Volumes, Réseaux** : liste, création, inspection, suppression (toujours avec confirmation).
 - **Des adresses qui marchent, toujours** : chaque conteneur en marche est joignable sur
   `https://<nom>.solon.local` (et `https://<service>.<projet>.solon.local` pour Compose), **qu'il publie un port

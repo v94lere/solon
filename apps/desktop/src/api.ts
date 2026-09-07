@@ -156,6 +156,8 @@ export interface ExecOutput {
 export const containers = {
   list: (all: boolean) => invoke<ContainerSummary[]>("containers_list", { all }),
   inspect: (id: string) => invoke<unknown>("container_inspect", { id }),
+  copyFrom: (id: string, path: string, destDir: string) => invoke<string>("container_copy_from", { id, path, destDir }),
+  copyTo: (id: string, source: string, dest: string) => invoke<void>("container_copy_to", { id, source, dest }),
   start: (id: string) => invoke<void>("container_start", { id }),
   stop: (id: string) => invoke<void>("container_stop", { id }),
   restart: (id: string) => invoke<void>("container_restart", { id }),
@@ -261,10 +263,11 @@ export const diagnostic = {
 
 // ---- Terminal dans la machine ----
 export const machineShell = {
-  open: (cols: number, rows: number, onOutput: (o: ExecOutput) => void) => {
+  /** `command` : lancée dans le pseudo-terminal à la place du shell interactif (`sh -lc`). */
+  open: (cols: number, rows: number, onOutput: (o: ExecOutput) => void, command?: string) => {
     const channel = new Channel<ExecOutput>();
     channel.onmessage = onOutput;
-    return invoke<number>("machine_shell_open", { cols, rows, channel });
+    return invoke<number>("machine_shell_open", { cols, rows, command: command ?? null, channel });
   },
   input: (id: number, data: string) => invoke<void>("machine_shell_input", { id, data }),
   resize: (id: number, cols: number, rows: number) => invoke<void>("machine_shell_resize", { id, cols, rows }),

@@ -335,3 +335,13 @@ select {
 .palette-hint { margin-left: auto; color: var(--ink-3); font-size: 12px; max-width: 55%; }
 .palette-empty { padding: 16px; color: var(--ink-3); text-align: center; }
 .palette-foot { padding: 6px 12px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 11.5px; }
+
+/* Fiche de conteneur : listes clé / valeur */
+.kv { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 2px 14px; margin: 0; font-size: 13px; }
+.kv-row { display: contents; }
+.kv dt { color: var(--ink-3); white-space: nowrap; }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.kv-mono dt, .kv-mono dd { font-family: var(--font-mono); font-size: 12px; }
+.kv-mono dt { color: var(--accent-ink); }
+.chip-mini { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--surface-3); color: var(--ink-2); font-size: 11px; font-family: var(--font-sans); vertical-align: 1px; }
+.select-text { user-select: text; }

@@ -122,8 +122,10 @@
   },
   "detail": {
     "tabs": {
+      "overview": "Fiche",
       "logs": "Journaux",
       "terminal": "Terminal",
+      "debug": "Shell de débogage",
       "inspect": "Inspecter"
     },
     "back": "Retour aux conteneurs",
@@ -141,6 +143,53 @@
     },
     "inspect": {
       "copy": "Copier le JSON"
+    },
+    "debug": {
+      "hint": "Boîte à outils partageant les processus, le réseau et les volumes du conteneur — fonctionne même si l'image n'a pas de shell. Système de fichiers cible sous /proc/1/root.",
+      "stopped": "Le conteneur doit être en marche pour ouvrir un shell de débogage."
+    },
+    "overview": {
+      "general": "Général",
+      "id": "ID",
+      "image": "Image",
+      "created": "Créé",
+      "started": "Démarré",
+      "finished": "Terminé",
+      "exit_code": "code de sortie {{code}}",
+      "health": "Santé",
+      "command": "Commande",
+      "workdir": "Dossier de travail",
+      "user": "Utilisateur",
+      "hostname": "Nom d'hôte",
+      "restart": "Redémarrage",
+      "restarts_one": "{{count}} redémarrage",
+      "restarts_other": "{{count}} redémarrages",
+      "privileged": "Privilégié",
+      "network": "Réseau",
+      "ip": "Adresse IP",
+      "gateway": "Passerelle",
+      "mac": "MAC",
+      "aliases": "Alias",
+      "ports": "Ports",
+      "not_published": "non publié",
+      "mounts": "Montages",
+      "no_mounts": "Aucun montage.",
+      "env": "Environnement",
+      "labels": "Étiquettes"
+    },
+    "files": {
+      "title": "Fichiers",
+      "help": "Copier des fichiers entre le conteneur et Windows (docker cp).",
+      "from_path": "Chemin dans le conteneur",
+      "to_path": "Dossier de destination dans le conteneur",
+      "copy_from": "Copier vers Windows…",
+      "copy_file_to": "Envoyer un fichier…",
+      "copy_folder_to": "Envoyer un dossier…",
+      "pick_dest": "Choisir le dossier de destination",
+      "pick_source": "Choisir ce qu'il faut envoyer",
+      "copied_from": "{{path}} copié dans {{dest}}",
+      "copied_to": "{{src}} envoyé dans {{dest}}",
+      "stopped_note": "L'envoi exige un conteneur en marche ; la copie depuis un conteneur arrêté fonctionne."
     }
   },
   "common": {

@@ -573,3 +573,26 @@ dans Conteneurs ; (3) menu en deux catégories, **Docker** (Containers, Volumes,
 | `Ctrl+B` sans effet après usage du terminal | xterm garde le focus quand sa section est masquée et « consomme » Ctrl+B / Ctrl+K | raccourcis exclus du terminal ; `term.blur()` quand la section est masquée |
 | Clic sur l'en-tête de groupe manqué dans les tests | le bouton n'a que la largeur du texte | sans changement (test corrigé) |
 
+## Lot « OrbStack » A (7 septembre 2026) — shell de débogage et fiche de conteneur
+
+Demande : « fait le 1, 2, 3, 10 » de la liste des fonctionnalités d'OrbStack pertinentes ; ce lot couvre le **2**
+(shell de débogage dans n'importe quel conteneur) et le **10** (fiche complète et copie de fichiers). Image du moteur
+**0.1.0-dev.17** (script `solon-debug` dans `/usr/local/bin`), en-tête du terminal machine étendu (`ShellHeader.command`).
+
+| Élément | Réalisation | Vérification (captures `.local/build/w*.png`) |
+|---|---|---|
+| Shell de débogage | `solon-debug <conteneur>` : boîte à outils `solon-debug` (Alpine + bash, curl, wget, dig, ps, strace, tcpdump, jq, vim, nano, less, ss, lsof, htop ; 75 Mo, construite au premier usage) lancée avec `--pid`, `--network`, `--volumes-from` du conteneur cible et `SYS_PTRACE` ; démarre dans `/proc/1/root` (système de fichiers de la cible) avec l'invite `debug(nom):chemin #`. Onglet « Debug shell » de la fiche : terminal machine avec une commande au lieu du shell (`ShellHeader.command`, `sh -lc`). | conteneur `web` (busybox, sans bash) : `ps aux` montre `httpd` (PID 1 de la cible), `ls www` → `index.html`, `curl -s http://localhost/` → `hello from web container`, `ss -tlnp` → `httpd pid=1` sur :80 |
+| Fiche (Overview) | onglet par défaut : général (ID, image, dates, commande, dossier, utilisateur, nom d'hôte, politique de redémarrage, santé, code de sortie), réseau par réseau (IP, passerelle, MAC, alias), ports avec lien, montages, environnement (copiable), étiquettes ; rafraîchie toutes les 5 s | capture `w3.png` |
+| Copie de fichiers | `container_copy_from` (API `GET /archive` → tar → `tar.exe` de Windows extrait dans le dossier choisi) et `container_copy_to` (`tar.exe` crée l'archive → `PUT /archive`) ; boîtes de dialogue natives, message de résultat avec « Ouvrir le dossier » | `/www` → `.local\build\copytest\www\index.html` (25 octets, contenu correct) ; `README.md` → `/tmp/README.md` dans le conteneur (16 132 octets) |
+
+### Défauts trouvés en chemin
+
+| Défaut | Cause | Correction |
+|---|---|---|
+| `failed to join IPC namespace … non-shareable IPC` | `--ipc=container:X` exige que la cible ait été créée avec `--ipc=shareable`, ce qui n'est jamais le cas par défaut | partage de l'IPC retiré (processus, réseau et volumes suffisent) |
+| invite `bash-5.3#` au lieu de `debug(web)` | bash **efface `PS1`** dans un shell non interactif, même exporté | invite écrite dans un fichier rc, `bash --rcfile … -i` |
+| `ps` seul n'affichait pas la cible | comportement normal de `ps` (terminal courant) | aide-mémoire du shell : `ps aux` |
+
+Reste à faire de la demande : **1** (machines Linux complètes) et **3** (fichiers des conteneurs et volumes dans
+l'Explorateur), avec un point de validation sur la conception avant de coder.
+

@@ -48,6 +48,9 @@ pub const SHELL_FRAME_RESIZE: u8 = 1;
 pub struct ShellHeader {
     pub cols: u16,
     pub rows: u16,
+    /// Commande à lancer dans le pseudo-terminal (`sh -lc <command>`) au lieu d'un shell interactif.
+    #[serde(default)]
+    pub command: Option<String>,
 }
 
 /// Version du protocole ; l'agent la renvoie dans [`HealthReport`], le service refuse une

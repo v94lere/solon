@@ -122,8 +122,10 @@
   },
   "detail": {
     "tabs": {
+      "overview": "Overview",
       "logs": "Logs",
       "terminal": "Terminal",
+      "debug": "Debug shell",
       "inspect": "Inspect"
     },
     "back": "Back to containers",
@@ -141,6 +143,53 @@
     },
     "inspect": {
       "copy": "Copy JSON"
+    },
+    "debug": {
+      "hint": "Toolbox shell sharing the container's processes, network and volumes — works even when the image has no shell. Target filesystem under /proc/1/root.",
+      "stopped": "The container must be running to open a debug shell."
+    },
+    "overview": {
+      "general": "General",
+      "id": "ID",
+      "image": "Image",
+      "created": "Created",
+      "started": "Started",
+      "finished": "Finished",
+      "exit_code": "exit code {{code}}",
+      "health": "Health",
+      "command": "Command",
+      "workdir": "Working dir",
+      "user": "User",
+      "hostname": "Hostname",
+      "restart": "Restart policy",
+      "restarts_one": "{{count}} restart",
+      "restarts_other": "{{count}} restarts",
+      "privileged": "Privileged",
+      "network": "Network",
+      "ip": "IP address",
+      "gateway": "Gateway",
+      "mac": "MAC",
+      "aliases": "Aliases",
+      "ports": "Ports",
+      "not_published": "not published",
+      "mounts": "Mounts",
+      "no_mounts": "No mount.",
+      "env": "Environment",
+      "labels": "Labels"
+    },
+    "files": {
+      "title": "Files",
+      "help": "Copy files between the container and Windows (docker cp).",
+      "from_path": "Path in the container",
+      "to_path": "Destination folder in the container",
+      "copy_from": "Copy to Windows…",
+      "copy_file_to": "Send a file…",
+      "copy_folder_to": "Send a folder…",
+      "pick_dest": "Choose the destination folder",
+      "pick_source": "Choose what to send",
+      "copied_from": "{{path}} copied to {{dest}}",
+      "copied_to": "{{src}} sent to {{dest}}",
+      "stopped_note": "Sending files requires a running container; copying from a stopped container works."
     }
   },
   "common": {

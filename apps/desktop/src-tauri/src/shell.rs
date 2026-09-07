@@ -73,12 +73,17 @@ pub async fn machine_shell_open(
     state: State<'_>,
     cols: u16,
     rows: u16,
+    command: Option<String>,
     channel: Channel<ExecOutput>,
 ) -> Result<u64, String> {
     let pipe = open_pipe().await?;
     let (mut reader, mut writer) = tokio::io::split(pipe);
-    let mut header =
-        serde_json::to_string(&ShellHeader { cols, rows }).map_err(|e| e.to_string())?;
+    let mut header = serde_json::to_string(&ShellHeader {
+        cols,
+        rows,
+        command,
+    })
+    .map_err(|e| e.to_string())?;
     header.push('\n');
     writer
         .write_all(header.as_bytes())
@@ -155,7 +160,12 @@ pub async fn machine_shell_resize(
     rows: u16,
 ) -> Result<(), String> {
     let s = session(&state, id).await?;
-    let payload = serde_json::to_vec(&ShellHeader { cols, rows }).map_err(|e| e.to_string())?;
+    let payload = serde_json::to_vec(&ShellHeader {
+        cols,
+        rows,
+        command: None,
+    })
+    .map_err(|e| e.to_string())?;
     let mut w = s.writer.lock().await;
     write_frame(&mut w, SHELL_FRAME_RESIZE, &payload).await
 }
