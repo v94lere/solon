@@ -1,0 +1,65 @@
+# Intégration continue : compilation et tests sur Windows à chaque contribution.
+# Ne construit pas l'installeur (image du moteur non disponible sur les agents GitHub) ;
+# vérifie le service, les crates partagées, l'agent (cible musl) et l'application.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: Rust (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Check (Windows crates)
+        run: cargo check --workspace --all-targets
+      - name: Check guest agent (musl)
+        run: cargo check -p solon-agent --target x86_64-unknown-linux-musl
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Tests
+        run: cargo test --workspace
+
+  desktop:
+    name: Desktop app (TypeScript)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+
+  installer-scripts:
+    name: Installer scripts
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell syntax (setup.ps1 must parse, see CONTRIBUTING)
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("installer/setup.ps1", [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
+          $bytes = [System.IO.File]::ReadAllBytes("installer/setup.ps1")
+          if (-not ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)) { Write-Error "setup.ps1 must be UTF-8 with BOM"; exit 1 }

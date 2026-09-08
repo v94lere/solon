@@ -70,6 +70,23 @@ Toute modification du provisionnement, du réseau ou de l'agent doit passer `tes
 - Le vocabulaire de l'interface parle de « moteur » et de « conteneurs », jamais de « machine virtuelle »
   ni de « WSL » ; les journaux techniques, eux, sont explicites.
 
+## Accepter les contributions : Developer Certificate of Origin
+
+Pas de contrat de cession de droits : chaque commit porte une ligne `Signed-off-by: Prénom Nom <e-mail>`
+(`git commit -s`), qui atteste que vous avez le droit de contribuer ce code sous la licence du projet
+(Apache-2.0), selon le [Developer Certificate of Origin 1.1](https://developercertificate.org/). Les
+contributions sans cette ligne ne sont pas fusionnées.
+
+Le projet suit le code de conduite du `CODE_OF_CONDUCT.md`. Les failles de sécurité se signalent en privé,
+voir `SECURITY.md`.
+
+### Licences des dépendances
+
+`THIRD-PARTY.md` liste tout ce que l'installeur et l'image redistribuent. Quand une dépendance change :
+`cargo metadata --format-version 1` donne les licences des crates, `apps/desktop/node_modules/*/package.json`
+celles des paquets npm, et `image/out/<version>/packages.txt` les paquets Alpine de l'image. Toute nouvelle
+dépendance sous licence copyleft forte (GPL, AGPL) doit être discutée avant d'être ajoutée.
+
 ## Signaler un problème
 
 Joignez : l'édition et le build de Windows (`winver`), le rapport des prérequis (écran de démarrage ou

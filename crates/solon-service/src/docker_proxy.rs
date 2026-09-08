@@ -361,7 +361,7 @@ pub fn translate_host_path(src: &str) -> Option<(String, String)> {
         let trimmed = src.trim_start_matches('/');
         let slashes = src.len() - trimmed.len();
         if (1..=2).contains(&slashes)
-            && trimmed.len() >= 1
+            && !trimmed.is_empty()
             && trimmed.as_bytes()[0].is_ascii_alphabetic()
             && (trimmed.len() == 1 || trimmed.as_bytes()[1] == b'/')
         {

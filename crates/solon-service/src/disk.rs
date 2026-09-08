@@ -27,8 +27,10 @@ pub fn ensure_data_disk(path: &Path, max_size_gib: u64) -> Result<bool> {
         DeviceId: VIRTUAL_STORAGE_TYPE_DEVICE_VHDX,
         VendorId: VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT,
     };
-    let mut params = CREATE_VIRTUAL_DISK_PARAMETERS::default();
-    params.Version = CREATE_VIRTUAL_DISK_VERSION_2;
+    let mut params = CREATE_VIRTUAL_DISK_PARAMETERS {
+        Version: CREATE_VIRTUAL_DISK_VERSION_2,
+        ..Default::default()
+    };
     params.Anonymous.Version2.UniqueId = GUID::new().unwrap_or_default();
     params.Anonymous.Version2.MaximumSize = max_size_gib * 1024 * 1024 * 1024;
     params.Anonymous.Version2.BlockSizeInBytes = 0; // défaut (32 Mo pour VHDX dynamique)

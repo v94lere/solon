@@ -365,7 +365,7 @@ mod tests {
 
     #[test]
     fn icones_png_decodables() {
-        let all: [&[u8]; 11] = [
+        let all: [&[u8]; 15] = [
             png!("tray-ready"),
             png!("tray-busy"),
             png!("tray-failed"),

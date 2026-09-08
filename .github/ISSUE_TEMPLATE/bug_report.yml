@@ -1,0 +1,54 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The **diagnostic zip** (Settings → Export a diagnostic…) contains the
+        logs, state, settings, prerequisites and `docker info`, with no credentials: attaching it
+        saves a lot of back-and-forth.
+  - type: input
+    id: version
+    attributes:
+      label: Solon version
+      placeholder: "0.1.0 (Settings → About), engine image 0.1.0-dev.17"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows edition and version
+      placeholder: "Windows 11 Pro 24H2 (winver)"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got. Error codes shown by Solon (e.g. `ENGINE_UNREACHABLE`) are useful.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+  - type: dropdown
+    id: env
+    attributes:
+      label: Environment details
+      multiple: true
+      options:
+        - Corporate VPN active
+        - Antivirus / EDR other than Defender
+        - Docker Desktop also installed
+        - WSL also installed
+        - Running inside a virtual machine
+  - type: textarea
+    id: logs
+    attributes:
+      label: Diagnostic zip or relevant log lines
+      description: Drag the zip here, or paste the relevant lines of `%ProgramData%\Solon\logs\solon-service.log.*`.
