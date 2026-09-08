@@ -1,11 +1,14 @@
 # Mesures
 
+> Le projet s'appelait **Solon** jusqu'au 8 septembre 2026 ; les mesures antérieures ont été renommées d'un bloc,
+> les noms d'époque (`\\.\pipe\solon`, `%ProgramData%\Solon`, `*.solon.local`) se lisent donc `monodon`.
+
 Toutes les mesures sont prises sur la machine de test décrite dans `ARCHITECTURE.md` §1.1
 (Windows 11 Pro 26200, i7-13700, 13,7 Go). Elles sont reproduites à chaque bloc et jamais promises à l'avance.
 
 ## Bloc 0a — démarrage d'un noyau dans une VM HCS (2 septembre 2026)
 
-Outil : `cargo run -p solon-vm-hcs --example boot_smoke -- <noyau> <initrd>` en Administrateur.
+Outil : `cargo run -p monodon-vm-hcs --example boot_smoke -- <noyau> <initrd>` en Administrateur.
 Initramfs de spike : busybox statique + `/init` qui affiche des marqueurs puis `poweroff -f`.
 Machine : 1 024 Mo, 2 processeurs, aucun disque, console série COM1 sur named pipe.
 Ligne de commande noyau : `console=ttyS0,115200 8250_core.nr_uarts=1 panic=-1 pci=off rdinit=/init`.
@@ -16,22 +19,22 @@ Ligne de commande noyau : `console=ttyS0,115200 8250_core.nr_uarts=1 panic=-1 pc
 | `HcsStartComputeSystem` rend la main | 29 ms | 25 ms |
 | Premier octet sur la console série | 241 ms | 185 ms |
 | `/init` démarre (espace utilisateur) | 723 ms | 609 ms |
-| Marqueur `SOLON-INIT-OK` | 794 ms | 611 ms |
+| Marqueur `MONODON-INIT-OK` | 794 ms | 611 ms |
 | `poweroff` invité → événement de sortie HCS | 1 797 ms (dont 1 s de `sleep` volontaire dans init) | ~1 660 ms (idem) |
 
 Lecture : **le noyau atteint l'espace utilisateur en ~0,6–0,7 s** après l'ordre de démarrage. Le temps total
 « API Docker prête » dépendra ensuite de `containerd` + `dockerd` (mesuré au bloc 1).
 
-### Tests d'intégration (`crates/solon-vm-hcs/tests/boot.rs`, exécutés en Administrateur)
+### Tests d'intégration (`crates/monodon-vm-hcs/tests/boot.rs`, exécutés en Administrateur)
 
 | Test | Résultat | Durée |
 |---|---|---|
-| `demarre_puis_s_arrete_proprement` : création, démarrage, présence dans l'énumération `Owner=Solon`, arrêt spontané détecté avec `ExitType=GracefulExit`, disparition après arrêt | OK | 1,4 s |
+| `demarre_puis_s_arrete_proprement` : création, démarrage, présence dans l'énumération `Owner=Monodon`, arrêt spontané détecté avec `ExitType=GracefulExit`, disparition après arrêt | OK | 1,4 s |
 | `une_machine_orpheline_est_retrouvee_et_terminee` : handle fermé sans arrêt, rattachement par `HcsOpenComputeSystem`, terminaison par `terminate_orphans`, disparition | OK | ~1,4 s |
 
 Note pratique : une élévation UAC (`Start-Process -Verb RunAs`) **n'hérite pas** des variables d'environnement
-du shell appelant ; les tests sont lancés via un fichier `.cmd` qui définit `SOLON_IT`, `SOLON_TEST_KERNEL`
-et `SOLON_TEST_INITRD` lui-même.
+du shell appelant ; les tests sont lancés via un fichier `.cmd` qui définit `MONODON_IT`, `MONODON_TEST_KERNEL`
+et `MONODON_TEST_INITRD` lui-même.
 
 ### Faits établis par le spike 0a
 
@@ -41,7 +44,7 @@ et `SOLON_TEST_INITRD` lui-même.
   connecte en client dès `HcsStartComputeSystem` (connexion réussie en < 1 ms après le retour de l'appel).
 - L'événement `HcsEventSystemExited` porte un document JSON exploitable pour distinguer un arrêt propre
   d'un crash : `{"Status":0,"ExitType":"GracefulExit","Attribution":[{"SystemExit":{"Detail":"Shutdown","Initiator":"GuestOS"}}, ...]}`.
-- Le noyau WSL2 expose `/proc/config.gz` et contient **en dur** (`=y`) tout ce dont Solon a besoin :
+- Le noyau WSL2 expose `/proc/config.gz` et contient **en dur** (`=y`) tout ce dont Monodon a besoin :
   `HYPERV`, `HYPERV_VSOCKETS` (hv_sock), `HYPERV_STORAGE`, `HYPERV_NET`, `HYPERV_UTILS`, `HYPERV_BALLOON`,
   `PAGE_REPORTING`, `NET_9P`, `9P_FS`, `9P_FS_POSIX_ACL`, `EXT4_FS`, `OVERLAY_FS`, `SQUASHFS`, `VETH`,
   `NF_TABLES`, `VSOCKETS`, `VIRTIO_CONSOLE`. Seuls `BRIDGE` et `EROFS_FS` sont en modules (`=m`) : notre
@@ -51,13 +54,13 @@ et `SOLON_TEST_INITRD` lui-même.
 - Sans élévation, la création échoue immédiatement avec `HCS_E_ACCESS_DENIED` (`0x8037011B`) et le message
   Windows « Privilèges insuffisants. Seuls les administrateurs ou les utilisateurs membres du groupe
   d'utilisateurs Administrateurs Hyper-V sont autorisés à accéder aux machines virtuelles ou conteneurs. »
-  Solon le traduit en code `INSUFFICIENT_PRIVILEGES`. Le service Windows (LocalSystem) est confirmé comme
+  Monodon le traduit en code `INSUFFICIENT_PRIVILEGES`. Le service Windows (LocalSystem) est confirmé comme
   nécessaire pour que l'application n'ait jamais à s'élever.
 
 ## Bloc 0b — canal HvSocket, partage 9P, micro-bancs (2 septembre 2026)
 
-Outil : `cargo run -p solon-vm-hcs --example channel_smoke -- <noyau> <initrd> <dossier> --bench-opts ...`
-en Administrateur. L'initrd embarque l'agent spike (`solon-agent`, musl statique, 567 Ko, compilé
+Outil : `cargo run -p monodon-vm-hcs --example channel_smoke -- <noyau> <initrd> <dossier> --bench-opts ...`
+en Administrateur. L'initrd embarque l'agent spike (`monodon-agent`, musl statique, 567 Ko, compilé
 croisé depuis Windows avec `rust-lld`) qui écoute sur `AF_VSOCK` port 5000. Machine : 1 024 Mo, 2 processeurs,
 noyau WSL2 local. Trois exécutions complètes, chiffres de la dernière (les deux autres sont dans la même fourchette).
 
@@ -118,8 +121,8 @@ Lecture honnête :
 
 ## Bloc 1 — image Linux complète et moteur Docker (2 septembre 2026)
 
-Outil : `cargo run -p solon-vm-hcs --example engine_smoke -- <vmlinuz> <initrd.img> <rootfs.vhd> <data.vhdx> --busybox <busybox>`
-en Administrateur. Image construite par `image/build.sh` : noyau `6.18.40.1-solon` (16 Mo, netfilter en dur), initrd 0,6 Mo,
+Outil : `cargo run -p monodon-vm-hcs --example engine_smoke -- <vmlinuz> <initrd.img> <rootfs.vhd> <data.vhdx> --busybox <busybox>`
+en Administrateur. Image construite par `image/build.sh` : noyau `6.18.40.1-monodon` (16 Mo, netfilter en dur), initrd 0,6 Mo,
 `rootfs.vhd` 293 Mo (Alpine v3.24, docker-engine 29.5.3, containerd 2.3.2, runc 1.4.3, compose 5.1.4, 42 paquets),
 `data.vhdx` dynamique de 20 Go. Machine : 2 048 Mo, 4 processeurs.
 
@@ -127,10 +130,10 @@ en Administrateur. Image construite par `image/build.sh` : noyau `6.18.40.1-solo
 
 | Étape | Temps |
 |---|---|
-| `SOLON-INITRD-OK` (rootfs monté sous overlay, `switch_root`) | 688 ms |
+| `MONODON-INITRD-OK` (rootfs monté sous overlay, `switch_root`) | 688 ms |
 | Agent PID 1 prêt (systèmes de fichiers virtuels, `e2fsck -p` du disque de données, RPC et relais à l'écoute) | 757 ms |
-| **`SOLON-ENGINE-READY` : dockerd répond sur `/run/docker.sock`** | **1 158 ms** (réseau des conteneurs désactivé) ; **1 265 ms et 1 459 ms** sur deux cycles avec pont `docker0` et règles netfilter |
-| `docker version` depuis le CLI Windows via `\\.\pipe\solon` | 47–125 ms |
+| **`MONODON-ENGINE-READY` : dockerd répond sur `/run/docker.sock`** | **1 158 ms** (réseau des conteneurs désactivé) ; **1 265 ms et 1 459 ms** sur deux cycles avec pont `docker0` et règles netfilter |
+| `docker version` depuis le CLI Windows via `\\.\pipe\monodon` | 47–125 ms |
 | `docker import` d'une image de 1 Mo | 78 ms |
 | `docker run --rm … echo` (création, exécution, suppression) | 491–514 ms (réseau pont) ; 620–640 ms sans réseau |
 | `docker run -d` | 298–308 ms |
@@ -146,7 +149,7 @@ Premier démarrage (disque de données vierge) : le formatage ext4 de 20 Go ajou
 
 - **ACL obligatoire** : sans ACE pour le groupe « NT VIRTUAL MACHINE\Virtual Machines » (`S-1-5-83-0`) sur les
   disques, `HcsStartComputeSystem` échoue avec `E_ACCESSDENIED` (`0x80070005`) alors que la création réussit.
-  `solon-vm-hcs::acl` l'accorde (lecture, ou lecture-écriture pour le disque de données, plus traversée du dossier).
+  `monodon-vm-hcs::acl` l'accorde (lecture, ou lecture-écriture pour le disque de données, plus traversée du dossier).
 - Un **VHD fixe** généré par `image/tools/mkvhd.py` est accepté comme disque SCSI par HCS. Un pied de fichier
   mal aligné donne `ERROR_FILE_CORRUPT` (`0x80070570`) au démarrage : la disposition (checksum à l'octet 64,
   UUID à 68) est maintenant vérifiée par relecture.
@@ -167,8 +170,8 @@ Premier démarrage (disque de données vierge) : le formatage ext4 de 20 Go ajou
 
 ## Bloc 2 — service Windows, réseau, ports publiés, robustesse (2 septembre 2026)
 
-Outil : `solon-service console --start` (Administrateur, build **debug**) puis le scénario non élevé
-`e2e.ps1` : état via `\.\pipe\solon-control`, CLI `docker` via `\.\pipe\solon`, `docker pull`,
+Outil : `monodon-service console --start` (Administrateur, build **debug**) puis le scénario non élevé
+`e2e.ps1` : état via `\.\pipe\monodon-control`, CLI `docker` via `\.\pipe\monodon`, `docker pull`,
 port publié relayé vers `localhost`, mesure mémoire, arrêt propre. Image `0.1.0-dev.2`, machine 2 048 Mo / 4 processeurs.
 
 | Mesure | Valeur |
@@ -181,7 +184,7 @@ port publié relayé vers `localhost`, mesure mémoire, arrêt propre. Image `0.
 | `docker pull public.ecr.aws/docker/library/alpine:3.20` (réseau sortant NAT + DNS, image ~3,5 Mo) | 0,9 s |
 | `docker run -d -p 8080:80` → première réponse HTTP sur `http://localhost:8080` depuis Windows | 2,3 s (dont démarrage du serveur dans le conteneur et détection de la publication) |
 | Fermeture du relais après suppression du conteneur | < 1 s |
-| **RAM au repos après 60 s** (processus `vmmem` + `solon-service`), 4 exécutions | **426–516 Mo** (408–500 + 16–18) pour 2 048 Mo alloués ; la variation suit le cache de pages de l'invité (images tirées juste avant) |
+| **RAM au repos après 60 s** (processus `vmmem` + `monodon-service`), 4 exécutions | **426–516 Mo** (408–500 + 16–18) pour 2 048 Mo alloués ; la variation suit le cache de pages de l'invité (images tirées juste avant) |
 | Arrêt propre (agent → dockerd → `poweroff`, réseau HNS supprimé) | 0,6 s |
 
 ### Faits établis par le bloc 2
@@ -190,7 +193,7 @@ port publié relayé vers `localhost`, mesure mémoire, arrêt propre. Image `0.
   d'être refusé. Sans `HVSOCKET_CONNECT_TIMEOUT` (option de socket niveau `HV_PROTOCOL_RAW`), la boucle de
   réessai ne réessaie jamais ; borné à 1 s par tentative.
 - **Réseau HNS de type ICS** (JSON WSL : `Type=ICS`, `Flags=9`, `IsolateSwitch=true`, sous-réseau statique)
-  créé par `HcnCreateNetwork` fonctionne sur Windows 11 26200 : carte `vEthernet (Solon)` 172.30.0.1/24,
+  créé par `HcnCreateNetwork` fonctionne sur Windows 11 26200 : carte `vEthernet (Monodon)` 172.30.0.1/24,
   invité 172.30.0.2 configuré statiquement par l'agent, NAT et résolution DNS opérationnels (DNS de l'hôte
   relayés). L'endpoint reçoit un GUID distinct de la machine.
 - **Le CLI `docker events` ne vide pas sa sortie tant qu'il tourne** quand elle est redirigée : l'agent
@@ -200,7 +203,7 @@ port publié relayé vers `localhost`, mesure mémoire, arrêt propre. Image `0.
   conteneur (`10.90.0.x`). Fonctionne pour `0.0.0.0` et `127.0.0.1` ; UDP hors périmètre.
 - **Le CLI `docker` de Windows avec Docker Desktop installé** utilise par défaut le gestionnaire
   d'identifiants Windows (`docker-credential-wincred`) et envoie des identifiants Docker Hub périmés
-  (« unauthorized: incorrect username or password ») ; ce n'est pas lié à Solon (les tirages depuis un autre
+  (« unauthorized: incorrect username or password ») ; ce n'est pas lié à Monodon (les tirages depuis un autre
   registre réussissent). À documenter pour les utilisateurs ; l'application (bollard) n'envoie aucun identifiant.
 - **La cible RAM < 500 Mo est atteinte sans marge** (426–516 Mo mesurés). Leviers identifiés pour le bloc de durcissement : `drop_caches` côté invité après inactivité, hints mémoire HCS (`EnableColdDiscardHint`), allocation initiale plus basse que 2 Go quand la machine hôte a peu de RAM.
 
@@ -209,7 +212,7 @@ port publié relayé vers `localhost`, mesure mémoire, arrêt propre. Image `0.
 | Test | Résultat | Détail |
 |---|---|---|
 | `crash-force-stop.ps1` : terminaison brutale de la machine (`stop --force`, sans arrêt invité) pendant qu'un conteneur écrit en boucle dans un volume | **OK** | `e2fsck -p` code 0 (journal rejoué) ; compteur écrit avec `sync` : 507 avant, 514 après (rien de perdu) ; journal écrit sans `sync` : 513 lignes conservées sur ~514 (fenêtre de perte bornée à ~2 s par le `sync()` périodique de l'agent) ; conteneur marqué `Exited (255)` par dockerd au redémarrage ; moteur prêt 12,8 s après (build debug) |
-| `crash-service-kill.ps1` : service tué (`taskkill /F`) pendant que la machine tourne, relance du service, rattachement | **OK** | même identifiant de machine avant/après, conteneur `solon-survivor` toujours `Up`, journal « rattachement à une machine encore en marche » ; le rattachement passe désormais avant la vérification d'image (chemin rapide) |
+| `crash-service-kill.ps1` : service tué (`taskkill /F`) pendant que la machine tourne, relance du service, rattachement | **OK** | même identifiant de machine avant/après, conteneur `monodon-survivor` toujours `Up`, journal « rattachement à une machine encore en marche » ; le rattachement passe désormais avant la vérification d'image (chemin rapide) |
 
 Sans le `sync()` périodique, la première exécution avait perdu **toutes** les écritures des 4 dernières
 secondes (compteur revenu à 0, conteneur en état « Created » car l'état de dockerd lui-même n'avait pas
@@ -273,20 +276,20 @@ performance spécifiques à ce bloc.
 
 | Étape | Résultat |
 |---|---|
-| Installation silencieuse `/S` (une fenêtre UAC) | 40 s, code 0 ; `C:\Program Files\Solon\{solon.exe, solon-service.exe, image\, installer\}` ; 80 Mo d'installeur (324 Mo décompressés) |
-| `setup.ps1` (élevé) | Hyper-V et Plateforme de machine virtuelle détectés « déjà activés » ; `SolonService` installé (Automatique) et démarré |
+| Installation silencieuse `/S` (une fenêtre UAC) | 40 s, code 0 ; `C:\Program Files\Monodon\{monodon.exe, monodon-service.exe, image\, installer\}` ; 80 Mo d'installeur (324 Mo décompressés) |
+| `setup.ps1` (élevé) | Hyper-V et Plateforme de machine virtuelle détectés « déjà activés » ; `MonodonService` installé (Automatique) et démarré |
 | Premier démarrage du moteur par le **service Windows réel** (LocalSystem, session 0, disque de données créé et formaté) | prêt en **3 974 ms** (canal de contrôle) ; démarrages suivants : 1 144 ms (rattachement) |
 | `docker version` depuis un utilisateur non élevé (ACL `IU`) | OK (29.5.3) |
 | Port publié 8080 → conteneur, retrait à la suppression | OK (2,4 s jusqu'à la première réponse HTTP, image absente au départ) |
 | Arrêt propre | 673 ms |
-| `docker pull public.ecr.aws/…/busybox` | **échec `toomanyrequests: Rate exceeded`** : quota anonyme du registre ECR public, pas Solon (le `docker run` suivant a bien tiré l'image) |
+| `docker pull public.ecr.aws/…/busybox` | **échec `toomanyrequests: Rate exceeded`** : quota anonyme du registre ECR public, pas Monodon (le `docker run` suivant a bien tiré l'image) |
 
 ### Mémoire au repos (2 Go alloués, moteur sans conteneur, machine hôte au repos)
 
 | Instant | `vmmem` (working set) |
 |---|---|
 | +1 min après démarrage | 454 Mo |
-| +2 à +5 min | **426 Mo** (plancher stable) ; `solon-service` 16 Mo |
+| +2 à +5 min | **426 Mo** (plancher stable) ; `monodon-service` 16 Mo |
 
 Dans l'invité au même moment : `used` 105 Mo, `buff/cache` 97 Mo, `available` 1 737 Mo. `dmesg` confirme que le
 mécanisme est actif : `hv_balloon: Dynamic Memory protocol version 2.0`, `Free page reporting enabled`,
@@ -308,17 +311,17 @@ des blocs de 2 Mo signalables. Non fait au MVP : 426–516 Mo reste le budget an
 - Le ballon Hyper-V (`CONFIG_HYPERV_BALLOON=y`) et le signalement de pages libres sont actifs avec les hints
   `EnableColdDiscardHint`/`EnableHotHint`/`EnableColdHint` ; ils n'apportent rien de mesurable sur le plancher.
 - Les tests unitaires couvrent désormais le **catalogue d'erreurs** : chaque variante de `ErrorCode` doit avoir un
-  message dans les deux langues, sinon `cargo test -p solon` échoue.
+  message dans les deux langues, sinon `cargo test -p monodon` échoue.
 - Le registre ECR public limite les tirages anonymes (`toomanyrequests`) : les tests de bout en bout doivent
   tolérer cet échec ou utiliser une image déjà présente.
 
 ## Bloc 6 — livraison (3 septembre 2026)
 
-### Installeur final `Solon_0.1.0_x64-setup.exe` (80 Mo), mise à jour par-dessus l'installation du bloc 5
+### Installeur final `Monodon_0.1.0_x64-setup.exe` (80 Mo), mise à jour par-dessus l'installation du bloc 5
 
 | Étape | Résultat |
 |---|---|
-| Installation silencieuse `/S` par-dessus une version installée (service en marche) | **16 s**, code 0 ; hook pré-installation arrête le service, `setup.ps1` le réinstalle et le redémarre ; données de `%ProgramData%\Solon` conservées (image busybox déjà présente au test suivant) |
+| Installation silencieuse `/S` par-dessus une version installée (service en marche) | **16 s**, code 0 ; hook pré-installation arrête le service, `setup.ps1` le réinstalle et le redémarre ; données de `%ProgramData%\Monodon` conservées (image busybox déjà présente au test suivant) |
 | Moteur prêt (service Windows réel, rattachement du disque existant) | 3 435 ms |
 | Scénario `e2e.ps1` complet (prérequis, `docker` non élevé, pull, port 8080, retrait du port, arrêt propre) | **9/9 OK** ; pull 960 ms ; première réponse HTTP 2,3 s ; arrêt propre 634 ms |
 | Mémoire au repos 60 s après activité | 494 Mo (vmmem) + 16 Mo (service) = 510 Mo |
@@ -326,34 +329,34 @@ des blocs de 2 Mo signalables. Non fait au MVP : 426–516 Mo reste le budget an
 ### Faits établis par le bloc 6
 
 - **Une mise à jour doit arrêter le service avant la copie des fichiers** : le bundler NSIS de Tauri ferme
-  l'application mais ignore le service, qui tient `solon-service.exe` ouvert. Hook `NSIS_HOOK_PREINSTALL` ajouté.
+  l'application mais ignore le service, qui tient `monodon-service.exe` ouvert. Hook `NSIS_HOOK_PREINSTALL` ajouté.
 - Le menu de la barre des tâches lit ses libellés dans les mêmes fichiers `locales/*.json` que le frontend
   (`include_str!`) : une seule source de traduction, couverte par le test de parité des clés.
 - `tauri icon` accepte un SVG et régénère toutes les tailles (Windows, macOS, mobiles) ; les jeux Android/iOS
   ont été retirés du dépôt (hors périmètre).
 
-## Comparatif Docker Desktop 4.66.1 (WSL2) — Solon 0.1.0, même machine, 3 septembre 2026
+## Comparatif Docker Desktop 4.66.1 (WSL2) — Monodon 0.1.0, même machine, 3 septembre 2026
 
 Machine : Windows 11 Pro 26200, 16 cœurs. Charge : `examples/odoo18` (Odoo 18 Community + PostgreSQL 16), même fichier
 Compose, même dossier partagé (`config/`, `addons/`), volumes nommés pour les données. Docker Desktop utilise ses
-réglages par défaut (WSL2, tous les cœurs, 6,6 Go visibles par les conteneurs) ; Solon ses réglages par défaut
+réglages par défaut (WSL2, tous les cœurs, 6,6 Go visibles par les conteneurs) ; Monodon ses réglages par défaut
 (4 processeurs, 2 Go).
 
-| Mesure | Docker Desktop | Solon | Lecture |
+| Mesure | Docker Desktop | Monodon | Lecture |
 |---|---|---|---|
-| Moteur prêt après l'ordre de démarrage | 6,1 s (application déjà installée, WSL chaud) | 1,1 s (rattachement) / 2,6–3,4 s (démarrage complet) | Solon 2 à 5× plus rapide |
-| Mémoire au repos, aucun conteneur | **1 998 Mo** (vmmemWSL 1 335 + processus Docker Desktop 663) | **426–516 Mo** | Solon ≈ 4× plus léger |
-| Mémoire avec Odoo + PostgreSQL, 150 s de repos | **5 146 Mo** (vmmemWSL 4 771) | **1 892 Mo** (dont invité : 353 Mo utilisés, 400 Mo de cache ; conteneurs 151 + 114 Mo) | Solon ≈ 2,7× plus léger ; les deux gardent trop de cache |
-| `docker pull odoo:18.0` (2 Go) depuis ECR public | **échec** (`cloudfront.net … EOF`, 3 essais) ; images transférées depuis Solon par `docker save/load` | 38,8 s | Réseau sortant de Docker Desktop défaillant sur cette machine, pas mesuré |
-| `compose down` + `compose up -d`, images présentes | 7,1 s | 10,3 s | Docker Desktop plus rapide (plus de cœurs, `down` compris côté Solon) |
+| Moteur prêt après l'ordre de démarrage | 6,1 s (application déjà installée, WSL chaud) | 1,1 s (rattachement) / 2,6–3,4 s (démarrage complet) | Monodon 2 à 5× plus rapide |
+| Mémoire au repos, aucun conteneur | **1 998 Mo** (vmmemWSL 1 335 + processus Docker Desktop 663) | **426–516 Mo** | Monodon ≈ 4× plus léger |
+| Mémoire avec Odoo + PostgreSQL, 150 s de repos | **5 146 Mo** (vmmemWSL 4 771) | **1 892 Mo** (dont invité : 353 Mo utilisés, 400 Mo de cache ; conteneurs 151 + 114 Mo) | Monodon ≈ 2,7× plus léger ; les deux gardent trop de cache |
+| `docker pull odoo:18.0` (2 Go) depuis ECR public | **échec** (`cloudfront.net … EOF`, 3 essais) ; images transférées depuis Monodon par `docker save/load` | 38,8 s | Réseau sortant de Docker Desktop défaillant sur cette machine, pas mesuré |
+| `compose down` + `compose up -d`, images présentes | 7,1 s | 10,3 s | Docker Desktop plus rapide (plus de cœurs, `down` compris côté Monodon) |
 | Odoo répond après `up` | 1,5 s | 2,9–3,1 s | |
-| Création d'une base avec données de démonstration | 13,6 s | 16,4–17,7 s | Docker Desktop +20 % : 16 cœurs contre 4 pour Solon (réglable) |
+| Création d'une base avec données de démonstration | 13,6 s | 16,4–17,7 s | Docker Desktop +20 % : 16 cœurs contre 4 pour Monodon (réglable) |
 | Page de connexion, moyenne de 5 chargements | 27–46 ms | 34 ms | Équivalent |
 
-Conclusions honnêtes : Solon gagne nettement sur ce qui coûte tous les jours (démarrage, mémoire) ; à charge égale
-Docker Desktop reste 20 à 30 % plus rapide sur les tâches CPU parce qu'il dispose par défaut de tous les cœurs (Solon :
+Conclusions honnêtes : Monodon gagne nettement sur ce qui coûte tous les jours (démarrage, mémoire) ; à charge égale
+Docker Desktop reste 20 à 30 % plus rapide sur les tâches CPU parce qu'il dispose par défaut de tous les cœurs (Monodon :
 4, modifiable dans Réglages) ; la latence des requêtes web est identique. Les deux moteurs gardent le cache disque de
-l'invité en mémoire ; Solon plafonne à l'allocation (2 Go), Docker Desktop monte à 5 Go.
+l'invité en mémoire ; Monodon plafonne à l'allocation (2 Go), Docker Desktop monte à 5 Go.
 
 Incidents pendant la mesure : rate limit anonyme du registre ECR (`toomanyrequests`) sur les deux moteurs ; Odoo lancé
 en double sur le même dossier `config/` réécrit `admin_passwd` haché à tour de rôle (sans conséquence, même mot de passe).
@@ -364,9 +367,9 @@ en double sur le même dossier `config/` réécrit `admin_passwd` haché à tour
 |---|---|
 | Processeurs par défaut sur la machine de test (24 cœurs logiques) | 22 (`nproc` dans l'invité) ; le réglage reste modifiable |
 | Terminal dans la machine | ouvert en < 1 s, `sh -l` root, redimensionnement suivi ; `Ctrl+\`` |
-| CLI intégré (`C:\Program Files\Solonin` en tête du PATH) | `docker version` : client 29.7.2 / serveur 29.5.3 ; `docker compose version` : **c'était le plugin de Docker Desktop** qui répondait ; sans lui (test machine vierge), `docker compose` était introuvable : `DOCKER_CLI_PLUGIN_EXTRA_DIRS` n'est pas lue par le CLI 29, seule la clé `cliPluginsExtraDirs` de `config.json` l'est. Corrigé dans le lanceur. |
+| CLI intégré (`C:\Program Files\Monodonin` en tête du PATH) | `docker version` : client 29.7.2 / serveur 29.5.3 ; `docker compose version` : **c'était le plugin de Docker Desktop** qui répondait ; sans lui (test machine vierge), `docker compose` était introuvable : `DOCKER_CLI_PLUGIN_EXTRA_DIRS` n'est pas lue par le CLI 29, seule la clé `cliPluginsExtraDirs` de `config.json` l'est. Corrigé dans le lanceur. |
 | Installeur | 105 Mo avec le CLI et Compose (+25 Mo) |
-| **Défaut corrigé** : partages non remontés après redémarrage du moteur | reproduit sur Odoo (`/etc/odoo/odoo.conf` absent, `No section: 'options'`) ; après correctif : `solon.shares=c:9100` dans la ligne de commande du noyau, `/mnt/host/c` monté avant dockerd, Odoo redémarre avec sa configuration, connexion HTTP 200 |
+| **Défaut corrigé** : partages non remontés après redémarrage du moteur | reproduit sur Odoo (`/etc/odoo/odoo.conf` absent, `No section: 'options'`) ; après correctif : `monodon.shares=c:9100` dans la ligne de commande du noyau, `/mnt/host/c` monté avant dockerd, Odoo redémarre avec sa configuration, connexion HTTP 200 |
 | Redémarrage du moteur avec un partage à remonter | 5,2 s (contre 1,1 s en rattachement) |
 
 Faits établis : une machine créée à chaud n'a que les partages ajoutés pendant sa vie ; tout partage doit être
@@ -375,7 +378,7 @@ pointent sur des dossiers vides. Le port vsock d'un partage est `9100 + index d'
 
 ### Complément du 3 septembre 2026 (soir) — après passage à 22 processeurs
 
-| Mesure | Docker Desktop | Solon (22 cœurs) | Solon (4 cœurs, plus haut) |
+| Mesure | Docker Desktop | Monodon (22 cœurs) | Monodon (4 cœurs, plus haut) |
 |---|---|---|---|
 | Création d'une base Odoo avec démo | 13,6 s | **17,9 s** | 16,4–17,7 s |
 | `compose down` + `up -d` | 7,1 s | 8,3 s | 10,3 s |
@@ -387,7 +390,7 @@ pointent sur des dossiers vides. Le port vsock d'un partage est `9100 + index d'
 
 Lecture : le nombre de cœurs **n'était pas** la cause de l'écart sur la création de base (tâche essentiellement
 mono-thread : Python d'Odoo + une connexion PostgreSQL). Le disque n'est pas en cause non plus : les écritures
-synchrones sont ~2× plus rapides sur Solon. Suspects restants, à tester isolément : le `sync()` global toutes les
+synchrones sont ~2× plus rapides sur Monodon. Suspects restants, à tester isolément : le `sync()` global toutes les
 2 s de l'agent (peut bloquer les écrivains pendant un import massif), et la vitesse par cœur perçue dans la machine
 (ordonnancement HCS avec 22 vCPU pour 24 cœurs logiques). Le redémarrage de pile et la mise en route d'Odoo sont
 désormais au niveau de Docker Desktop ; la mémoire est passée sous 1,2 Go avec la pile.
@@ -412,21 +415,21 @@ le contrôle SHA-256 du service l'a détecté (`IMAGE_CORRUPTED`) ; attendre la 
 
 | Vérification | Résultat |
 |---|---|
-| Bloc `hosts` écrit par le service | `odoo.odoo18.solon.local`, `odoo18-odoo-1.solon.local`, `web.solon.local` → 127.0.0.1 |
-| `Resolve-DnsName odoo.odoo18.solon.local` | 127.0.0.1 (le fichier hosts l'emporte sur mDNS pour `.local`) |
-| `http://odoo.odoo18.solon.local/web/login?db=demo` | HTTP 200 (page Odoo complète, 5 087 octets) |
-| `http://web.solon.local/` | HTTP 200 |
+| Bloc `hosts` écrit par le service | `odoo.odoo18.monodon.local`, `odoo18-odoo-1.monodon.local`, `web.monodon.local` → 127.0.0.1 |
+| `Resolve-DnsName odoo.odoo18.monodon.local` | 127.0.0.1 (le fichier hosts l'emporte sur mDNS pour `.local`) |
+| `http://odoo.odoo18.monodon.local/web/login?db=demo` | HTTP 200 (page Odoo complète, 5 087 octets) |
+| `http://web.monodon.local/` | HTTP 200 |
 | Nom inconnu | non résolu (pas d'entrée hosts) ; en cas de `Host` inconnu sur 127.0.0.1:80, page 404 listant les domaines |
-| Port 80 sur cette machine | libre : mandataire actif (`local_domains=true` dans l'état) || Notification Windows | toast « Solon : conteneur arrêté — crashtest s'est terminé avec le code 3 » 3 s après `exit 3`, icône Solon |
+| Port 80 sur cette machine | libre : mandataire actif (`local_domains=true` dans l'état) || Notification Windows | toast « Monodon : conteneur arrêté — crashtest s'est terminé avec le code 3 » 3 s après `exit 3`, icône Monodon |
 | Export de diagnostic | archive de 14 fichiers (18 Ko) : LISEZMOI, état, prérequis, réglages, partages, version, docker info, state.json, journaux récents, bloc hosts |
 
-## Lot « dossiers rapides » — solonfs contre 9P (6 septembre 2026)
+## Lot « dossiers rapides » — monodonfs contre 9P (6 septembre 2026)
 
 Arbre de test : 5 000 fichiers de 0,2 à 4 Ko dans 250 × 2 dossiers (forme d'un `node_modules`), sur le disque C:,
 **copie fraîche** pour chaque mesure (jamais ouverte auparavant). Mesures prises depuis la machine Linux du moteur.
 Disque natif ext4 de la machine, pour l'échelle : `find` 19 ms, `stat` de tout 50 ms, `cat` de tout 19 ms.
 
-| Opération | 9P Windows (`/mnt/host/c`) | **solonfs** (`/mnt/solonfs/c`) | Gain |
+| Opération | 9P Windows (`/mnt/host/c`) | **monodonfs** (`/mnt/monodonfs/c`) | Gain |
 |---|---|---|---|
 | `find` (5 000 fichiers, 500 dossiers) | 5 279 ms | **800 ms** | 6,6× |
 | `stat` de chaque fichier | 11 240 ms | **119 ms** | 94× |
@@ -439,7 +442,7 @@ Disque natif ext4 de la machine, pour l'échelle : `find` 19 ms, `stat` de tout 
 | `rm -rf` | 1 689 ms | **279 ms** | 6× |
 
 Comment : un aller-retour hôte↔invité coûte ~0,5 ms quel que soit le protocole ; 9P en dépense un par `stat`.
-solonfs renvoie les attributs de **tout un dossier** en une réponse et les garde 1,5 s en cache côté invité ; les
+monodonfs renvoie les attributs de **tout un dossier** en une réponse et les garde 1,5 s en cache côté invité ; les
 lectures demandent 128 Ko d'un coup ; et, mesure clé, la **première ouverture d'un fichier côté Windows coûte
 ~3,5 ms** (contre 0,2 ensuite), d'où un préchauffage des petits fichiers d'un dossier dès qu'il est listé.
 Reste : la première lecture est encore à 1,3 ms/fichier (le préchauffage ne rattrape pas tout), et le client FUSE
@@ -447,15 +450,15 @@ est mono-thread.
 
 Défauts trouvés et corrigés pendant le lot : (1) `rm -rf` sautait des entrées parce que la liste d'un dossier
 était relue pendant la suppression → listage figé par descripteur ouvert ; (2) un démarrage a monté le disque de
-données comme racine (`/dev/sda` n'est pas garanti) → disques choisis par étiquette ext4 (`solon-root`, `solon-data`)
+données comme racine (`/dev/sda` n'est pas garanti) → disques choisis par étiquette ext4 (`monodon-root`, `monodon-data`)
 dans l'initrd et l'agent.
 
-### Bascule des conteneurs sur solonfs (6 septembre 2026)
+### Bascule des conteneurs sur monodonfs (6 septembre 2026)
 
 | Vérification | Résultat |
 |---|---|
-| Montages après démarrage | `solonfs on /mnt/host/c` (FUSE), `hcs-plan9 on /mnt/host9p/c` (secours) |
-| Odoo (compose, `./config` et `./addons` montés) | démarre, « Using configuration file at /etc/odoo/odoo.conf », page de connexion HTTP 200 via `odoo.odoo18.solon.local` |
+| Montages après démarrage | `monodonfs on /mnt/host/c` (FUSE), `hcs-plan9 on /mnt/host9p/c` (secours) |
+| Odoo (compose, `./config` et `./addons` montés) | démarre, « Using configuration file at /etc/odoo/odoo.conf », page de connexion HTTP 200 via `odoo.odoo18.monodon.local` |
 | `docker run -v %TEMP%\…:/data` : lecture d'un fichier Windows, écriture d'un fichier et d'un sous-dossier | vus côté Windows immédiatement |
 | Fichier modifié côté Windows puis lu par un nouveau conteneur 2 s après | nouveau contenu (cache 1,5 s) |
 | Démarrage du moteur avec les deux montages | 2,1 s |
@@ -464,16 +467,16 @@ dans l'initrd et l'agent.
 
 Machine de développement remise dans l'état d'un PC sans Docker (`tests/e2e/fresh-machine-phase1.ps1`, élevé) :
 Docker Desktop 4.66.1 désinstallé (12 s), distributions WSL `docker-desktop` et `Ubuntu` retirées (Ubuntu exportée
-avant en 134 s, 10,25 Go), WSL 2.7.12 désinstallé (8 s), Solon désinstallé avec ses données (6 s, bloc `hosts` propre),
+avant en 134 s, 10,25 Go), WSL 2.7.12 désinstallé (8 s), Monodon désinstallé avec ses données (6 s, bloc `hosts` propre),
 composants `Microsoft-Hyper-V-All`, `VirtualMachinePlatform` et `Microsoft-Windows-Subsystem-Linux` désactivés
-(redémarrage requis). Phase 2 (installation de Solon seul, activation des composants par l'installeur, redémarrages,
+(redémarrage requis). Phase 2 (installation de Monodon seul, activation des composants par l'installeur, redémarrages,
 vérifications `fresh-machine-phase2.ps1`) : résultats à la suite.
 
 ### Test « machine vierge » — phase 2 (6 septembre 2026)
 
 Après redémarrage, installeur lancé depuis le Bureau comme un utilisateur (SmartScreen accepté à la main).
 `setup.log` : `Microsoft-Hyper-V` activé en 20 s, `VirtualMachinePlatform` en 8 s, PATH ajouté, service installé,
-**redémarrage requis** signalé à l'installeur ; après ce second redémarrage, `SolonService` était démarré tout seul.
+**redémarrage requis** signalé à l'installeur ; après ce second redémarrage, `MonodonService` était démarré tout seul.
 
 | Vérification (`fresh-machine-phase2.ps1`, sans élévation) | Résultat |
 |---|---|
@@ -481,14 +484,14 @@ Après redémarrage, installeur lancé depuis le Bureau comme un utilisateur (Sm
 | Service installé et en marche après le redémarrage | OK |
 | Prérequis tous verts (composants activés par l'installeur) | OK |
 | Premier démarrage du moteur (création + formatage du disque de données) | **6,7 s** ; redémarrage suivant 1,0 s |
-| `docker version` avec le CLI livré par Solon (PATH machine) | 29.7.2 / 29.5.3 |
+| `docker version` avec le CLI livré par Monodon (PATH machine) | 29.7.2 / 29.5.3 |
 | `docker run hello-world` (réseau sortant, registre ECR public) | OK en 539 ms à la seconde exécution ; **la première a échoué** ~1 min après le démarrage de Windows (réseau ou registre pas encore prêt), voir ci-dessous |
-| Montage d'un dossier Windows via solonfs, aller-retour | OK |
+| Montage d'un dossier Windows via monodonfs, aller-retour | OK |
 | Port publié relayé sur localhost | OK |
-| Domaine local `fresh-web.solon.local` | OK |
+| Domaine local `fresh-web.monodon.local` | OK |
 | Mémoire du moteur | 630–672 Mo |
 
-Conclusion : **Solon fonctionne seul**, sans Docker Desktop ni WSL, y compris le chemin « composants désactivés →
+Conclusion : **Monodon fonctionne seul**, sans Docker Desktop ni WSL, y compris le chemin « composants désactivés →
 activation → redémarrage » de l'installeur jamais testé jusque-là. Point à surveiller : le premier `docker pull`
 juste après un redémarrage de Windows peut échouer (réseau pas encore stable ou quota du registre) ; à
 reproduire avant d'ajouter un nouvel essai automatique côté moteur.
@@ -499,11 +502,11 @@ reproduire avant d'ajouter un nouvel essai automatique côté moteur.
 |---|---|---|---|
 | `docker compose` introuvable | le plugin de Docker Desktop masquait l'absence du nôtre ; le CLI 29 ignore `DOCKER_CLI_PLUGIN_EXTRA_DIRS` | le lanceur inscrit `bin\cli-plugins` dans `cliPluginsExtraDirs` de `config.json` | `docker compose version` → v5.1.4 dans un shell neuf |
 | Warpgate `setup` : « failed to tighten file permissions (EPERM) » | `DefaultPermissions` sur le montage FUSE : le noyau refusait `chmod` à un utilisateur non root sur des fichiers présentés comme root | option retirée, le système de fichiers arbitre (chmod/chown acceptés et ignorés) | `chmod 600` + `chown` par uid 1000 sur un dossier Windows : OK |
-| Image du moteur non reconstructible sans WSL | pipeline lié à Ubuntu WSL | **construction dans un conteneur Solon** (Alpine 3.24), dépôt monté par solonfs ; scripts corrigés (SIGPIPE `curl | head`), taille de bloc ext4 fixée à 4 Kio | image dev.12 construite en **14 s** (contre 3 à 4 min sous WSL), agent présent, empreinte conforme |
+| Image du moteur non reconstructible sans WSL | pipeline lié à Ubuntu WSL | **construction dans un conteneur Monodon** (Alpine 3.24), dépôt monté par monodonfs ; scripts corrigés (SIGPIPE `curl | head`), taille de bloc ext4 fixée à 4 Kio | image dev.12 construite en **14 s** (contre 3 à 4 min sous WSL), agent présent, empreinte conforme |
 
 ## Lot « des adresses qui marchent, toujours » (6 septembre 2026)
 
-Objectif : joindre tout conteneur en marche depuis Windows **sans publier de port**, par son adresse et par `https://nom.solon.local`, avec un certificat accepté par le navigateur. Image du moteur **0.1.0-dev.14** (agent : règles de pare-feu pour l'hôte), service : route, autorité locale, mandataire HTTPS.
+Objectif : joindre tout conteneur en marche depuis Windows **sans publier de port**, par son adresse et par `https://nom.monodon.local`, avec un certificat accepté par le navigateur. Image du moteur **0.1.0-dev.14** (agent : règles de pare-feu pour l'hôte), service : route, autorité locale, mandataire HTTPS.
 
 ### Ce qui bloquait, et la solution retenue
 
@@ -524,14 +527,14 @@ Objectif : joindre tout conteneur en marche depuis Windows **sans publier de por
 | `curl http://10.90.1.3:8069/web/login` | HTTP 303 (Odoo, redirection vers le gestionnaire de bases) |
 | `Test-NetConnection 10.90.1.2 -Port 5432` | `True` (PostgreSQL joignable directement, port non publié) |
 | `ping 10.90.0.2`, `ping 10.90.1.3` | réponses |
-| bloc `hosts` | `web`, `odoo.odoo18`, `db.odoo18`, `odoo18-odoo-1`, `odoo18-db-1` `.solon.local` → 127.0.0.1 |
-| `http://web.solon.local/` | `hello from web container` (conteneur sans port publié) |
-| `https://web.solon.local/` (.NET / Schannel) | 200, certificat `CN=web.solon.local` émis par `O=Solon, CN=Solon Local CA`, expire le 1er janvier 2036 |
-| `https://odoo.odoo18.solon.local/web/login` (.NET) | 200 |
-| Edge (mode headless) sur `https://web.solon.local/` | page rendue, aucun avertissement de certificat |
+| bloc `hosts` | `web`, `odoo.odoo18`, `db.odoo18`, `odoo18-odoo-1`, `odoo18-db-1` `.monodon.local` → 127.0.0.1 |
+| `http://web.monodon.local/` | `hello from web container` (conteneur sans port publié) |
+| `https://web.monodon.local/` (.NET / Schannel) | 200, certificat `CN=web.monodon.local` émis par `O=Monodon, CN=Monodon Local CA`, expire le 1er janvier 2036 |
+| `https://odoo.odoo18.monodon.local/web/login` (.NET) | 200 |
+| Edge (mode headless) sur `https://web.monodon.local/` | page rendue, aucun avertissement de certificat |
 | `curl.exe https://…` | code 35 `CRYPT_E_NO_REVOCATION_CHECK` sans `--ssl-no-revoke` ; OK avec (limite connue de curl/Schannel, identique à mkcert) |
-| `certutil -store Root "Solon Local CA"` | présent, `NotAfter 01/01/2036` |
-| conteneur → hôte (`wget http://172.30.0.1/`, `ping 172.30.0.1`) | bloqué par le pare-feu Windows sur `vEthernet (Solon)` : inchangé, non nécessaire |
+| `certutil -store Root "Monodon Local CA"` | présent, `NotAfter 01/01/2036` |
+| conteneur → hôte (`wget http://172.30.0.1/`, `ping 172.30.0.1`) | bloqué par le pare-feu Windows sur `vEthernet (Monodon)` : inchangé, non nécessaire |
 | démarrage du moteur | route, mandataires 80 et 443 et autorité prêts en **0,16 s** après le réseau (journal : 14:49:16.618 → 16.774) |
 
 ### Défauts trouvés en installant, corrigés dans ce lot
@@ -539,15 +542,15 @@ Objectif : joindre tout conteneur en marche depuis Windows **sans publier de por
 | Défaut | Cause | Correction |
 |---|---|---|
 | Après mise à jour silencieuse : `IMAGE_CORRUPTED` (manifeste dev.14, image dev.13) | l'hyperviseur garde `vmlinuz`, `initrd.img`, `rootfs.vhd` ouverts quelques secondes après l'arrêt de la machine ; l'installeur remplaçait le manifeste mais pas l'image verrouillée | `installer/hooks.nsh` : après l'arrêt du service, attente (60 s au plus) que chaque fichier de `image\` s'ouvre en exclusif |
-| `solon-ca.key` lisible par tous les utilisateurs | `%ProgramData%` hérite d'un droit de lecture pour « Utilisateurs » | dossier `ca\` : héritage retiré, SYSTEM et administrateurs seuls (`icacls`), fichiers existants remis en héritage (`/reset`) ; une première version avec `/T` laissait les fichiers **sans aucun droit** (même SYSTEM refusé) |
-| Installeur reconstruit sans le service | `npm run tauri build` ne recompile pas `solon-service` (ressource copiée depuis `target/release`) | rappel : `cargo build --release -p solon-service` **avant** `tauri build` (déjà dans le README) |
+| `monodon-ca.key` lisible par tous les utilisateurs | `%ProgramData%` hérite d'un droit de lecture pour « Utilisateurs » | dossier `ca\` : héritage retiré, SYSTEM et administrateurs seuls (`icacls`), fichiers existants remis en héritage (`/reset`) ; une première version avec `/T` laissait les fichiers **sans aucun droit** (même SYSTEM refusé) |
+| Installeur reconstruit sans le service | `npm run tauri build` ne recompile pas `monodon-service` (ressource copiée depuis `target/release`) | rappel : `cargo build --release -p monodon-service` **avant** `tauri build` (déjà dans le README) |
 
 ### Ce qui reste fragile
 
 - Le port **443** est aussi réservé sur `127.0.0.1` : un IIS ou un autre serveur local sur 443 désactive le HTTPS (le HTTP sur 80 reste), avec un avertissement dans le journal.
 - Les règles de l'agent visent la passerelle `172.30.0.1` : si la plage HNS change (collision détectée au démarrage), la règle suit puisque l'adresse vient de `ConfigureNetwork`.
 - La route Windows est non persistante (recréée à chaque démarrage du moteur) : si le service est tué sans passer par l'arrêt, une route orpheline reste jusqu'au redémarrage ou au prochain démarrage du moteur (elle est d'abord supprimée puis recréée).
-- La clé de l'autorité est dans `%ProgramData%\Solon\ca\solon-ca.key` (droits SYSTEM/administrateurs) : un administrateur local peut signer des certificats pour n'importe quel nom **sur cette machine seulement** (l'autorité n'est installée nulle part ailleurs), comme avec mkcert.
+- La clé de l'autorité est dans `%ProgramData%\Monodon\ca\monodon-ca.key` (droits SYSTEM/administrateurs) : un administrateur local peut signer des certificats pour n'importe quel nom **sur cette machine seulement** (l'autorité n'est installée nulle part ailleurs), comme avec mkcert.
 
 ## Lot « menu » (6 septembre 2026, soir) — deux catégories, repli, Projets fusionnés, Activité, Terminal
 
@@ -558,12 +561,12 @@ dans Conteneurs ; (3) menu en deux catégories, **Docker** (Containers, Volumes,
 
 | Élément | Réalisation | Vérification (captures `.local/build/menu-*.png`, `u*.png`, `v*.png`) |
 |---|---|---|
-| Menu replié | `Ctrl+B` ou bouton en haut du menu ; 56 px, icônes seules, libellés et raccourcis en infobulle, état du moteur réduit au point ; mémorisé (`localStorage` `solon.sidebar`) | replié / déplié dans les deux sens, y compris depuis le terminal |
+| Menu replié | `Ctrl+B` ou bouton en haut du menu ; 56 px, icônes seules, libellés et raccourcis en infobulle, état du moteur réduit au point ; mémorisé (`localStorage` `monodon.sidebar`) | replié / déplié dans les deux sens, y compris depuis le terminal |
 | Projets dans Conteneurs | plus d'onglet Projets ; en-tête d'un groupe Compose → écran du projet (services, journaux mêlés, Up / Down / Rebuild, Explorateur, VS Code) avec retour « ← Containers » | clic sur « COMPOSE PROJECT · ODOO18 → » : écran du projet `<dossier du projet>\odoo18\compose.yaml`, 2/2 running, journaux d'Odoo en direct |
 | Deux catégories | ordre du menu = ordre des raccourcis `Ctrl+1` … `Ctrl+7` ; palette `Ctrl+K` alignée | palette : Containers Ctrl+1 … Settings Ctrl+7, Terminal Ctrl+` |
-| Activity | agent : `Command::Metrics` (`/proc/stat`, `/proc/meminfo`, `/proc/loadavg`, `statvfs(/var/lib/solon)`, `/proc/net/dev` eth0) ; service `ServiceCommand::Metrics` ; app : relevé toutes les 2 s, pourcentages et débits par différence, courbes glissantes de 60 points ; conteneurs : flux `stats` existant, débits réseau par différence, tri par colonne | 22 processeurs, 457 MiB sur 1,9 GiB (2,0 GiB réservés), stockage 6,1 GiB sur 62 GiB (10 %), réseau eth0 ; 3 conteneurs avec CPU, mémoire / limite, débits, courbe |
+| Activity | agent : `Command::Metrics` (`/proc/stat`, `/proc/meminfo`, `/proc/loadavg`, `statvfs(/var/lib/monodon)`, `/proc/net/dev` eth0) ; service `ServiceCommand::Metrics` ; app : relevé toutes les 2 s, pourcentages et débits par différence, courbes glissantes de 60 points ; conteneurs : flux `stats` existant, débits réseau par différence, tri par colonne | 22 processeurs, 457 MiB sur 1,9 GiB (2,0 GiB réservés), stockage 6,1 GiB sur 62 GiB (10 %), réseau eth0 ; 3 conteneurs avec CPU, mémoire / limite, débits, courbe |
 | Terminal en section | `MachineTerminalPanel` monté à la première visite puis conservé masqué (la session survit aux changements de section) ; « New session » ; raccourcis de l'application prioritaires sur le shell (`attachCustomKeyEventHandler`) ; focus rendu quand la section est masquée | `echo terminal-ok` puis `Ctrl+B` (menu replié, pas de `^B` dans le shell), `Ctrl+1` puis `Ctrl+K` (palette ouverte) |
-| Anglais par défaut | déjà le cas dans l'interface ; passés en anglais : pages 404 / 502 du mandataire `*.solon.local`, messages de l'installeur (`hooks.nsh`), journal `setup.log`, console et description du service | `setup.log` : « service started: Running » |
+| Anglais par défaut | déjà le cas dans l'interface ; passés en anglais : pages 404 / 502 du mandataire `*.monodon.local`, messages de l'installeur (`hooks.nsh`), journal `setup.log`, console et description du service | `setup.log` : « service started: Running » |
 
 ### Défauts trouvés en chemin
 
@@ -577,11 +580,11 @@ dans Conteneurs ; (3) menu en deux catégories, **Docker** (Containers, Volumes,
 
 Demande : « fait le 1, 2, 3, 10 » de la liste des fonctionnalités d'OrbStack pertinentes ; ce lot couvre le **2**
 (shell de débogage dans n'importe quel conteneur) et le **10** (fiche complète et copie de fichiers). Image du moteur
-**0.1.0-dev.17** (script `solon-debug` dans `/usr/local/bin`), en-tête du terminal machine étendu (`ShellHeader.command`).
+**0.1.0-dev.17** (script `monodon-debug` dans `/usr/local/bin`), en-tête du terminal machine étendu (`ShellHeader.command`).
 
 | Élément | Réalisation | Vérification (captures `.local/build/w*.png`) |
 |---|---|---|
-| Shell de débogage | `solon-debug <conteneur>` : boîte à outils `solon-debug` (Alpine + bash, curl, wget, dig, ps, strace, tcpdump, jq, vim, nano, less, ss, lsof, htop ; 75 Mo, construite au premier usage) lancée avec `--pid`, `--network`, `--volumes-from` du conteneur cible et `SYS_PTRACE` ; démarre dans `/proc/1/root` (système de fichiers de la cible) avec l'invite `debug(nom):chemin #`. Onglet « Debug shell » de la fiche : terminal machine avec une commande au lieu du shell (`ShellHeader.command`, `sh -lc`). | conteneur `web` (busybox, sans bash) : `ps aux` montre `httpd` (PID 1 de la cible), `ls www` → `index.html`, `curl -s http://localhost/` → `hello from web container`, `ss -tlnp` → `httpd pid=1` sur :80 |
+| Shell de débogage | `monodon-debug <conteneur>` : boîte à outils `monodon-debug` (Alpine + bash, curl, wget, dig, ps, strace, tcpdump, jq, vim, nano, less, ss, lsof, htop ; 75 Mo, construite au premier usage) lancée avec `--pid`, `--network`, `--volumes-from` du conteneur cible et `SYS_PTRACE` ; démarre dans `/proc/1/root` (système de fichiers de la cible) avec l'invite `debug(nom):chemin #`. Onglet « Debug shell » de la fiche : terminal machine avec une commande au lieu du shell (`ShellHeader.command`, `sh -lc`). | conteneur `web` (busybox, sans bash) : `ps aux` montre `httpd` (PID 1 de la cible), `ls www` → `index.html`, `curl -s http://localhost/` → `hello from web container`, `ss -tlnp` → `httpd pid=1` sur :80 |
 | Fiche (Overview) | onglet par défaut : général (ID, image, dates, commande, dossier, utilisateur, nom d'hôte, politique de redémarrage, santé, code de sortie), réseau par réseau (IP, passerelle, MAC, alias), ports avec lien, montages, environnement (copiable), étiquettes ; rafraîchie toutes les 5 s | capture `w3.png` |
 | Copie de fichiers | `container_copy_from` (API `GET /archive` → tar → `tar.exe` de Windows extrait dans le dossier choisi) et `container_copy_to` (`tar.exe` crée l'archive → `PUT /archive`) ; boîtes de dialogue natives, message de résultat avec « Ouvrir le dossier » | `/www` → `.local\build\copytest\www\index.html` (25 octets, contenu correct) ; `README.md` → `/tmp/README.md` dans le conteneur (16 132 octets) |
 
@@ -598,13 +601,13 @@ Demande : « fait le 1, 2, 3, 10 » de la liste des fonctionnalités d'OrbStack 
 | Élément | Réalisation | Vérification (captures `.local/build/f*.png`) |
 |---|---|---|
 | Parcours | `files_list` : commande `stat` de busybox exécutée dans la machine (`ServiceCommand::Exec`) sur le système de fichiers fusionné du conteneur (`GraphDriver.Data.MergedDir`, conteneur en marche) ou sur `/var/lib/docker/volumes/<nom>/_data` ; aucun shell requis dans l'image ; chemins normalisés (`..` refusé), noms cités pour le shell | racine du conteneur Odoo (dossiers, droits, dates), navigation dans `boot`, fil d'Ariane ; volume `odoo18_odoo-db` : données PostgreSQL, droits 700 |
-| Créer, supprimer | `mkdir -p` / `rm -rf` dans la machine, racine protégée, confirmation avant suppression | dossier `aaa-solon-test` créé (755, visible dans la machine), puis supprimé après confirmation |
-| Copier vers Windows | API `archive` : conteneur directement ; volume via un **conteneur auxiliaire jamais démarré** (image vide `solon-empty` importée une fois, 0 octet) qui monte le volume sur `/v`, supprimé après usage | dossier `base` du volume PostgreSQL → 896 fichiers, 23 Mo, aucun auxiliaire restant |
+| Créer, supprimer | `mkdir -p` / `rm -rf` dans la machine, racine protégée, confirmation avant suppression | dossier `aaa-monodon-test` créé (755, visible dans la machine), puis supprimé après confirmation |
+| Copier vers Windows | API `archive` : conteneur directement ; volume via un **conteneur auxiliaire jamais démarré** (image vide `monodon-empty` importée une fois, 0 octet) qui monte le volume sur `/v`, supprimé après usage | dossier `base` du volume PostgreSQL → 896 fichiers, 23 Mo, aucun auxiliaire restant |
 | Envoyer | boutons fichiers / dossier et **glisser-déposer** depuis l'Explorateur (`onDragDropEvent` de la fenêtre), même mécanique en sens inverse | envoi testé dans le lot A (README.md → /tmp) |
 | Intégration | onglet **Files** de la fiche de conteneur ; section Volumes : bouton « Files » ou clic sur le nom → explorateur du volume avec retour | captures `f2`, `f3`, `f5`–`f8` |
 
 Reste à faire de la demande : **1** (machines Linux complètes, proposition « conteneurs système » en attente de
-validation) et la seconde étape du **3** (lecteur réseau `\\solon\` dans l'Explorateur, si l'usage le justifie).
+validation) et la seconde étape du **3** (lecteur réseau `\\monodon\` dans l'Explorateur, si l'usage le justifie).
 
 ## Lot « visuel » (7 septembre 2026, soir)
 
@@ -635,13 +638,13 @@ fenêtre serait restée masquée au lancement suivant → drapeau `VISIBLE` excl
 ## Réveil à la demande (7–8 septembre 2026, nuit)
 
 Demande : « fait le 1 » de la liste des plus-values (sommeil automatique et réveil à la demande). Service seul
-(`crates/solon-service/src/sleep.rs`), aucun changement d'image ; réglages appliqués sans redémarrage.
+(`crates/monodon-service/src/sleep.rs`), aucun changement d'image ; réglages appliqués sans redémarrage.
 
 | Élément | Réalisation | Vérification |
 |---|---|---|
-| Éligibilité | seuls les conteneurs ayant déjà reçu une connexion **via Solon** (domaine ou port publié) ; jamais tant qu'une connexion relayée est ouverte ; jamais ceux de « Keep awake » ; jamais si l'état Docker n'est pas `running` (pause manuelle respectée) | `odoo18-db-1` (PostgreSQL, joint seulement par Odoo en interne) **jamais endormi** pendant tout le test |
+| Éligibilité | seuls les conteneurs ayant déjà reçu une connexion **via Monodon** (domaine ou port publié) ; jamais tant qu'une connexion relayée est ouverte ; jamais ceux de « Keep awake » ; jamais si l'état Docker n'est pas `running` (pause manuelle respectée) | `odoo18-db-1` (PostgreSQL, joint seulement par Odoo en interne) **jamais endormi** pendant tout le test |
 | Endormissement | boucle toutes les 15 s, `docker pause` par l'agent, délai par défaut 10 min (réglable 1–1440) | `web` et `odoo18-odoo-1` touchés à 23:53:46 → endormis à 00:03:48 (`idle_s=600`) ; avec 1 min : endormis 71 s après la dernière requête |
-| Réveil | `docker unpause` avant le relais de la première connexion (mandataire des domaines **et** relais de ports) | `web` via `web.solon.local` : réveil 51 ms, réponse complète 115 ms ; Odoo via `localhost:8069` : réveil 31 ms, réponse 355 ms |
+| Réveil | `docker unpause` avant le relais de la première connexion (mandataire des domaines **et** relais de ports) | `web` via `web.monodon.local` : réveil 51 ms, réponse complète 115 ms ; Odoo via `localhost:8069` : réveil 31 ms, réponse 355 ms |
 | Interface | pastille « Asleep » avec lune dans la liste et la fiche, liens de domaine conservés (un clic réveille), bouton « Keep awake » dans la fiche (liste `sleep_never`), réglages activer / délai | capture `.local/build/s6.png` : Odoo et web « Asleep », db en marche ; `s7.png` : web de nouveau en marche après une requête |
 | Événements | `unpause` / `stop` / `start` faits par l'utilisateur sortent le conteneur de la liste des endormis | code (`on_container_event`) |
 
@@ -652,6 +655,26 @@ Demande : « fait le 1 » de la liste des plus-values (sommeil automatique et r�
 | Bouton « Save » des réglages inaccessible | la page Réglages n'était pas défilable ; les nouveaux réglages l'ont fait dépasser la fenêtre | conteneur défilable (`overflow-auto`) |
 
 Limites connues : un conteneur endormi ne fait plus tourner ses tâches planifiées internes (cron d'Odoo par exemple)
-tant que personne ne l'appelle ; « Keep awake » règle le cas. Les connexions non relayées par Solon (par exemple
+tant que personne ne l'appelle ; « Keep awake » règle le cas. Les connexions non relayées par Monodon (par exemple
 l'accès direct à l'adresse `10.90.x.y`) ne réveillent pas et ne comptent pas comme activité.
+
+## Renommage Solon → Monodon (8 septembre 2026)
+
+Valère a choisi le nom **Monodon** (genre du narval, *Monodon monoceros*) ; logo narval minimaliste à venir.
+Renommage d'un bloc de tout le dépôt (crates `monodon-*`, service `MonodonService`, canaux `\.\pipe\monodon*`,
+dossier `%ProgramData%\Monodon`, domaines `*.monodon.local`, autorité « Monodon Local CA », système de fichiers
+`monodonfs`, agent `monodon-agent`, script `monodon-debug`, identifiant Tauri `dev.monodon.app`, exécutables
+`monodon.exe` et `monodon-service.exe`), image du moteur **0.1.0-dev.18**.
+
+Compatibilité avec les installations existantes :
+
+| Élément | Mécanisme |
+|---|---|
+| Ancienne installation `C:\Program Files\Solon` | l'installeur Monodon lance son désinstalleur en silence (moteur arrêté, service et PATH retirés, données conservées) |
+| Données `%ProgramData%\Solon` (disque, réglages, journaux) | déplacées vers `%ProgramData%\Monodon` au premier démarrage du service |
+| Disque de données étiqueté `solon-data` | l'agent accepte les deux étiquettes (`monodon-data`, `solon-data`) |
+| Bloc du fichier `hosts` `# solon-begin … # solon-end` | retiré à la première réécriture, remplacé par les marqueurs `monodon` |
+| Autorité « Solon Local CA » dans le magasin racine | supprimée quand « Monodon Local CA » est installée |
+| Préférences de l'interface (thème, menu replié, projets récents) | non reprises : nouvel identifiant d'application |
+| Noyau : chaîne de version `6.18.40.1-solon` | inchangée pour l'instant ; la recompilation du noyau dans la machine (2 Go) l'a saturée (agent injoignable, arrêt forcé) : à refaire avec plus de mémoire ou hors machine |
 

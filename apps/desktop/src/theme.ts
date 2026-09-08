@@ -3,7 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export type Theme = "light" | "dark" | "system";
 
-const KEY = "solon.theme";
+const KEY = "monodon.theme";
 
 export function loadTheme(): Theme {
   try {

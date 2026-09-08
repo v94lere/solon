@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Solon"
+    "name": "Monodon"
   },
   "nav": {
     "containers": "Conteneurs",
@@ -23,7 +23,7 @@
       "degraded": "Moteur en cours de redémarrage",
       "stopping": "Arrêt du moteur…",
       "failed": "Le moteur n'a pas pu démarrer",
-      "service_unavailable": "Le service Solon n'est pas en cours d'exécution"
+      "service_unavailable": "Le service Monodon n'est pas en cours d'exécution"
     },
     "step": {
       "checking_prerequisites": "Vérification de votre système",
@@ -44,7 +44,7 @@
     "retry": "Réessayer",
     "boot_time": "Démarré en {{seconds}} s",
     "recovered": "La session précédente s'est terminée brutalement ; le stockage a été vérifié et récupéré.",
-    "service_hint": "Le service Solon en arrière-plan doit être en cours d'exécution. Réinstaller Solon le répare.",
+    "service_hint": "Le service Monodon en arrière-plan doit être en cours d'exécution. Réinstaller Monodon le répare.",
     "short": {
       "ready": "En marche",
       "starting": "Démarrage…",
@@ -58,19 +58,19 @@
   },
   "error": {
     "title": "Une action est nécessaire",
-    "VIRTUALIZATION_DISABLED_IN_FIRMWARE": "La virtualisation matérielle est désactivée. Activez Intel VT-x ou AMD-V dans le BIOS/UEFI (souvent dans Avancé ou CPU), puis relancez Solon.",
-    "UNSUPPORTED_WINDOWS_EDITION": "Solon nécessite Windows 11 Pro, Entreprise ou Éducation. Windows Famille ne contient pas les composants nécessaires.",
-    "WINDOWS_FEATURE_MISSING": "Un composant Windows est absent. Réinstallez Solon pour l'activer ; un redémarrage peut être nécessaire.",
+    "VIRTUALIZATION_DISABLED_IN_FIRMWARE": "La virtualisation matérielle est désactivée. Activez Intel VT-x ou AMD-V dans le BIOS/UEFI (souvent dans Avancé ou CPU), puis relancez Monodon.",
+    "UNSUPPORTED_WINDOWS_EDITION": "Monodon nécessite Windows 11 Pro, Entreprise ou Éducation. Windows Famille ne contient pas les composants nécessaires.",
+    "WINDOWS_FEATURE_MISSING": "Un composant Windows est absent. Réinstallez Monodon pour l'activer ; un redémarrage peut être nécessaire.",
     "WINDOWS_FEATURE_BLOCKED_BY_POLICY": "Votre organisation restreint l'activation de composants Windows. Demandez à votre administrateur d'activer Hyper-V et la Plateforme de machine virtuelle.",
     "HYPERVISOR_NOT_RUNNING": "Le moteur de virtualisation Windows n'est pas démarré. Causes fréquentes : un VirtualBox/VMware ancien, virtualisation désactivée au démarrage, ou exécution dans une autre machine virtuelle.",
-    "HOST_COMPUTE_SERVICE_UNAVAILABLE": "Un service Windows dont Solon dépend (Host Compute Service) est arrêté ou absent. Redémarrez Windows ; si le problème persiste, réinstallez Solon.",
-    "BLOCKED_BY_SECURITY_SOFTWARE": "Un logiciel de sécurité bloque Solon. Ajoutez le dossier Solon à ses exclusions.",
-    "INSUFFICIENT_PRIVILEGES": "Solon n'a pas les droits nécessaires. Réinstaller Solon répare le service en arrière-plan.",
+    "HOST_COMPUTE_SERVICE_UNAVAILABLE": "Un service Windows dont Monodon dépend (Host Compute Service) est arrêté ou absent. Redémarrez Windows ; si le problème persiste, réinstallez Monodon.",
+    "BLOCKED_BY_SECURITY_SOFTWARE": "Un logiciel de sécurité bloque Monodon. Ajoutez le dossier Monodon à ses exclusions.",
+    "INSUFFICIENT_PRIVILEGES": "Monodon n'a pas les droits nécessaires. Réinstaller Monodon répare le service en arrière-plan.",
     "VM_CONFIGURATION_REJECTED": "Windows a refusé la configuration du moteur. Signalez ce problème avec le fichier journal.",
     "VM_BOOT_TIMEOUT": "Le moteur n'a pas démarré dans le délai prévu.",
     "AGENT_UNREACHABLE": "Le moteur a démarré mais ne répond pas.",
     "ENGINE_UNREACHABLE": "Docker n'est pas devenu prêt dans le délai prévu.",
-    "IMAGE_CORRUPTED": "Les fichiers du moteur sont absents ou corrompus. Réinstallez Solon.",
+    "IMAGE_CORRUPTED": "Les fichiers du moteur sont absents ou corrompus. Réinstallez Monodon.",
     "DATA_DISK_ERROR": "Le disque de stockage n'a pas pu être créé ou ouvert.",
     "HCS_ERROR": "La couche de virtualisation a renvoyé une erreur.",
     "IO": "Une opération sur un fichier a échoué.",
@@ -131,15 +131,15 @@
       "hello_action": "Lancer hello-world",
       "hello_running": "En cours…",
       "compose_title": "Ouvrir un projet Compose",
-      "compose_body": "Choisissez un dossier contenant compose.yaml : Solon montre ses services, les journaux mêlés et les boutons Up / Down.",
+      "compose_body": "Choisissez un dossier contenant compose.yaml : Monodon montre ses services, les journaux mêlés et les boutons Up / Down.",
       "cli_title": "Utiliser la commande docker",
-      "cli_body": "La commande docker est déjà dans votre PATH et parle à Solon. Tout ce que vous lancez apparaît ici.",
-      "cli_hint": "Chaque conteneur en marche reçoit aussi https://<nom>.solon.local, avec ou sans port publié."
+      "cli_body": "La commande docker est déjà dans votre PATH et parle à Monodon. Tout ce que vous lancez apparaît ici.",
+      "cli_hint": "Chaque conteneur en marche reçoit aussi https://<nom>.monodon.local, avec ou sans port publié."
     },
     "none_running": "Aucun conteneur en marche",
     "none_running_hint": "Les conteneurs arrêtés sont masqués.",
     "sleeping": "Endormi",
-    "sleeping_hint": "Mis en pause par Solon après une période d'inactivité. Se réveille à la première requête."
+    "sleeping_hint": "Mis en pause par Monodon après une période d'inactivité. Se réveille à la première requête."
   },
   "detail": {
     "tabs": {
@@ -254,12 +254,12 @@
     "diagnostic_done": "{{count}} fichiers écrits dans {{path}}",
     "diagnostic_open": "Ouvrir le dossier",
     "legacy_fs": "Utiliser l'ancien partage de fichiers Windows (9P) pour les dossiers montés",
-    "legacy_fs_help": "Repli si un conteneur se comporte mal avec le système de fichiers Solon. Plus lent. Appliqué au prochain démarrage du moteur.",
+    "legacy_fs_help": "Repli si un conteneur se comporte mal avec le système de fichiers Monodon. Plus lent. Appliqué au prochain démarrage du moteur.",
     "accent": "Couleur d'accent",
-    "accent_solon": "Bleu Solon",
+    "accent_monodon": "Bleu Monodon",
     "accent_windows": "Couleur d'accent de Windows",
     "sleep": "Endormir les conteneurs inactifs",
-    "sleep_help": "Les conteneurs joints via Solon (adresses solon.local ou ports publiés) sont mis en pause quand plus personne ne leur parle ; ils se réveillent à la première requête en une fraction de seconde. Les bases de données et les tâches de fond qui ne parlent qu'en interne ne sont jamais concernées.",
+    "sleep_help": "Les conteneurs joints via Monodon (adresses monodon.local ou ports publiés) sont mis en pause quand plus personne ne leur parle ; ils se réveillent à la première requête en une fraction de seconde. Les bases de données et les tâches de fond qui ne parlent qu'en interne ne sont jamais concernées.",
     "sleep_after": "Après",
     "sleep_minutes": "minutes sans trafic",
     "sleep_never": "Toujours éveillés : {{names}}"
@@ -384,18 +384,18 @@
     "state_failed": "en échec",
     "state_stopped": "arrêté",
     "state_unknown": "inconnu",
-    "service_unavailable": "Le service Solon n'est pas en cours d'exécution",
+    "service_unavailable": "Le service Monodon n'est pas en cours d'exécution",
     "containers_zero": "Aucun conteneur en marche",
     "containers_one": "1 conteneur en marche",
     "containers_other": "{{count}} conteneurs en marche",
-    "open": "Ouvrir Solon",
+    "open": "Ouvrir Monodon",
     "start": "Démarrer le moteur",
     "stop": "Arrêter le moteur",
-    "quit": "Quitter Solon",
+    "quit": "Quitter Monodon",
     "container_start": "Démarrer",
     "container_restart": "Redémarrer",
     "container_stop": "Arrêter",
-    "containers_more": "… et {{count}} autres (ouvrir Solon)"
+    "containers_more": "… et {{count}} autres (ouvrir Monodon)"
   },
   "projects": {
     "running_count": "{{running}}/{{total}} en marche"
@@ -416,7 +416,7 @@
   },
   "machine": {
     "terminal": "Terminal",
-    "terminal_hint": "shell root dans le moteur Solon",
+    "terminal_hint": "shell root dans le moteur Monodon",
     "new_session": "Nouvelle session"
   },
   "palette": {
@@ -434,13 +434,13 @@
     }
   },
   "notify": {
-    "engine_failed_title": "Solon : le moteur n'a pas démarré",
-    "engine_failed_body": "Ouvrez Solon pour le détail.",
-    "engine_degraded_title": "Solon : redémarrage du moteur",
+    "engine_failed_title": "Monodon : le moteur n'a pas démarré",
+    "engine_failed_body": "Ouvrez Monodon pour le détail.",
+    "engine_degraded_title": "Monodon : redémarrage du moteur",
     "engine_degraded_body": "Docker s'est arrêté de façon inattendue et redémarre.",
-    "disk_title": "Solon : disque du moteur presque plein",
+    "disk_title": "Monodon : disque du moteur presque plein",
     "disk_body": "{{pct}} % utilisés, {{free}} Go restants. Supprimez des images ou volumes inutilisés.",
-    "container_died_title": "Solon : conteneur arrêté",
+    "container_died_title": "Monodon : conteneur arrêté",
     "container_died_body": "{{name}} s'est terminé avec le code {{code}}."
   },
   "activity": {

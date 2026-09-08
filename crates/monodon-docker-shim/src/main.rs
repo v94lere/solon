@@ -1,0 +1,177 @@
+//! `docker.exe` livré par Monodon (installé dans `<dossier>\bin`, ajouté au PATH par l'installeur).
+//!
+//! Il lance le CLI Docker officiel (`docker-cli.exe`, à côté de lui) en le dirigeant vers le moteur
+//! Monodon (`npipe:////./pipe/monodon`) **sauf** si l'utilisateur a choisi explicitement un hôte ou un
+//! contexte (`-H`, `--host`, `-c`, `--context`, ou les variables `DOCKER_HOST` / `DOCKER_CONTEXT`).
+//! Le plugin Compose livré avec Monodon (`bin\cli-plugins\docker-compose.exe`) est rendu visible en
+//! ajoutant son dossier à `cliPluginsExtraDirs` dans le fichier de configuration du CLI de
+//! l'utilisateur (`%USERPROFILE%\.docker\config.json`, ou `DOCKER_CONFIG`) : le CLI n'a pas de
+//! variable d'environnement pour cela, et c'est ce que fait aussi Docker Desktop. Les autres clés du
+//! fichier sont préservées. Le code de sortie du CLI est propagé tel quel.
+
+use std::ffi::OsString;
+use std::process::{Command, exit};
+
+const MONODON_HOST: &str = "npipe:////./pipe/monodon";
+
+/// Vrai si les **options globales** (celles placées avant la sous-commande) désignent un hôte ou un
+/// contexte. On s'arrête à la sous-commande : un `-c` de `sh -c` dans `docker run … sh -c …` ne compte pas.
+fn targets_engine_explicitly(args: &[OsString]) -> bool {
+    // Options globales du CLI Docker qui prennent une valeur.
+    const WITH_VALUE: &[&str] = &[
+        "--config",
+        "-c",
+        "--context",
+        "-H",
+        "--host",
+        "-l",
+        "--log-level",
+        "--tlscacert",
+        "--tlscert",
+        "--tlskey",
+    ];
+    let mut i = 0;
+    while i < args.len() {
+        let a = args[i].to_string_lossy().into_owned();
+        if !a.starts_with('-') {
+            return false; // sous-commande atteinte
+        }
+        if a == "-H"
+            || a == "--host"
+            || a.starts_with("--host=")
+            || a == "-c"
+            || a == "--context"
+            || a.starts_with("--context=")
+        {
+            return true;
+        }
+        if WITH_VALUE.contains(&a.as_str()) {
+            i += 2;
+        } else {
+            i += 1;
+        }
+    }
+    false
+}
+
+/// Ajoute `plugins_dir` à `cliPluginsExtraDirs` du `config.json` du CLI Docker s'il n'y est pas.
+/// Sans bruit en cas d'échec : `docker compose` sera alors simplement introuvable.
+fn ensure_plugin_dir(plugins_dir: &std::path::Path) {
+    let config_dir = std::env::var_os("DOCKER_CONFIG")
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("USERPROFILE").map(|h| std::path::PathBuf::from(h).join(".docker"))
+        });
+    let Some(config_dir) = config_dir else {
+        return;
+    };
+    let path = config_dir.join("config.json");
+    let wanted = plugins_dir.to_string_lossy().into_owned();
+    let mut root: serde_json::Value = std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+    if !root.is_object() {
+        return;
+    }
+    let dirs = root
+        .as_object_mut()
+        .unwrap()
+        .entry("cliPluginsExtraDirs")
+        .or_insert_with(|| serde_json::json!([]));
+    if !dirs.is_array() {
+        return;
+    }
+    let list = dirs.as_array_mut().unwrap();
+    if list
+        .iter()
+        .any(|d| d.as_str().is_some_and(|s| s.eq_ignore_ascii_case(&wanted)))
+    {
+        return;
+    }
+    list.push(serde_json::Value::String(wanted));
+    if std::fs::create_dir_all(&config_dir).is_err() {
+        return;
+    }
+    if let Ok(text) = serde_json::to_string_pretty(&root) {
+        let _ = std::fs::write(&path, text);
+    }
+}
+
+fn main() {
+    let exe = match std::env::current_exe() {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("monodon docker : chemin de l'exécutable inconnu : {e}");
+            exit(127);
+        }
+    };
+    let dir = exe.parent().map(|d| d.to_path_buf()).unwrap_or_default();
+    let real = dir.join("docker-cli.exe");
+    if !real.is_file() {
+        eprintln!(
+            "monodon docker : CLI Docker introuvable ({}). Réinstallez Monodon.",
+            real.display()
+        );
+        exit(127);
+    }
+
+    let args: Vec<OsString> = std::env::args_os().skip(1).collect();
+    let explicit_target = targets_engine_explicitly(&args);
+
+    let mut cmd = Command::new(&real);
+    cmd.args(&args);
+    if !explicit_target
+        && std::env::var_os("DOCKER_HOST").is_none()
+        && std::env::var_os("DOCKER_CONTEXT").is_none()
+    {
+        cmd.env("DOCKER_HOST", MONODON_HOST);
+    }
+    ensure_plugin_dir(&dir.join("cli-plugins"));
+
+    match cmd.status() {
+        Ok(status) => exit(status.code().unwrap_or(1)),
+        Err(e) => {
+            eprintln!(
+                "monodon docker : impossible de lancer {} : {e}",
+                real.display()
+            );
+            exit(127);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn v(items: &[&str]) -> Vec<OsString> {
+        items.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn options_globales_seulement() {
+        assert!(targets_engine_explicitly(&v(&["-H", "tcp://x", "ps"])));
+        assert!(targets_engine_explicitly(&v(&[
+            "--context",
+            "desktop-linux",
+            "ps"
+        ])));
+        assert!(targets_engine_explicitly(&v(&[
+            "--context=desktop-linux",
+            "ps"
+        ])));
+        assert!(!targets_engine_explicitly(&v(&[
+            "run", "--rm", "busybox", "sh", "-c", "echo"
+        ])));
+        assert!(!targets_engine_explicitly(&v(&["-D", "ps"])));
+        assert!(!targets_engine_explicitly(&v(&[
+            "--log-level",
+            "debug",
+            "run",
+            "-H",
+            "x"
+        ])));
+        assert!(!targets_engine_explicitly(&v(&[])));
+    }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compile le noyau Solon à partir d'un tag du dépôt microsoft/WSL2-Linux-Kernel.
+# Compile le noyau Monodon à partir d'un tag du dépôt microsoft/WSL2-Linux-Kernel.
 #
 # Usage (Linux, ex. WSL Ubuntu) : build-kernel.sh <dossier_de_sortie>
 # Variables : KERNEL_TAG (défaut ci-dessous), KERNEL_WORKDIR (sources et objets, sur un disque ext4,
@@ -8,19 +8,19 @@
 #
 # Pourquoi ce dépôt : c'est la configuration que Microsoft maintient pour les machines HCS
 # (Hyper-V, hv_sock, 9P, ballon mémoire), vérifiée au bloc 0a. On la reprend telle quelle et on
-# applique le fragment solon.config (voir ce fichier pour la liste des changements).
+# applique le fragment monodon.config (voir ce fichier pour la liste des changements).
 set -euo pipefail
 
 OUT="${1:?dossier de sortie requis}"
 KERNEL_TAG="${KERNEL_TAG:-linux-msft-wsl-6.18.40.1}"
-KERNEL_WORKDIR="${KERNEL_WORKDIR:-/root/solon-build/kernel}"
+KERNEL_WORKDIR="${KERNEL_WORKDIR:-/root/monodon-build/kernel}"
 JOBS="${JOBS:-$(nproc)}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FRAGMENT="$HERE/solon.config"
+FRAGMENT="$HERE/monodon.config"
 
 # Reproductibilité : horodatage, utilisateur et hôte fixes dans la bannière du noyau.
 export KBUILD_BUILD_TIMESTAMP="${KBUILD_BUILD_TIMESTAMP:-2026-01-01T00:00:00Z}"
-export KBUILD_BUILD_USER=solon
+export KBUILD_BUILD_USER=monodon
 export KBUILD_BUILD_HOST=build
 export KCFLAGS="${KCFLAGS:--fdebug-prefix-map=$KERNEL_WORKDIR=.}"
 
@@ -41,7 +41,7 @@ echo "==> Configuration : Microsoft/config-wsl + $FRAGMENT"
 cp Microsoft/config-wsl .config
 # merge_config.sh applique le fragment ; -m évite un olddefconfig implicite, fait explicitement ensuite.
 KCONFIG_CONFIG=.config scripts/kconfig/merge_config.sh -m .config "$FRAGMENT" >/dev/null
-# Solon n'embarque aucun module : tout ce que Docker peut demander à netfilter / au réseau doit être
+# Monodon n'embarque aucun module : tout ce que Docker peut demander à netfilter / au réseau doit être
 # en dur. On convertit en =y les familles réseau que la config WSL laisse en modules (constaté au
 # bloc 1 : « Extension addrtype revision 0 not supported » avec NETFILTER_XT_MATCH_ADDRTYPE=m).
 sed -i -E 's/^(CONFIG_(NF_|NFT_|NETFILTER_|IP_NF_|IP6_NF_|IP_SET|IP_VS|BRIDGE_|NET_SCH_|NET_CLS_|NET_ACT_|DUMMY|MACVLAN|IPVLAN|VXLAN|GENEVE|TUN|VETH|XFRM_|INET_DIAG|NETLINK_DIAG|UNIX_DIAG|PACKET_DIAG|TCP_CONG_|INET_TUNNEL|IPV6_)[A-Z0-9_]*)=m$/\1=y/' .config

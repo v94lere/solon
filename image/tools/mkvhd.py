@@ -5,7 +5,7 @@ Usage : mkvhd.py <image_brute> <sortie.vhd> [--epoch SECONDES]
 
 Pourquoi un VHD fixe : c'est le format de disque virtuel le plus simple (données brutes + pied de
 512 octets), accepté par Hyper-V/HCS, et il se génère sans qemu-img ni outil Windows. Le disque racine
-de Solon est en lecture seule et compressé dans l'installeur : la taille « pleine » n'est pas un problème.
+de Monodon est en lecture seule et compressé dans l'installeur : la taille « pleine » n'est pas un problème.
 Le disque de données, lui, est un VHDX dynamique créé par Windows au premier lancement.
 """
 import argparse

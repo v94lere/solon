@@ -6,7 +6,7 @@ import "@xterm/xterm/css/xterm.css";
 import { base64ToBytes, bytesToBase64, machineShell } from "../api";
 
 /** Shell de débogage : boîte à outils lancée dans les espaces de noms du conteneur (processus, réseau,
- *  volumes), même si l'image n'a pas de shell. Passe par le terminal de la machine (`solon-debug`). */
+ *  volumes), même si l'image n'a pas de shell. Passe par le terminal de la machine (`monodon-debug`). */
 export function DebugPanel({ id, running }: { id: string; running: boolean }) {
   const { t } = useTranslation();
   const hostRef = useRef<HTMLDivElement>(null);
@@ -48,7 +48,7 @@ export function DebugPanel({ id, running }: { id: string; running: boolean }) {
             term.write("\r\n");
           } else if (out.kind === "error") setStatus(out.message ?? "error");
         },
-        `exec solon-debug ${id}`,
+        `exec monodon-debug ${id}`,
       )
       .then((sid) => {
         if (closed) void machineShell.close(sid);

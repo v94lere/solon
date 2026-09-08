@@ -10,7 +10,7 @@
 }
 
 
-/* Solon — charte graphique du 3 septembre 2026 : Urbanist, blanc / #F1F1F1 en clair, #222222 en sombre,
+/* Monodon — charte graphique du 3 septembre 2026 : Urbanist, blanc / #F1F1F1 en clair, #222222 en sombre,
    accent orange #FF7A47, vert #66FF4C pour les états actifs. Coins arrondis doux, barre latérale calme. */
 
 @theme {
@@ -134,7 +134,7 @@ select {
   }
 }
 
-/* Composants de base (classes utilitaires Solon) */
+/* Composants de base (classes utilitaires Monodon) */
 .btn {
   display: inline-flex;
   align-items: center;

@@ -1,7 +1,7 @@
-﻿# Configuration système de Solon, exécutée élevée par l'installeur NSIS (voir hooks.nsh).
+﻿# Configuration système de Monodon, exécutée élevée par l'installeur NSIS (voir hooks.nsh).
 # - active les composants Windows requis (Hyper-V, Plateforme de machine virtuelle) ;
-# - installe (ou retire) le service Windows SolonService.
-# Codes de retour : 0 OK, 3010 redémarrage requis, autre = erreur. Journal : %ProgramData%\Solon\logs\setup.log
+# - installe (ou retire) le service Windows MonodonService.
+# Codes de retour : 0 OK, 3010 redémarrage requis, autre = erreur. Journal : %ProgramData%\Monodon\logs\setup.log
 param(
     [Parameter(Mandatory = $true)][string]$InstallDir,
     [switch]$Uninstall
@@ -9,15 +9,15 @@ param(
 $ErrorActionPreference = "Continue"
 # Les binaires Rust écrivent en UTF-8 : lire leur sortie correctement dans le journal.
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$logDir = Join-Path $env:ProgramData "Solon\logs"
+$logDir = Join-Path $env:ProgramData "Monodon\logs"
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $log = Join-Path $logDir "setup.log"
 function Log($m) { $line = "{0:yyyy-MM-dd HH:mm:ss} {1}" -f (Get-Date), $m; Add-Content -Path $log -Value $line; Write-Output $line }
-$svc = Join-Path $InstallDir "solon-service.exe"
+$svc = Join-Path $InstallDir "monodon-service.exe"
 
 $binDir = Join-Path $InstallDir "bin"
 function Set-MachinePath($present) {
-    # Ajoute (ou retire) <install>in en tête du PATH machine : `docker` et `docker compose` de Solon.
+    # Ajoute (ou retire) <install>in en tête du PATH machine : `docker` et `docker compose` de Monodon.
     $key = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
     $current = (Get-ItemProperty -Path $key -Name Path).Path
     $parts = @($current -split ";" | Where-Object { $_ -and ($_.TrimEnd("\") -ne $binDir.TrimEnd("\")) })
@@ -25,7 +25,7 @@ function Set-MachinePath($present) {
     Set-ItemProperty -Path $key -Name Path -Value ($parts -join ";") -Type ExpandString
     # Prévenir les processus ouverts (Explorateur, nouveaux terminaux) du changement d'environnement.
     $sig = '[DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);'
-    $w = Add-Type -MemberDefinition $sig -Name "EnvBroadcast" -Namespace "Solon" -PassThru
+    $w = Add-Type -MemberDefinition $sig -Name "EnvBroadcast" -Namespace "Monodon" -PassThru
     $r = [UIntPtr]::Zero
     $w::SendMessageTimeout([IntPtr]0xffff, 0x001A, [UIntPtr]::Zero, "Environment", 2, 5000, [ref]$r) | Out-Null
 }
@@ -36,7 +36,7 @@ if ($Uninstall) {
     try { Set-MachinePath $false; Log "PATH: $binDir removed" } catch { Log "PATH: $($_.Exception.Message)" }
     # Nettoyage des enregistrements HvSocket créés par une ancienne version de ce script.
     $base = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Virtualization\GuestCommunicationServices"
-    Get-ChildItem $base -ErrorAction SilentlyContinue | Where-Object { ($_ | Get-ItemProperty).ElementName -like "Solon vsock *" } | Remove-Item -Force
+    Get-ChildItem $base -ErrorAction SilentlyContinue | Where-Object { ($_ | Get-ItemProperty).ElementName -like "Monodon vsock *" -or ($_ | Get-ItemProperty).ElementName -like "Solon vsock *" } | Remove-Item -Force
     exit 0
 }
 
@@ -65,8 +65,8 @@ foreach ($feature in @("Microsoft-Hyper-V", "VirtualMachinePlatform")) {
 
 # 2. (Aucun enregistrement HvSocket n'est nécessaire : toutes les connexions sont ouvertes par l'hôte.)
 
-# 2b. CLI docker / docker compose de Solon dans le PATH machine (nouveaux terminaux).
-try { Set-MachinePath $true; Log "PATH: $binDir added (SOLON_BIN)" } catch { Log "PATH: FAILED $($_.Exception.Message)" }
+# 2b. CLI docker / docker compose de Monodon dans le PATH machine (nouveaux terminaux).
+try { Set-MachinePath $true; Log "PATH: $binDir added (MONODON_BIN)" } catch { Log "PATH: FAILED $($_.Exception.Message)" }
 
 # 3. Service Windows : (ré)installation puis démarrage.
 & $svc uninstall 2>&1 | Out-Null
@@ -74,8 +74,8 @@ $out = & $svc install 2>&1
 $out | ForEach-Object { Log $_ }
 if ($LASTEXITCODE -ne 0) { Log "service install: exit code $LASTEXITCODE"; exit 1 }
 if (-not $needsReboot) {
-    Start-Service -Name SolonService -ErrorAction SilentlyContinue
-    Log "service started: $((Get-Service SolonService).Status)"
+    Start-Service -Name MonodonService -ErrorAction SilentlyContinue
+    Log "service started: $((Get-Service MonodonService).Status)"
 }
 
 if ($needsReboot) { Log "restart required"; exit 3010 }

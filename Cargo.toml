@@ -1,13 +1,13 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/solon-core",
-    "crates/solon-vm-hcs",
-    "crates/solon-hvsock",
-    "crates/solon-agent",
-    "crates/solon-prereq",
-    "crates/solon-service",
-    "crates/solon-docker-shim",
+    "crates/monodon-core",
+    "crates/monodon-vm-hcs",
+    "crates/monodon-hvsock",
+    "crates/monodon-agent",
+    "crates/monodon-prereq",
+    "crates/monodon-service",
+    "crates/monodon-docker-shim",
     "apps/desktop/src-tauri",
 ]
 
@@ -15,14 +15,14 @@ members = [
 version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
-repository = "https://github.com/v94lere/solon"
+repository = "https://github.com/v94lere/monodon"
 rust-version = "1.85"
 
 [workspace.dependencies]
-solon-core = { path = "crates/solon-core" }
-solon-hvsock = { path = "crates/solon-hvsock" }
-solon-vm-hcs = { path = "crates/solon-vm-hcs" }
-solon-prereq = { path = "crates/solon-prereq" }
+monodon-core = { path = "crates/monodon-core" }
+monodon-hvsock = { path = "crates/monodon-hvsock" }
+monodon-vm-hcs = { path = "crates/monodon-vm-hcs" }
+monodon-prereq = { path = "crates/monodon-prereq" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
@@ -38,6 +38,6 @@ lto = "thin"
 codegen-units = 1
 strip = true
 
-# fuser : voir third_party/fuser/SOLON-NOTES.md (compilation croisée Windows → Linux)
+# fuser : voir third_party/fuser/MONODON-NOTES.md (compilation croisée Windows → Linux)
 [patch.crates-io]
 fuser = { path = "third_party/fuser" }

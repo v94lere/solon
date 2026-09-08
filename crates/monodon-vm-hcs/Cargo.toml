@@ -1,0 +1,29 @@
+[package]
+name = "monodon-vm-hcs"
+description = "Pilotage de la VM Monodon via l'API Host Compute System de Windows (computecore.dll)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+monodon-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_System_HostComputeSystem",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+] }
+
+[dev-dependencies]
+tracing-subscriber = { workspace = true }
+monodon-hvsock = { workspace = true }
+tokio = { workspace = true }

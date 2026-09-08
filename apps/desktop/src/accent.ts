@@ -1,14 +1,14 @@
-// Couleur d'accent : orange Solon (défaut) ou couleur d'accent de Windows, lue par le service Tauri.
+// Couleur d'accent : orange Monodon (défaut) ou couleur d'accent de Windows, lue par le service Tauri.
 import { invoke } from "@tauri-apps/api/core";
 
-export type Accent = "solon" | "windows";
-const KEY = "solon.accent";
+export type Accent = "monodon" | "windows";
+const KEY = "monodon.accent";
 
 export function loadAccent(): Accent {
   try {
-    return localStorage.getItem(KEY) === "windows" ? "windows" : "solon";
+    return localStorage.getItem(KEY) === "windows" ? "windows" : "monodon";
   } catch {
-    return "solon";
+    return "monodon";
   }
 }
 
@@ -30,7 +30,7 @@ export async function applyAccent(accent: Accent): Promise<void> {
         return;
       }
     } catch {
-      /* couleur indisponible : orange Solon */
+      /* couleur indisponible : orange Monodon */
     }
   }
   root.classList.remove("accent-custom");

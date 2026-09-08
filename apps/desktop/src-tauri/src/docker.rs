@@ -1,5 +1,5 @@
 //! Client Docker de l'application : `bollard` sur le named pipe exposé par le service
-//! (`\\.\pipe\solon`). Les flux (journaux, statistiques, exec, événements) sont poussés au
+//! (`\\.\pipe\monodon`). Les flux (journaux, statistiques, exec, événements) sont poussés au
 //! frontend par des `Channel` Tauri et fermés explicitement par `stream_close` / `exec_close`.
 
 use std::collections::HashMap;
@@ -20,8 +20,8 @@ use bollard::query_parameters::{
 };
 use bollard::{API_DEFAULT_VERSION, Docker};
 use futures_util::StreamExt;
+use monodon_core::ipc::DOCKER_PIPE;
 use serde::{Deserialize, Serialize};
-use solon_core::ipc::DOCKER_PIPE;
 use tauri::ipc::Channel;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
@@ -798,7 +798,7 @@ pub(crate) fn windows_tar() -> std::path::PathBuf {
 
 pub(crate) fn temp_tar() -> std::path::PathBuf {
     std::env::temp_dir().join(format!(
-        "solon-copy-{}-{}.tar",
+        "monodon-copy-{}-{}.tar",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

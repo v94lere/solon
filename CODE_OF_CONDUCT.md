@@ -1,6 +1,6 @@
 # Code of conduct
 
-Solon follows the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/),
+Monodon follows the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/),
 version 2.1. In short:
 
 - Be respectful and constructive. Disagree about code, not about people.

@@ -2,7 +2,7 @@
 // par leurs étiquettes Compose.
 import type { ContainerSummary } from "./api";
 
-const RECENT_KEY = "solon.compose.recent";
+const RECENT_KEY = "monodon.compose.recent";
 export const LABEL_PROJECT = "com.docker.compose.project";
 export const LABEL_SERVICE = "com.docker.compose.service";
 export const LABEL_WORKDIR = "com.docker.compose.project.working_dir";

@@ -2,11 +2,11 @@
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $Build = Join-Path $Repo ".local\build"
 New-Item -ItemType Directory -Force $Build | Out-Null
-$Svc = if ($env:SOLON_SERVICE_EXE) { $env:SOLON_SERVICE_EXE } else { Join-Path $Repo "target\debug\solon-service.exe" }
-$Root = if ($env:SOLON_ROOT) { $env:SOLON_ROOT } else { Join-Path $Build "solon-root" }
+$Svc = if ($env:MONODON_SERVICE_EXE) { $env:MONODON_SERVICE_EXE } else { Join-Path $Repo "target\debug\monodon-service.exe" }
+$Root = if ($env:MONODON_ROOT) { $env:MONODON_ROOT } else { Join-Path $Build "monodon-root" }
 $ConsoleLog = Join-Path $Build "service-console.log"
 $Image = "public.ecr.aws/docker/library/busybox:1.36"
-$env:DOCKER_HOST = "npipe:////./pipe/solon"
+$env:DOCKER_HOST = "npipe:////./pipe/monodon"
 # Configuration Docker CLI vide : évite le gestionnaire d'identifiants Windows de Docker Desktop.
 $DockerConfig = Join-Path $Build "docker-config"
 New-Item -ItemType Directory -Force $DockerConfig | Out-Null

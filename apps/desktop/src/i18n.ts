@@ -7,7 +7,7 @@ import fr from "./locales/fr.json";
 // Anglais par défaut (décision du 2 septembre 2026), français disponible.
 const stored = (() => {
   try {
-    return localStorage.getItem("solon.language");
+    return localStorage.getItem("monodon.language");
   } catch {
     return null;
   }
@@ -31,7 +31,7 @@ export function setLanguage(lng: "en" | "fr") {
   void i18n.changeLanguage(lng);
   tellTray(lng);
   try {
-    localStorage.setItem("solon.language", lng);
+    localStorage.setItem("monodon.language", lng);
   } catch {
     /* stockage indisponible : la langue ne sera pas mémorisée */
   }

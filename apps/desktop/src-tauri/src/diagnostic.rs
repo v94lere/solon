@@ -6,8 +6,8 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use monodon_core::ipc::ServiceCommand;
 use serde_json::Value;
-use solon_core::ipc::ServiceCommand;
 use zip::write::SimpleFileOptions;
 
 use crate::service;
@@ -16,7 +16,7 @@ fn program_data() -> PathBuf {
     std::env::var_os("ProgramData")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"))
-        .join("Solon")
+        .join("Monodon")
 }
 
 fn add_file<W: Write + std::io::Seek>(
@@ -60,7 +60,7 @@ pub async fn diagnostic_export(app: tauri::AppHandle, dest: String) -> Result<u3
     let engine_ready = status.contains("\"ready\"");
     let docker_info = if engine_ready {
         call_or_error(ServiceCommand::Exec {
-            command: "docker version 2>&1; echo; docker info 2>&1; echo; df -h /var/lib/solon 2>&1; echo; free -m; echo; uname -a; echo; mount | grep -E '9p|/var/lib' ".into(),
+            command: "docker version 2>&1; echo; docker info 2>&1; echo; df -h /var/lib/monodon 2>&1; echo; free -m; echo; uname -a; echo; mount | grep -E '9p|/var/lib' ".into(),
             timeout_s: Some(30),
         })
         .await
@@ -85,7 +85,7 @@ pub async fn diagnostic_export(app: tauri::AppHandle, dest: String) -> Result<u3
         &mut zip,
         "LISEZMOI.txt",
         &format!(
-            "Diagnostic Solon\nApplication : {app_version}\nWindows : {windows}\nDate : {}\n\nContenu : journaux du service et de l'installation, état, réglages, prérequis, versions, docker info.\nAucun identifiant n'est inclus ; les journaux peuvent contenir les chemins des dossiers partagés.\n",
+            "Diagnostic Monodon\nApplication : {app_version}\nWindows : {windows}\nDate : {}\n\nContenu : journaux du service et de l'installation, état, réglages, prérequis, versions, docker info.\nAucun identifiant n'est inclus ; les journaux peuvent contenir les chemins des dossiers partagés.\n",
             chrono_like_now()
         ),
     )?;
@@ -129,10 +129,10 @@ pub async fn diagnostic_export(app: tauri::AppHandle, dest: String) -> Result<u3
     if let Ok(text) = std::fs::read_to_string(&hosts) {
         let block: Vec<&str> = text
             .lines()
-            .skip_while(|l| !l.contains("solon-begin"))
-            .take_while(|l| !l.contains("solon-end"))
+            .skip_while(|l| !l.contains("monodon-begin"))
+            .take_while(|l| !l.contains("monodon-end"))
             .collect();
-        add_text(&mut zip, "hosts-solon.txt", &block.join("\n"))?;
+        add_text(&mut zip, "hosts-monodon.txt", &block.join("\n"))?;
         count += 1;
     }
     zip.finish().map_err(|e| e.to_string())?;

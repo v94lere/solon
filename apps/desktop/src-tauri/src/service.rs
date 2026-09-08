@@ -1,4 +1,4 @@
-//! Client du canal de contrôle du service Windows (`\\.\pipe\solon-control`).
+//! Client du canal de contrôle du service Windows (`\\.\pipe\monodon-control`).
 //!
 //! Chaque appel ouvre sa propre connexion (simple, sans état à réparer). L'abonnement aux
 //! événements garde une connexion ouverte et pousse chaque événement dans un `Channel` Tauri ;
@@ -7,9 +7,9 @@
 
 use std::time::Duration;
 
+use monodon_core::ipc::{CONTROL_PIPE, IpcRequest, ServiceCommand};
+use monodon_core::protocol::Response;
 use serde_json::Value;
-use solon_core::ipc::{CONTROL_PIPE, IpcRequest, ServiceCommand};
-use solon_core::protocol::Response;
 use tauri::ipc::Channel;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};

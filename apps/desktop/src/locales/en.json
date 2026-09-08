@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Solon"
+    "name": "Monodon"
   },
   "nav": {
     "containers": "Containers",
@@ -23,7 +23,7 @@
       "degraded": "Engine restarting",
       "stopping": "Stopping engine…",
       "failed": "Engine failed to start",
-      "service_unavailable": "Solon service is not running"
+      "service_unavailable": "Monodon service is not running"
     },
     "step": {
       "checking_prerequisites": "Checking your system",
@@ -44,7 +44,7 @@
     "retry": "Try again",
     "boot_time": "Started in {{seconds}} s",
     "recovered": "The previous session ended unexpectedly; storage was checked and recovered.",
-    "service_hint": "The Solon background service must be running. Reinstalling Solon repairs it.",
+    "service_hint": "The Monodon background service must be running. Reinstalling Monodon repairs it.",
     "short": {
       "ready": "Running",
       "starting": "Starting…",
@@ -58,19 +58,19 @@
   },
   "error": {
     "title": "Something needs your attention",
-    "VIRTUALIZATION_DISABLED_IN_FIRMWARE": "Hardware virtualization is disabled. Enable Intel VT-x or AMD-V in your BIOS/UEFI settings (usually under Advanced or CPU), then start Solon again.",
-    "UNSUPPORTED_WINDOWS_EDITION": "Solon requires Windows 11 Pro, Enterprise or Education. Windows Home does not include the components Solon needs.",
-    "WINDOWS_FEATURE_MISSING": "A Windows component is missing. Reinstall Solon to enable it; a restart may be required.",
+    "VIRTUALIZATION_DISABLED_IN_FIRMWARE": "Hardware virtualization is disabled. Enable Intel VT-x or AMD-V in your BIOS/UEFI settings (usually under Advanced or CPU), then start Monodon again.",
+    "UNSUPPORTED_WINDOWS_EDITION": "Monodon requires Windows 11 Pro, Enterprise or Education. Windows Home does not include the components Monodon needs.",
+    "WINDOWS_FEATURE_MISSING": "A Windows component is missing. Reinstall Monodon to enable it; a restart may be required.",
     "WINDOWS_FEATURE_BLOCKED_BY_POLICY": "Your organization restricts enabling Windows components. Ask your administrator to enable Hyper-V and Virtual Machine Platform.",
     "HYPERVISOR_NOT_RUNNING": "The Windows virtualization engine is not running. Common causes: an older VirtualBox/VMware, virtualization disabled at boot, or running inside another virtual machine.",
-    "HOST_COMPUTE_SERVICE_UNAVAILABLE": "A Windows service Solon depends on (Host Compute Service) is stopped or missing. Restart Windows; if it persists, reinstall Solon.",
-    "BLOCKED_BY_SECURITY_SOFTWARE": "A security product is blocking Solon. Add the Solon folder to its exclusions.",
-    "INSUFFICIENT_PRIVILEGES": "Solon does not have the rights it needs. Reinstalling Solon repairs the background service.",
+    "HOST_COMPUTE_SERVICE_UNAVAILABLE": "A Windows service Monodon depends on (Host Compute Service) is stopped or missing. Restart Windows; if it persists, reinstall Monodon.",
+    "BLOCKED_BY_SECURITY_SOFTWARE": "A security product is blocking Monodon. Add the Monodon folder to its exclusions.",
+    "INSUFFICIENT_PRIVILEGES": "Monodon does not have the rights it needs. Reinstalling Monodon repairs the background service.",
     "VM_CONFIGURATION_REJECTED": "Windows rejected the engine configuration. Please report this with the log file.",
     "VM_BOOT_TIMEOUT": "The engine did not start in time.",
     "AGENT_UNREACHABLE": "The engine started but is not responding.",
     "ENGINE_UNREACHABLE": "Docker did not become ready in time.",
-    "IMAGE_CORRUPTED": "The container engine files are missing or corrupted. Reinstall Solon.",
+    "IMAGE_CORRUPTED": "The container engine files are missing or corrupted. Reinstall Monodon.",
     "DATA_DISK_ERROR": "The storage disk could not be created or opened.",
     "HCS_ERROR": "The virtualization layer returned an error.",
     "IO": "A file operation failed.",
@@ -131,15 +131,15 @@
       "hello_action": "Run hello-world",
       "hello_running": "Running…",
       "compose_title": "Open a Compose project",
-      "compose_body": "Pick a folder containing compose.yaml: Solon shows its services, merged logs and Up / Down buttons.",
+      "compose_body": "Pick a folder containing compose.yaml: Monodon shows its services, merged logs and Up / Down buttons.",
       "cli_title": "Use the docker command",
-      "cli_body": "The docker CLI is already on your PATH and talks to Solon. Anything you start shows up here.",
-      "cli_hint": "Every running container also gets https://<name>.solon.local, with or without published ports."
+      "cli_body": "The docker CLI is already on your PATH and talks to Monodon. Anything you start shows up here.",
+      "cli_hint": "Every running container also gets https://<name>.monodon.local, with or without published ports."
     },
     "none_running": "No running container",
     "none_running_hint": "Stopped containers are hidden.",
     "sleeping": "Asleep",
-    "sleeping_hint": "Paused by Solon after a period of inactivity. Wakes up on the first request."
+    "sleeping_hint": "Paused by Monodon after a period of inactivity. Wakes up on the first request."
   },
   "detail": {
     "tabs": {
@@ -254,12 +254,12 @@
     "diagnostic_done": "{{count}} files written to {{path}}",
     "diagnostic_open": "Open folder",
     "legacy_fs": "Use the legacy Windows file sharing (9P) for mounted folders",
-    "legacy_fs_help": "Fallback if a container misbehaves with the Solon file system. Slower. Applies at the next engine start.",
+    "legacy_fs_help": "Fallback if a container misbehaves with the Monodon file system. Slower. Applies at the next engine start.",
     "accent": "Accent color",
-    "accent_solon": "Solon blue",
+    "accent_monodon": "Monodon blue",
     "accent_windows": "Windows accent color",
     "sleep": "Put idle containers to sleep",
-    "sleep_help": "Containers reached through Solon (solon.local addresses or published ports) are paused when nobody talks to them; they wake up on the first request in a fraction of a second. Databases and background workers that only talk internally are never affected.",
+    "sleep_help": "Containers reached through Monodon (monodon.local addresses or published ports) are paused when nobody talks to them; they wake up on the first request in a fraction of a second. Databases and background workers that only talk internally are never affected.",
     "sleep_after": "After",
     "sleep_minutes": "minutes without traffic",
     "sleep_never": "Kept awake: {{names}}"
@@ -384,18 +384,18 @@
     "state_failed": "failed",
     "state_stopped": "stopped",
     "state_unknown": "unknown",
-    "service_unavailable": "Solon service not running",
+    "service_unavailable": "Monodon service not running",
     "containers_zero": "No containers running",
     "containers_one": "1 container running",
     "containers_other": "{{count}} containers running",
-    "open": "Open Solon",
+    "open": "Open Monodon",
     "start": "Start engine",
     "stop": "Stop engine",
-    "quit": "Quit Solon",
+    "quit": "Quit Monodon",
     "container_start": "Start",
     "container_restart": "Restart",
     "container_stop": "Stop",
-    "containers_more": "… and {{count}} more (open Solon)"
+    "containers_more": "… and {{count}} more (open Monodon)"
   },
   "projects": {
     "running_count": "{{running}}/{{total}} running"
@@ -416,7 +416,7 @@
   },
   "machine": {
     "terminal": "Terminal",
-    "terminal_hint": "root shell inside the Solon engine",
+    "terminal_hint": "root shell inside the Monodon engine",
     "new_session": "New session"
   },
   "palette": {
@@ -434,13 +434,13 @@
     }
   },
   "notify": {
-    "engine_failed_title": "Solon: engine failed to start",
-    "engine_failed_body": "Open Solon for details.",
-    "engine_degraded_title": "Solon: engine restarting",
+    "engine_failed_title": "Monodon: engine failed to start",
+    "engine_failed_body": "Open Monodon for details.",
+    "engine_degraded_title": "Monodon: engine restarting",
     "engine_degraded_body": "Docker stopped unexpectedly and is being restarted.",
-    "disk_title": "Solon: engine disk almost full",
+    "disk_title": "Monodon: engine disk almost full",
     "disk_body": "{{pct}} % used, {{free}} GB left. Remove unused images or volumes.",
-    "container_died_title": "Solon: container stopped",
+    "container_died_title": "Monodon: container stopped",
     "container_died_body": "{{name}} exited with code {{code}}."
   },
   "activity": {
