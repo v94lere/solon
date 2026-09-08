@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
-import logo from "./assets/logo.svg";
+import logo from "./assets/logo.png";
 import { useTranslation } from "react-i18next";
 import { EngineProvider, useEngine } from "./engine";
 import "./accent";

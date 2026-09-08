@@ -2,6 +2,7 @@ Monodon — a standalone container manager for Windows
 Copyright 2026 Valère Neveux
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
+The narwhal logo is the work of Valère Neveux and is distributed under the same licence.
 
 This product bundles software developed by third parties (Docker CLI, Docker Compose,
 a Linux kernel, Alpine Linux packages, Rust crates, npm packages and the Urbanist font),
