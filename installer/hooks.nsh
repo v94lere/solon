@@ -8,11 +8,19 @@
   ; Puis attente (60 s au plus) que l'hyperviseur relâche les fichiers de l'image (vmlinuz, initrd.img,
   ; rootfs.vhd restent ouverts quelques secondes après l'arrêt de la machine) : sinon l'installeur
   ; silencieux remplace le manifeste mais pas l'image, et le moteur démarre en IMAGE_CORRUPTED.
-  ; Installation précédente sous l'ancien nom du projet (Solon) : son désinstalleur silencieux arrête
-  ; le moteur, retire le service et le PATH, et conserve les données (reprises par Monodon au démarrage).
-  IfFileExists "$PROGRAMFILES64\Solon\uninstall.exe" 0 +3
+  ; Installation précédente sous l'ancien nom du projet (Solon). D'abord mettre les données à l'abri :
+  ; %ProgramData%\Solon est déplacé vers %ProgramData%\Monodon (fusion, robocopy /MOVE) AVANT de lancer
+  ; l'ancien désinstalleur, dont la question « supprimer les données ? » ne peut plus rien détruire.
+  ; Le service Solon est arrêté au préalable pour libérer le disque de données.
+  IfFileExists "$PROGRAMFILES64\Solon\uninstall.exe" 0 no_legacy
+    DetailPrint "Moving Solon data to Monodon…"
+    nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "Stop-Service -Name SolonService -Force -ErrorAction SilentlyContinue; Get-Process solon -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; $$src = Join-Path $$env:ProgramData Solon; $$dst = Join-Path $$env:ProgramData Monodon; if (Test-Path $$src) { for ($$i = 0; $$i -lt 60; $$i++) { try { $$h = [IO.File]::Open((Join-Path $$src data.vhdx), [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None); $$h.Close(); break } catch { Start-Sleep 1 } }; robocopy $$src $$dst /E /MOVE /NFL /NDL /NJH /NJS /R:3 /W:2 | Out-Null; Write-Output \"data moved, robocopy code $$LASTEXITCODE\" }"'
+    Pop $0
     DetailPrint "Removing the previous Solon installation…"
     ExecWait '"$PROGRAMFILES64\Solon\uninstall.exe" /S _?=$PROGRAMFILES64\Solon'
+    Delete "$PROGRAMFILES64\Solon\uninstall.exe"
+    RMDir /r "$PROGRAMFILES64\Solon"
+  no_legacy:
   DetailPrint "Stopping the Monodon service if present…"
   nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "Stop-Service -Name MonodonService -Force -ErrorAction SilentlyContinue; Get-Process monodon -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; $$d = \"$INSTDIR\image\"; for ($$i = 0; $$i -lt 60; $$i++) { $$busy = $$false; Get-ChildItem $$d -ErrorAction SilentlyContinue | ForEach-Object { try { $$h = [IO.File]::Open($$_.FullName, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None); $$h.Close() } catch { $$busy = $$true } }; if (-not $$busy) { break }; Start-Sleep 1 }; if ($$busy) { Write-Output \"image still locked after 60 s\" } else { Write-Output \"image released after $$i s\" }"'
   Pop $0

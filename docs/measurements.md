@@ -678,3 +678,23 @@ Compatibilité avec les installations existantes :
 | Préférences de l'interface (thème, menu replié, projets récents) | non reprises : nouvel identifiant d'application |
 | Noyau : chaîne de version `6.18.40.1-solon` | inchangée pour l'instant ; la recompilation du noyau dans la machine (2 Go) l'a saturée (agent injoignable, arrêt forcé) : à refaire avec plus de mémoire ou hors machine |
 
+### Incident : perte du disque de données lors de la première installation de Monodon (8 septembre 2026, 20 h 55)
+
+Le premier installeur Monodon lançait le désinstalleur silencieux de Solon en comptant sur sa réponse par défaut
+« ne pas supprimer les données » (`MessageBox … /SD IDNO`). Après son passage, `%ProgramData%\Solon` ne contenait
+plus que `logs\` (fichiers ouverts, donc non supprimables) : `data.vhdx` (6 Go), `state.json`, `settings.json` et
+`ca\` avaient été supprimés. La reprise côté service n'a pas pu jouer (le dossier `Monodon` existait déjà, créé par
+le journal de l'installeur). **Perdu** : images, conteneurs et volumes de test (Odoo 18, PostgreSQL, Warpgate,
+hello-world, busybox, alpine, images `solon-debug` et `solon-empty`). Cause exacte de la réponse « oui » non
+établie (défaut silencieux mal appliqué par le désinstalleur Tauri, ou question affichée et validée) ; la correction
+ne dépend plus de cette réponse.
+
+Corrections :
+- l'installeur **déplace d'abord** `%ProgramData%\Solon` vers `%ProgramData%\Monodon` (`robocopy /MOVE`, après
+  arrêt du service et attente du déverrouillage du disque), puis seulement lance l'ancien désinstalleur, dont la
+  question ne peut plus rien détruire ; le dossier `Program Files\Solon` résiduel est retiré ;
+- la reprise côté service fusionne entrée par entrée sans écraser, même si le dossier de destination existe déjà.
+
+Leçon : une migration ne doit **jamais** laisser les données sous la garde d'un programme dont on ne contrôle plus
+le comportement ; on les met à l'abri d'abord.
+

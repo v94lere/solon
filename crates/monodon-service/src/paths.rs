@@ -17,13 +17,11 @@ impl Paths {
             .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"));
         let root = base.join("Monodon");
         // Installation datant d'avant le renommage du projet (Solon, 8 septembre 2026) : les données
-        // (disque, réglages, journaux) sont reprises telles quelles par un simple déplacement.
+        // (disque, réglages, journaux, autorité) sont reprises entrée par entrée, sans écraser ce que
+        // Monodon aurait déjà créé (l'installeur écrit son journal dans Monodon\logs avant ce démarrage).
         let legacy = base.join("Solon");
-        if !root.exists() && legacy.is_dir() {
-            match std::fs::rename(&legacy, &root) {
-                Ok(()) => tracing::info!("données reprises depuis {}", legacy.display()),
-                Err(e) => tracing::warn!("reprise des données Solon impossible : {e}"),
-            }
+        if legacy.is_dir() && !root.join("data.vhdx").exists() {
+            migrate_legacy_dir(&legacy, &root);
         }
         root
     }
@@ -277,4 +275,33 @@ mod tests {
             "2edc986847e209b4016e141a6dc8716d3207350f416969382d431539bf292e4a"
         );
     }
+}
+
+/// Déplace le contenu de `from` dans `to` (fusion des sous-dossiers, jamais d'écrasement), puis
+/// supprime `from` s'il est vide. Même volume : de simples renommages, instantanés.
+fn migrate_legacy_dir(from: &std::path::Path, to: &std::path::Path) {
+    let _ = std::fs::create_dir_all(to);
+    let Ok(entries) = std::fs::read_dir(from) else {
+        return;
+    };
+    let mut moved = 0usize;
+    for entry in entries.flatten() {
+        let src = entry.path();
+        let dst = to.join(entry.file_name());
+        if src.is_dir() && dst.is_dir() {
+            migrate_legacy_dir(&src, &dst);
+            continue;
+        }
+        if dst.exists() {
+            continue;
+        }
+        match std::fs::rename(&src, &dst) {
+            Ok(()) => moved += 1,
+            Err(e) => tracing::warn!("reprise de {} impossible : {e}", src.display()),
+        }
+    }
+    if moved > 0 {
+        tracing::info!(moved, "données reprises depuis {}", from.display());
+    }
+    let _ = std::fs::remove_dir(from);
 }
