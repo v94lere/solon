@@ -16,7 +16,8 @@ for name, color in STATES.items():
     im = base.copy()
     d = ImageDraw.Draw(im)
     # Liseré transparent pour détacher le point du cube, puis le point.
-    d.ellipse((18, 18, 32, 32), fill=(0, 0, 0, 0))
+    d.ellipse((17, 17, 32, 32), fill=(0, 0, 0, 0))
+    d.ellipse((19, 19, 31, 31), fill=(255, 255, 255, 255))
     d.ellipse((20, 20, 30, 30), fill=color)
     im.save(os.path.join(HERE, name + ".png"))
     print(name)
