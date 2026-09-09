@@ -1,0 +1,41 @@
+# WordPress + MariaDB — exemple pour essayer Solon de bout en bout.
+# Ouvrir le dossier dans Solon (Containers → Open a project…) puis « Up », ou :
+#   docker compose -f examples\wordpress\compose.yaml up -d
+# Puis http://wordpress.wordpress.solon.local/ (aucun port à publier ; le port 8080 ci-dessous
+# est un plus pour http://localhost:8080). Identifiants de démonstration, à changer hors test.
+services:
+  db:
+    image: public.ecr.aws/docker/library/mariadb:11
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: wordpress
+      MARIADB_ROOT_PASSWORD: root-demo
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  wordpress:
+    image: public.ecr.aws/docker/library/wordpress:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - html:/var/www/html
+      # Thèmes et extensions en cours de développement : dossier Windows monté dans le conteneur.
+      # - ./wp-content:/var/www/html/wp-content
+
+volumes:
+  db:
+  html:
