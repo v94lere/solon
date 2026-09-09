@@ -20,6 +20,8 @@ export interface StackTemplate {
   tags: string[];
   /** Adresse à ouvrir une fois démarré (`{project}` est remplacé par le nom du dossier). */
   open?: string;
+  /** Nom de projet proposé dans la galerie (sinon l'identifiant). */
+  defaultName?: string;
   files: StackFile[];
 }
 
@@ -28,6 +30,30 @@ const LIB = "public.ecr.aws/docker/library";
 const header = (title: string, hint: string) => `# ${title}\n# ${hint}\n`;
 
 export const TEMPLATES: StackTemplate[] = [
+  {
+    id: "blank",
+    name: "Blank",
+    tagline: { en: "An empty compose.yaml to paste your own; the skeleton starts an Nginx page.", fr: "Un compose.yaml vide pour coller le vôtre ; le squelette démarre une page Nginx." },
+    tags: ["compose"],
+    defaultName: "my-stack",
+    files: [
+      {
+        path: "compose.yaml",
+        content:
+          header("Blank stack", "Paste your own compose.yaml here, or edit this skeleton: one service, its image, ports and volumes.") +
+          `services:
+  app:
+    image: ${LIB}/nginx:alpine
+    # ports:
+    #   - "8080:80"
+    # volumes:
+    #   - ./data:/usr/share/nginx/html
+    # environment:
+    #   KEY: value
+`,
+      },
+    ],
+  },
   {
     id: "wordpress",
     name: "WordPress",
@@ -705,6 +731,15 @@ export function suggestStacks(p: Probe): StackSuggestion[] {
     });
   }
 
+  if (out.length === 0) {
+    const blank = TEMPLATES.find((x) => x.id === "blank")!;
+    out.push({
+      id: "blank",
+      title: { en: "Blank compose.yaml", fr: "compose.yaml vide" },
+      summary: { en: "Nothing recognised here: paste your own compose.yaml, or edit the skeleton.", fr: "Rien de reconnu ici : collez votre compose.yaml, ou modifiez le squelette." },
+      files: blank.files,
+    });
+  }
   return out;
 }
 

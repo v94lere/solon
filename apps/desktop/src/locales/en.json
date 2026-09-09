@@ -508,7 +508,7 @@
     "title_for": "Environment for {{name}}",
     "search": "Search a stack",
     "suggested": "Detected in this folder",
-    "nothing_detected": "No known project files in this folder. Pick a stack below.",
+    "nothing_detected": "No known project files in this folder. Start from a blank compose.yaml, or pick a stack below.",
     "gallery": "Gallery",
     "back": "Back",
     "parent_dir": "Create in",

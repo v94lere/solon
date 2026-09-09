@@ -508,7 +508,7 @@
     "title_for": "Environnement pour {{name}}",
     "search": "Chercher une pile",
     "suggested": "Détecté dans ce dossier",
-    "nothing_detected": "Aucun fichier de projet connu dans ce dossier. Choisissez une pile ci-dessous.",
+    "nothing_detected": "Aucun fichier de projet connu dans ce dossier. Partez d'un compose.yaml vide, ou choisissez une pile ci-dessous.",
     "gallery": "Galerie",
     "back": "Retour",
     "parent_dir": "Créer dans",

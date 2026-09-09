@@ -727,3 +727,11 @@ modules Odoo, Node.js avec le framework repéré, Python/Django, PHP, Go, Rust, 
 Non couvert : lecture d'un `compose.yaml` distant (catalogue en ligne), mots de passe générés (les modèles gardent
 des valeurs de démonstration explicites, à changer avant tout usage sérieux), démarrage direct d'un conteneur seul
 sans projet Compose.
+
+### Pile « Blank » (9 septembre 2026, soir)
+
+Carte **Blank** en tête de la galerie : un `compose.yaml` squelette (un service Nginx, ports, volumes et variables
+en commentaires) que l'on remplace par le sien ; nom de projet proposé `my-stack`. Quand un dossier ouvert sans
+Compose ne contient rien de reconnu, la même pile est proposée sous le message « No known project files… » comme
+porte de sortie. Vérifié : carte affichée en première position, formulaire pré-rempli, dossier vide → proposition
+« Blank compose.yaml ».

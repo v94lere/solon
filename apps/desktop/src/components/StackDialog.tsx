@@ -40,7 +40,7 @@ export function StackDialog({ open, probe, onClose, onCreated }: { open: boolean
     setPick(p);
     setError(null);
     const files = p.kind === "template" ? p.t.files : p.s.files;
-    const project = probe ? probe.name : p.kind === "template" ? p.t.id : "app";
+    const project = probe ? probe.name : p.kind === "template" ? p.t.defaultName ?? p.t.id : "app";
     if (!probe) setName(project);
     setContent(fillProject(files[0].content, slug(project)));
   }
@@ -94,7 +94,7 @@ export function StackDialog({ open, probe, onClose, onCreated }: { open: boolean
           <div className="min-h-0 flex-1 overflow-auto p-4">
             {probe && (
               <section className="mb-5">
-                <h3 className="stacks-section">{suggestions.length ? t("stacks.suggested") : t("stacks.nothing_detected")}</h3>
+                <h3 className="stacks-section">{suggestions.some((s) => s.id !== "blank") ? t("stacks.suggested") : t("stacks.nothing_detected")}</h3>
                 {suggestions.length > 0 && (
                   <div className="stacks-grid">
                     {suggestions.map((s) => (
