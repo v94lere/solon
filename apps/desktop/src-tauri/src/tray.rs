@@ -11,8 +11,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use monodon_core::ipc::ServiceCommand;
 use serde_json::Value;
+use solon_core::ipc::ServiceCommand;
 use tauri::image::Image;
 use tauri::menu::{IconMenuItem, Menu, PredefinedMenuItem, Submenu};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
@@ -213,7 +213,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
     let tray = TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().cloned().expect("icône"))
-        .tooltip("Monodon")
+        .tooltip("Solon")
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| {
@@ -329,7 +329,7 @@ async fn follow_state<R: Runtime>(
             continue;
         }
         let status = engine_label(&l, &state);
-        let _ = tray.set_tooltip(Some(format!("Monodon — {status}")));
+        let _ = tray.set_tooltip(Some(format!("Solon — {status}")));
         let _ = tray.set_icon(icon(tray_icon(&state)));
         match build_menu(&app, &l, &state, containers.as_deref()) {
             Ok(menu) => {

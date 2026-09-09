@@ -1,6 +1,6 @@
-# Contribuer à Monodon
+# Contribuer à Solon
 
-Merci de votre intérêt. Monodon est un projet Rust/TypeScript qui touche à la virtualisation Windows :
+Merci de votre intérêt. Solon est un projet Rust/TypeScript qui touche à la virtualisation Windows :
 les contributions les plus utiles sont des rapports précis, des tests sur d'autres configurations
 (éditions de Windows, antivirus, VPN) et des correctifs ciblés.
 
@@ -8,12 +8,12 @@ les contributions les plus utiles sont des rapports précis, des tests sur d'aut
 
 | Dossier | Rôle |
 |---|---|
-| `crates/monodon-core` | Types partagés : erreurs à codes stables, protocole hôte↔agent, protocole app↔service |
-| `crates/monodon-vm-hcs` | Pilotage de la machine via l'API Host Compute System (création, ACL, partages, événements) |
-| `crates/monodon-hvsock` | Sockets Hyper-V côté hôte, relais named pipe → HvSocket |
-| `crates/monodon-prereq` | Détection des prérequis Windows |
-| `crates/monodon-service` | Service Windows : machine à états, réseau HNS, disque, relais de ports, canal de contrôle |
-| `crates/monodon-agent` | PID 1 de la machine Linux (musl statique) : montages, dockerd, RPC, événements |
+| `crates/solon-core` | Types partagés : erreurs à codes stables, protocole hôte↔agent, protocole app↔service |
+| `crates/solon-vm-hcs` | Pilotage de la machine via l'API Host Compute System (création, ACL, partages, événements) |
+| `crates/solon-hvsock` | Sockets Hyper-V côté hôte, relais named pipe → HvSocket |
+| `crates/solon-prereq` | Détection des prérequis Windows |
+| `crates/solon-service` | Service Windows : machine à états, réseau HNS, disque, relais de ports, canal de contrôle |
+| `crates/solon-agent` | PID 1 de la machine Linux (musl statique) : montages, dockerd, RPC, événements |
 | `apps/desktop` | Application Tauri v2 (React, TypeScript, Tailwind), anglais par défaut, français |
 | `image/` | Pipeline reproductible de l'image Linux : noyau, système racine Alpine, initrd, manifeste |
 | `tests/e2e` | Scénarios de bout en bout contre le vrai service |
@@ -28,15 +28,15 @@ périphérique Plan9 à déclarer dès la création, `docker events` qui ne vide
 - Windows 11 Pro/Entreprise/Éducation avec Hyper-V et la Plateforme de machine virtuelle activés.
 - Rust stable (`rustup`), cible `x86_64-unknown-linux-musl` (`rustup target add x86_64-unknown-linux-musl`).
 - Node 22 et npm.
-- Monodon installé : l'image Linux se construit dans un conteneur Monodon (`image/build.sh` sous Alpine, ~15 s), plus besoin de WSL.
+- Solon installé : l'image Linux se construit dans un conteneur Solon (`image/build.sh` sous Alpine, ~15 s), plus besoin de WSL.
 - Une session administrateur pour lancer le service en mode console (`tests/e2e/start-console.ps1`).
 
 Construire :
 
 ```powershell
 cargo build --workspace --examples
-cargo build -p monodon-agent --release --target x86_64-unknown-linux-musl
-docker run --rm -v "${PWD}:/work" -w /work public.ecr.aws/docker/library/alpine:3.24 sh -c "apk add -q bash curl python3 e2fsprogs coreutils tar grep findutils gzip; SKIP_KERNEL=1 MONODON_IMAGE_VERSION=0.1.0-dev.N bash image/build.sh /work/target/x86_64-unknown-linux-musl/release/monodon-agent"
+cargo build -p solon-agent --release --target x86_64-unknown-linux-musl
+docker run --rm -v "${PWD}:/work" -w /work public.ecr.aws/docker/library/alpine:3.24 sh -c "apk add -q bash curl python3 e2fsprogs coreutils tar grep findutils gzip; SKIP_KERNEL=1 SOLON_IMAGE_VERSION=0.1.0-dev.N bash image/build.sh /work/target/x86_64-unknown-linux-musl/release/solon-agent"
 cd apps\desktop; npm install; npm run typecheck
 ```
 
@@ -47,7 +47,7 @@ avec `SKIP_KERNEL=1`.
 
 - `cargo test --workspace` : tests unitaires (schéma HCS, HRESULT, protocole, chemins, couverture des
   traductions).
-- `cargo test -p monodon-vm-hcs --test boot` avec `MONODON_IT=1` : tests d'intégration réels (Administrateur,
+- `cargo test -p solon-vm-hcs --test boot` avec `SOLON_IT=1` : tests d'intégration réels (Administrateur,
   voir l'en-tête du fichier).
 - `tests/e2e/*.ps1` : scénarios complets (service console, `docker` sans élévation, port publié,
   coupure brutale, crash du service). Détails dans `tests/e2e/README.md`.
@@ -90,5 +90,5 @@ dépendance sous licence copyleft forte (GPL, AGPL) doit être discutée avant d
 ## Signaler un problème
 
 Joignez : l'édition et le build de Windows (`winver`), le rapport des prérequis (écran de démarrage ou
-`monodon-service prereq`), le code d'erreur affiché, et `%ProgramData%\Monodon\logs\monodon-service.log`.
+`solon-service prereq`), le code d'erreur affiché, et `%ProgramData%\Solon\logs\solon-service.log`.
 Les lignes préfixées `guest` sont la console de la machine Linux : elles sont précieuses.

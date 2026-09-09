@@ -15,7 +15,7 @@ export type ProvisionStep =
   | "waiting_engine"
   | "ready";
 
-export interface MonodonError {
+export interface SolonError {
   code: string;
   message: string;
   hresult?: number;
@@ -36,7 +36,7 @@ export interface PortBinding {
 export interface EngineSnapshot {
   state: EngineState | null;
   step: ProvisionStep | null;
-  error: MonodonError | null;
+  error: SolonError | null;
   vm_id: string | null;
   image_version: string | null;
   docker_pipe: string | null;

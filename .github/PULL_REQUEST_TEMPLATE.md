@@ -9,7 +9,7 @@
 <!-- Which of these did you run? Delete what does not apply. -->
 
 - [ ] `cargo test --workspace`
-- [ ] `cargo check -p monodon-agent --target x86_64-unknown-linux-musl`
+- [ ] `cargo check -p solon-agent --target x86_64-unknown-linux-musl`
 - [ ] `npm run typecheck` in `apps/desktop`
 - [ ] Manual test on Windows (edition, version): …
 - [ ] Engine image rebuilt (if `image/` or the agent changed): version …

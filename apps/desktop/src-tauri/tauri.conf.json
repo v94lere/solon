@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Monodon",
+  "productName": "Solon",
   "version": "0.1.0",
-  "identifier": "dev.monodon.app",
+  "identifier": "dev.solon.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Monodon",
+        "title": "Solon",
         "width": 1180,
         "height": 760,
         "minWidth": 900,
@@ -50,18 +50,18 @@
       }
     },
     "resources": {
-      "../../../target/release/monodon-service.exe": "monodon-service.exe",
+      "../../../target/release/solon-service.exe": "solon-service.exe",
       "../../../installer/setup.ps1": "installer/setup.ps1",
       "../../../target/release/docker.exe": "bin/docker.exe",
       "../../../installer/vendor/docker-cli.exe": "bin/docker-cli.exe",
       "../../../installer/vendor/cli-plugins/docker-compose.exe": "bin/cli-plugins/docker-compose.exe",
       "../../../installer/vendor/NOTICE-third-party.txt": "bin/NOTICE-third-party.txt",
-      "../../../image/out/0.1.0-dev.18/vmlinuz": "image/vmlinuz",
-      "../../../image/out/0.1.0-dev.18/initrd.img": "image/initrd.img",
-      "../../../image/out/0.1.0-dev.18/rootfs.vhd": "image/rootfs.vhd",
-      "../../../image/out/0.1.0-dev.18/manifest.json": "image/manifest.json"
+      "../../../image/out/0.1.0-dev.19/vmlinuz": "image/vmlinuz",
+      "../../../image/out/0.1.0-dev.19/initrd.img": "image/initrd.img",
+      "../../../image/out/0.1.0-dev.19/rootfs.vhd": "image/rootfs.vhd",
+      "../../../image/out/0.1.0-dev.19/manifest.json": "image/manifest.json"
     },
     "licenseFile": "../../../LICENSE",
-    "publisher": "Monodon"
+    "publisher": "Solon"
   }
 }

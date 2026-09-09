@@ -1,9 +1,9 @@
-# Third-party software bundled with Monodon
+# Third-party software bundled with Solon
 
-Monodon itself is licensed under the Apache License 2.0 (`LICENSE`). The installer and the engine image
+Solon itself is licensed under the Apache License 2.0 (`LICENSE`). The installer and the engine image
 redistribute the following components, each under its own licence. Nothing below is modified unless stated.
 
-## Shipped in the installer (`C:\Program Files\Monodon`)
+## Shipped in the installer (`C:\Program Files\Solon`)
 
 | Component | Version | Licence | Source |
 |---|---|---|---|
@@ -21,7 +21,7 @@ The image is built by the reproducible pipeline in `image/` (see `image/build.sh
 - Source: Microsoft's WSL2 Linux kernel tree, tag `linux-msft-wsl-6.18.40.1`,
   <https://github.com/microsoft/WSL2-Linux-Kernel/releases/tag/linux-msft-wsl-6.18.40.1>
   (itself derived from <https://kernel.org>).
-- Build: `image/kernel/build-kernel.sh` applies the configuration fragment `image/kernel/monodon.config` on
+- Build: `image/kernel/build-kernel.sh` applies the configuration fragment `image/kernel/solon.config` on
   top of the upstream WSL configuration and compiles with the toolchain of Alpine 3.24. The exact resulting
   configuration is shipped next to every image as `kernel.config`.
 - No source change is made to the kernel. The complete corresponding source is the upstream tag above; the
@@ -41,11 +41,11 @@ the licence of each package is recorded in Alpine's package index and in the `ap
 
 The list for a given image is written by the build as `packages.txt` next to the manifest.
 
-### Monodon components inside the image
+### Solon components inside the image
 
-- `monodon-agent` (PID 1 of the machine), `monodon-debug`: Apache-2.0, this repository.
+- `solon-agent` (PID 1 of the machine), `solon-debug`: Apache-2.0, this repository.
 - `fuser` 0.15.1, vendored in `third_party/fuser` with one build-script change described in
-  `third_party/fuser/MONODON-NOTES.md`: MIT (`third_party/fuser/LICENSE.md`), <https://github.com/cberner/fuser>.
+  `third_party/fuser/SOLON-NOTES.md`: MIT (`third_party/fuser/LICENSE.md`), <https://github.com/cberner/fuser>.
 
 ## Rust dependencies (service, desktop back-end, agent)
 

@@ -1,5 +1,5 @@
 name: Feature request
-description: An idea to make Monodon more useful
+description: An idea to make Solon more useful
 labels: [enhancement]
 body:
   - type: textarea
@@ -20,4 +20,4 @@ body:
     id: alternatives
     attributes:
       label: Alternatives you considered
-      description: Other tools, workarounds, or why existing Monodon features do not cover it.
+      description: Other tools, workarounds, or why existing Solon features do not cover it.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Construit l'initramfs minimal de Monodon : busybox statique (paquet Alpine) + le script init.
+# Construit l'initramfs minimal de Solon : busybox statique (paquet Alpine) + le script init.
 # Usage (Linux) : build-initrd.sh <dossier_de_sortie>
 # Variables : ALPINE_BRANCH, ALPINE_MIRROR, INITRD_WORKDIR
 # Sortie : initrd.img, initrd.sha256
@@ -8,7 +8,7 @@ set -euo pipefail
 OUT="${1:?dossier de sortie requis}"
 ALPINE_BRANCH="${ALPINE_BRANCH:-v3.24}"
 ALPINE_MIRROR="${ALPINE_MIRROR:-https://dl-cdn.alpinelinux.org/alpine}"
-INITRD_WORKDIR="${INITRD_WORKDIR:-/root/monodon-build/initrd}"
+INITRD_WORKDIR="${INITRD_WORKDIR:-/root/solon-build/initrd}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TOOLS="$HERE/../tools"
 MAIN="$ALPINE_MIRROR/$ALPINE_BRANCH/main"

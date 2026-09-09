@@ -1,4 +1,4 @@
-//! Application de bureau Monodon (Tauri v2).
+//! Application de bureau Solon (Tauri v2).
 //!
 //! - [`service`] : canal de contrôle du service Windows (état du moteur, démarrage/arrêt, réglages) ;
 //! - [`docker`] : API Docker via `bollard` sur le pipe exposé par le service ; flux par `Channel`.
@@ -13,8 +13,8 @@ mod tray;
 
 use std::sync::Arc;
 
-use monodon_core::ipc::{EngineSnapshot, PrereqReport, ServiceCommand, Settings};
 use serde_json::Value;
+use solon_core::ipc::{EngineSnapshot, PrereqReport, ServiceCommand, Settings};
 use tauri::ipc::Channel;
 
 fn from_value<T: serde::de::DeserializeOwned>(v: Value) -> Result<T, String> {
@@ -129,7 +129,7 @@ fn paths_logs_dir() -> String {
     let base = std::env::var_os("ProgramData")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::path::PathBuf::from(r"C:\ProgramData"));
-    base.join("Monodon")
+    base.join("Solon")
         .join("logs")
         .to_string_lossy()
         .into_owned()
@@ -225,5 +225,5 @@ pub fn run() {
             docker::network_inspect,
         ])
         .run(tauri::generate_context!())
-        .expect("erreur au lancement de Monodon");
+        .expect("erreur au lancement de Solon");
 }

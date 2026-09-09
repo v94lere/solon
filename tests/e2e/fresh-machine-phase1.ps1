@@ -1,10 +1,10 @@
 ﻿# Test « machine vierge », phase 1 (ÉLEVÉ, une fenêtre UAC). Remet la machine dans l'état d'un PC sans
-# Docker : désinstalle Docker Desktop, les distributions WSL et WSL, désinstalle Monodon et ses données,
+# Docker : désinstalle Docker Desktop, les distributions WSL et WSL, désinstalle Solon et ses données,
 # désactive Hyper-V et la Plateforme de machine virtuelle. Un redémarrage est ensuite nécessaire.
-# Journal : %ProgramData%\Monodon-test\phase1.log. Ne touche pas au dépôt ni aux sauvegardes du Bureau.
+# Journal : %ProgramData%\Solon-test\phase1.log. Ne touche pas au dépôt ni aux sauvegardes du Bureau.
 param([switch]$KeepUbuntu)
 $ErrorActionPreference = "Continue"
-$logDir = Join-Path $env:ProgramData "Monodon-test"; New-Item -ItemType Directory -Force $logDir | Out-Null
+$logDir = Join-Path $env:ProgramData "Solon-test"; New-Item -ItemType Directory -Force $logDir | Out-Null
 $log = Join-Path $logDir "phase1.log"
 function Log($m) { $l = "{0:HH:mm:ss} {1}" -f (Get-Date), $m; Add-Content $log $l; Write-Host $l }
 Log "=== phase 1 : retour à une machine sans Docker ==="
@@ -30,22 +30,22 @@ if ($wslMsi) {
     Log "WSL : code $($p.ExitCode)"
 } else { Log "WSL (MSI) : absent" }
 
-# 3. Monodon (désinstalleur silencieux, puis données)
-Get-Process monodon -ErrorAction SilentlyContinue | Stop-Process -Force
-$un = "C:\Program Files\Monodon\uninstall.exe"
+# 3. Solon (désinstalleur silencieux, puis données)
+Get-Process solon -ErrorAction SilentlyContinue | Stop-Process -Force
+$un = "C:\Program Files\Solon\uninstall.exe"
 if (Test-Path $un) {
-    Log "désinstallation de Monodon…"
+    Log "désinstallation de Solon…"
     $p = Start-Process -FilePath $un -ArgumentList "/S" -Wait -PassThru
-    Log "Monodon : code $($p.ExitCode)"
-} else { Log "Monodon : absent" }
+    Log "Solon : code $($p.ExitCode)"
+} else { Log "Solon : absent" }
 Start-Sleep 3
-if (Test-Path "$env:ProgramData\Monodon") {
-    Remove-Item -Recurse -Force "$env:ProgramData\Monodon" -ErrorAction SilentlyContinue
-    Log "données de Monodon supprimées : $(-not (Test-Path "$env:ProgramData\Monodon"))"
+if (Test-Path "$env:ProgramData\Solon") {
+    Remove-Item -Recurse -Force "$env:ProgramData\Solon" -ErrorAction SilentlyContinue
+    Log "données de Solon supprimées : $(-not (Test-Path "$env:ProgramData\Solon"))"
 }
-if (Test-Path "C:\Program Files\Monodon") { Remove-Item -Recurse -Force "C:\Program Files\Monodon" -ErrorAction SilentlyContinue }
+if (Test-Path "C:\Program Files\Solon") { Remove-Item -Recurse -Force "C:\Program Files\Solon" -ErrorAction SilentlyContinue }
 $hosts = Get-Content "$env:SystemRoot\System32\drivers\etc\hosts" -ErrorAction SilentlyContinue
-if ($hosts -match "monodon-begin") { Log "AVERTISSEMENT : bloc Monodon encore présent dans hosts" } else { Log "hosts : propre" }
+if ($hosts -match "solon-begin") { Log "AVERTISSEMENT : bloc Solon encore présent dans hosts" } else { Log "hosts : propre" }
 
 # 4. Composants Windows
 foreach ($f in @("Microsoft-Hyper-V-All","VirtualMachinePlatform","Microsoft-Windows-Subsystem-Linux")) {
@@ -55,5 +55,5 @@ foreach ($f in @("Microsoft-Hyper-V-All","VirtualMachinePlatform","Microsoft-Win
         else { Log "composant $f : déjà $st" }
     } catch { Log "composant $f : $($_.Exception.Message)" }
 }
-Log "=== phase 1 terminée : REDÉMARRER WINDOWS, puis lancer l'installeur Monodon depuis le Bureau ==="
+Log "=== phase 1 terminée : REDÉMARRER WINDOWS, puis lancer l'installeur Solon depuis le Bureau ==="
 Log "Après l'installation (elle demandera un redémarrage), redémarrer encore, puis exécuter tests\e2e\fresh-machine-phase2.ps1"

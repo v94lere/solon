@@ -1,0 +1,21 @@
+[package]
+name = "solon-prereq"
+description = "Détection des prérequis Windows de Solon (édition, virtualisation, services, mémoire)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+solon-core = { workspace = true }
+solon-vm-hcs = { workspace = true }
+tracing = { workspace = true }
+windows-service = "0.8"
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+] }

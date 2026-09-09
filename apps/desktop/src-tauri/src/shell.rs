@@ -1,4 +1,4 @@
-//! Terminal dans la machine : connexion au pipe `\\.\pipe\monodon-shell` (relayé par le service vers
+//! Terminal dans la machine : connexion au pipe `\\.\pipe\solon-shell` (relayé par le service vers
 //! le port vsock 5004 de l'agent), en-tête JSON `{cols, rows}`, puis trames vers l'agent et octets
 //! bruts du TTY vers l'application (Channel Tauri, base64).
 
@@ -8,8 +8,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use base64::Engine;
-use monodon_core::ipc::SHELL_PIPE;
-use monodon_core::protocol::{SHELL_FRAME_INPUT, SHELL_FRAME_RESIZE, ShellHeader};
+use solon_core::ipc::SHELL_PIPE;
+use solon_core::protocol::{SHELL_FRAME_INPUT, SHELL_FRAME_RESIZE, ShellHeader};
 use tauri::ipc::Channel;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, WriteHalf};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};

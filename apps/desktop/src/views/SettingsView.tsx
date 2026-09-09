@@ -59,7 +59,7 @@ export function SettingsView() {
         </select>
         <h2 className="mt-4 font-semibold">{t("settings.accent")}</h2>
         <select className="input mt-2" value={accent} onChange={(e) => { const a = e.target.value as Accent; setAccent(a); void applyAccent(a); }} aria-label={t("settings.accent")}>
-          <option value="monodon">{t("settings.accent_monodon")}</option>
+          <option value="solon">{t("settings.accent_solon")}</option>
           <option value="windows">{t("settings.accent_windows")}</option>
         </select>
       </section>
@@ -73,7 +73,7 @@ export function SettingsView() {
             onClick={() => {
               void (async () => {
                 setDiag(null);
-                const dest = (await saveDialog({ defaultPath: "monodon-diagnostic.zip", filters: [{ name: "Zip", extensions: ["zip"] }] })) as string | null;
+                const dest = (await saveDialog({ defaultPath: "solon-diagnostic.zip", filters: [{ name: "Zip", extensions: ["zip"] }] })) as string | null;
                 if (!dest) return;
                 try {
                   const n = await diagnostic.export(dest);

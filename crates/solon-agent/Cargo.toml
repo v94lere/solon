@@ -1,0 +1,22 @@
+[package]
+name = "solon-agent"
+description = "Agent invité de Solon (PID 1 dans la machine Linux) : montages, moteur, RPC vers l'hôte"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "solon-agent"
+path = "src/main.rs"
+
+[dependencies]
+solon-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = { workspace = true }
+# Client FUSE pur Rust (sans libfuse) : montage direct par PID 1.
+fuser = { version = "0.15", default-features = false, features = ["abi-7-31"] }

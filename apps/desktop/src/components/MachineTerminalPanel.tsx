@@ -21,7 +21,7 @@ export function MachineTerminalPanel() {
       cursorBlink: true,
       fontFamily: '"Cascadia Mono", Consolas, monospace',
       fontSize: 13,
-      theme: dark ? { background: "#121212", foreground: "#ffffff", cursor: "#3c82c3" } : { background: "#ffffff", foreground: "#0a0a0a", cursor: "#3c82c3" },
+      theme: dark ? { background: "#121212", foreground: "#ffffff", cursor: "#f860c0" } : { background: "#ffffff", foreground: "#0a0a0a", cursor: "#f860c0" },
       allowProposedApi: true,
     });
     const fit = new FitAddon();

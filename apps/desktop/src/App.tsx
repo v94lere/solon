@@ -24,7 +24,7 @@ const GROUPS: { id: "docker" | "general"; items: Section[] }[] = [
   { id: "docker", items: ["containers", "volumes", "images", "networks"] },
   { id: "general", items: ["activity", "terminal", "settings"] },
 ];
-const SIDEBAR_KEY = "monodon.sidebar";
+const SIDEBAR_KEY = "solon.sidebar";
 
 const icons: Record<Section, JSX.Element> = {
   containers: (

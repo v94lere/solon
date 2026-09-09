@@ -1,7 +1,7 @@
 //! Chaque code d'erreur stable doit avoir un message dans chaque langue de l'interface, et les
 //! identifiants de prérequis aussi. Ce test échoue si l'on ajoute un code sans sa traduction.
 
-use monodon_core::ErrorCode;
+use solon_core::ErrorCode;
 
 fn locale(name: &str) -> serde_json::Value {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/locales/");

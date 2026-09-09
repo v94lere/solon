@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Pipeline complet de l'image Linux de Monodon. À exécuter sous Linux en root (WSL : `wsl -u root`).
+# Pipeline complet de l'image Linux de Solon. À exécuter sous Linux en root (WSL : `wsl -u root`).
 #
-# Usage : build.sh <binaire monodon-agent musl> [dossier_de_sortie]
-# Variables : MONODON_IMAGE_VERSION (défaut : 0.1.0-dev.<date>), SKIP_KERNEL=1 pour réutiliser
+# Usage : build.sh <binaire solon-agent musl> [dossier_de_sortie]
+# Variables : SOLON_IMAGE_VERSION (défaut : 0.1.0-dev.<date>), SKIP_KERNEL=1 pour réutiliser
 #             out/kernel/vmlinuz déjà compilé, KERNEL_TAG, ALPINE_BRANCH, SOURCE_DATE_EPOCH.
 #
 # Produit dans <sortie>/<version>/ : vmlinuz, initrd.img, rootfs.vhd, manifest.json (+ packages.txt,
@@ -10,10 +10,10 @@
 # service Windows vérifie avant de démarrer la machine.
 set -euo pipefail
 
-AGENT="${1:?chemin du binaire monodon-agent requis}"
+AGENT="${1:?chemin du binaire solon-agent requis}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT_BASE="${2:-$HERE/out}"
-VERSION="${MONODON_IMAGE_VERSION:-0.1.0-dev.$(date -u +%Y%m%d)}"
+VERSION="${SOLON_IMAGE_VERSION:-0.1.0-dev.$(date -u +%Y%m%d)}"
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-1767225600}"
 DEST="$OUT_BASE/$VERSION"
 mkdir -p "$DEST"

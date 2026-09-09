@@ -1,11 +1,11 @@
 //! Onglet Fichiers : parcourir, télécharger, envoyer, créer et supprimer des fichiers dans un
 //! conteneur ou un volume, sans rien exiger de l'image (pas de shell nécessaire).
 //!
-//! - **Lister, créer, supprimer** : commandes exécutées dans la machine Monodon (`ServiceCommand::Exec`,
+//! - **Lister, créer, supprimer** : commandes exécutées dans la machine Solon (`ServiceCommand::Exec`,
 //!   busybox), sur le système de fichiers fusionné du conteneur (`GraphDriver.Data.MergedDir`, donc
 //!   conteneur en marche) ou sur le dossier du volume (`/var/lib/docker/volumes/<nom>/_data`).
 //! - **Télécharger, envoyer** : API `archive` de Docker (tar) + `tar.exe` de Windows. Pour un volume,
-//!   un conteneur auxiliaire jetable (image vide `monodon-empty`, jamais démarré) monte le volume sur `/v`.
+//!   un conteneur auxiliaire jetable (image vide `solon-empty`, jamais démarré) monte le volume sur `/v`.
 
 use bollard::Docker;
 use bollard::models::{ContainerCreateBody, HostConfig};
@@ -14,16 +14,16 @@ use bollard::query_parameters::{
     RemoveContainerOptionsBuilder, UploadToContainerOptionsBuilder,
 };
 use futures_util::StreamExt;
-use monodon_core::ipc::ServiceCommand;
-use monodon_core::protocol::ExecResult;
 use serde::{Deserialize, Serialize};
+use solon_core::ipc::ServiceCommand;
+use solon_core::protocol::ExecResult;
 use tokio::io::AsyncWriteExt;
 
 use crate::docker::{State, temp_tar, windows_tar};
 use crate::service;
 
 const VOLUMES_ROOT: &str = "/var/lib/docker/volumes";
-const HELPER_IMAGE: &str = "monodon-empty";
+const HELPER_IMAGE: &str = "solon-empty";
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
@@ -216,7 +216,7 @@ impl Helper {
             return Err(format!("helper image: {}", r.stderr.trim()));
         }
         let name = format!(
-            "monodon-files-{}",
+            "solon-files-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_millis())
@@ -224,7 +224,7 @@ impl Helper {
         );
         let body = ContainerCreateBody {
             image: Some(HELPER_IMAGE.to_owned()),
-            cmd: Some(vec!["/monodon-files-helper".to_owned()]),
+            cmd: Some(vec!["/solon-files-helper".to_owned()]),
             host_config: Some(HostConfig {
                 binds: Some(vec![format!("{volume}:/v")]),
                 ..Default::default()

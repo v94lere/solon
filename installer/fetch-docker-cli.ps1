@@ -1,5 +1,5 @@
 ﻿# Télécharge le CLI Docker officiel (binaire statique Windows) et le plugin Compose, pour les livrer avec
-# Monodon dans <install>\bin (Apache-2.0, redistribution autorisée). Sortie : installer\vendor\ (ignoré par git).
+# Solon dans <install>\bin (Apache-2.0, redistribution autorisée). Sortie : installer\vendor\ (ignoré par git).
 # Usage : .\installer\fetch-docker-cli.ps1 [-DockerVersion 29.7.2] [-ComposeVersion 5.1.4]
 param(
     [string]$DockerVersion = "29.7.2",
@@ -25,10 +25,10 @@ Remove-Item -Recurse -Force $tmp, $zip -ErrorAction SilentlyContinue
 "téléchargement de Docker Compose $ComposeVersion…"
 Fetch "https://github.com/docker/compose/releases/download/v$ComposeVersion/docker-compose-windows-x86_64.exe" (Join-Path $vendor "cli-plugins\docker-compose.exe")
 @"
-Composants tiers livrés avec Monodon (dossier bin) :
+Composants tiers livrés avec Solon (dossier bin) :
 - docker-cli.exe : Docker CLI $DockerVersion (https://github.com/docker/cli), licence Apache-2.0
 - cli-plugins\docker-compose.exe : Docker Compose $ComposeVersion (https://github.com/docker/compose), licence Apache-2.0
-Monodon les lance tels quels ; docker.exe (Monodon) ne fait que les diriger vers le moteur Monodon.
+Solon les lance tels quels ; docker.exe (Solon) ne fait que les diriger vers le moteur Solon.
 "@ | Set-Content -Encoding UTF8 (Join-Path $vendor "NOTICE-third-party.txt")
 "docker=$DockerVersion`ncompose=$ComposeVersion" | Set-Content -Encoding ascii $stamp
 Get-ChildItem $vendor -Recurse -File | ForEach-Object { "{0,10:N0} Ko  {1}" -f ($_.Length/1KB), $_.FullName.Substring($vendor.Length + 1) }

@@ -27,7 +27,7 @@ jobs:
       - name: Check (Windows crates)
         run: cargo check --workspace --all-targets
       - name: Check guest agent (musl)
-        run: cargo check -p monodon-agent --target x86_64-unknown-linux-musl
+        run: cargo check -p solon-agent --target x86_64-unknown-linux-musl
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Tests

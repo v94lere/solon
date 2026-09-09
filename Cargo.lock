@@ -2210,114 +2210,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "monodon"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "bollard",
- "futures-util",
- "monodon-core",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-notification",
- "tauri-plugin-opener",
- "tauri-plugin-window-state",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "zip",
-]
-
-[[package]]
-name = "monodon-agent"
-version = "0.1.0"
-dependencies = [
- "fuser",
- "libc",
- "monodon-core",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "monodon-core"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 2.0.20",
-]
-
-[[package]]
-name = "monodon-docker-shim"
-version = "0.1.0"
-dependencies = [
- "serde_json",
-]
-
-[[package]]
-name = "monodon-hvsock"
-version = "0.1.0"
-dependencies = [
- "tokio",
- "tracing",
- "windows 0.62.2",
-]
-
-[[package]]
-name = "monodon-prereq"
-version = "0.1.0"
-dependencies = [
- "monodon-core",
- "monodon-vm-hcs",
- "tracing",
- "windows 0.62.2",
- "windows-service",
-]
-
-[[package]]
-name = "monodon-service"
-version = "0.1.0"
-dependencies = [
- "monodon-core",
- "monodon-hvsock",
- "monodon-prereq",
- "monodon-vm-hcs",
- "rcgen",
- "rustls",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
- "tokio",
- "tokio-rustls",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "uuid",
- "windows 0.62.2",
- "windows-service",
-]
-
-[[package]]
-name = "monodon-vm-hcs"
-version = "0.1.0"
-dependencies = [
- "monodon-core",
- "monodon-hvsock",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "windows 0.62.2",
-]
-
-[[package]]
 name = "moxcms"
 version = "0.7.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3681,6 +3573,114 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "solon"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "bollard",
+ "futures-util",
+ "serde",
+ "serde_json",
+ "solon-core",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-notification",
+ "tauri-plugin-opener",
+ "tauri-plugin-window-state",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "zip",
+]
+
+[[package]]
+name = "solon-agent"
+version = "0.1.0"
+dependencies = [
+ "fuser",
+ "libc",
+ "serde",
+ "serde_json",
+ "solon-core",
+]
+
+[[package]]
+name = "solon-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "solon-docker-shim"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
+name = "solon-hvsock"
+version = "0.1.0"
+dependencies = [
+ "tokio",
+ "tracing",
+ "windows 0.62.2",
+]
+
+[[package]]
+name = "solon-prereq"
+version = "0.1.0"
+dependencies = [
+ "solon-core",
+ "solon-vm-hcs",
+ "tracing",
+ "windows 0.62.2",
+ "windows-service",
+]
+
+[[package]]
+name = "solon-service"
+version = "0.1.0"
+dependencies = [
+ "rcgen",
+ "rustls",
+ "serde",
+ "serde_json",
+ "solon-core",
+ "solon-hvsock",
+ "solon-prereq",
+ "solon-vm-hcs",
+ "thiserror 2.0.20",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "uuid",
+ "windows 0.62.2",
+ "windows-service",
+]
+
+[[package]]
+name = "solon-vm-hcs"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "solon-core",
+ "solon-hvsock",
+ "thiserror 2.0.20",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "windows 0.62.2",
 ]
 
 [[package]]

@@ -19,17 +19,17 @@ function sanitize(label: string): string {
   return label.replace(/^\//, "").toLowerCase().replace(/[^a-z0-9._-]/g, "").replace(/[._]/g, "-").replace(/^-+|-+$/g, "");
 }
 
-/** Domaine local d'un conteneur : `service.projet.monodon.local` pour Compose, sinon `nom.monodon.local`. */
+/** Domaine local d'un conteneur : `service.projet.solon.local` pour Compose, sinon `nom.solon.local`. */
 export function localDomain(c: ContainerSummary): string | null {
   const project = c.Labels?.[LABEL_PROJECT];
   const service = c.Labels?.[LABEL_SERVICE];
   if (project && service) {
     const p = sanitize(project);
     const s = sanitize(service);
-    if (p && s) return `${s}.${p}.monodon.local`;
+    if (p && s) return `${s}.${p}.solon.local`;
   }
   const name = sanitize(c.Names?.[0] ?? "");
-  return name ? `${name}.monodon.local` : null;
+  return name ? `${name}.solon.local` : null;
 }
 
 export function PortLinks({ c, running }: { c: ContainerSummary; running: boolean }) {

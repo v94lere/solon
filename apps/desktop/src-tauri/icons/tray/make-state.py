@@ -1,4 +1,4 @@
-# Icônes de la barre des tâches qui reflètent l'état du moteur : le cube Monodon (icons/32x32.png)
+# Icônes de la barre des tâches qui reflètent l'état du moteur : le cube Solon (icons/32x32.png)
 # avec un point coloré en bas à droite. Usage : python make-state.py (dépend de Pillow).
 import os
 from PIL import Image, ImageDraw

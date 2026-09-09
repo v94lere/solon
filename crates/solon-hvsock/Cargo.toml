@@ -1,0 +1,20 @@
+[package]
+name = "solon-hvsock"
+description = "Sockets Hyper-V (AF_HYPERV) côté Windows pour parler à l'agent invité de Solon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+tracing = { workspace = true }
+tokio = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Networking_WinSock",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+] }

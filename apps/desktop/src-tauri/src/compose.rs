@@ -4,8 +4,8 @@
 
 use std::path::Path;
 
-use monodon_core::ipc::{ServiceCommand, ShareInfo};
 use serde::Serialize;
+use solon_core::ipc::{ServiceCommand, ShareInfo};
 
 use crate::service;
 
@@ -17,7 +17,7 @@ pub struct ComposeChunk {
     pub text: String,
 }
 
-/// Exécute `docker compose <args>` dans la machine avec la sortie **en flux** (canal `monodon-exec`).
+/// Exécute `docker compose <args>` dans la machine avec la sortie **en flux** (canal `solon-exec`).
 /// Renvoie le code de sortie une fois la commande terminée.
 #[tauri::command]
 pub async fn compose_stream(
@@ -25,7 +25,7 @@ pub async fn compose_stream(
     args: Vec<String>,
     channel: tauri::ipc::Channel<ComposeChunk>,
 ) -> Result<i32, String> {
-    use monodon_core::protocol::{
+    use solon_core::protocol::{
         EXEC_FRAME_EXIT, EXEC_FRAME_STDERR, EXEC_FRAME_STDOUT, ExecStreamRequest,
     };
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -93,7 +93,7 @@ async fn open_exec_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeCl
     const ERROR_PIPE_BUSY: i32 = 231;
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     loop {
-        match ClientOptions::new().open(monodon_core::ipc::EXEC_PIPE) {
+        match ClientOptions::new().open(solon_core::ipc::EXEC_PIPE) {
             Ok(pipe) => return Ok(pipe),
             Err(e)
                 if e.raw_os_error() == Some(ERROR_PIPE_BUSY)

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Construit le système racine de Monodon : Alpine Linux minimal + Docker Engine + agent Monodon,
+# Construit le système racine de Solon : Alpine Linux minimal + Docker Engine + agent Solon,
 # dans une image ext4 en lecture seule convertie en VHD fixe.
 #
-# Usage (Linux root, ex. `wsl -u root`) : build-rootfs.sh <dossier_de_sortie> <binaire monodon-agent>
+# Usage (Linux root, ex. `wsl -u root`) : build-rootfs.sh <dossier_de_sortie> <binaire solon-agent>
 # Variables : ALPINE_BRANCH (défaut v3.24), ALPINE_MIRROR, ROOTFS_WORKDIR (disque ext4), SOURCE_DATE_EPOCH.
 # Sortie : rootfs.vhd, rootfs.sha256, packages.txt (versions exactes installées)
 #
@@ -12,10 +12,10 @@
 set -euo pipefail
 
 OUT="${1:?dossier de sortie requis}"
-AGENT="${2:?chemin du binaire monodon-agent (x86_64 musl statique) requis}"
+AGENT="${2:?chemin du binaire solon-agent (x86_64 musl statique) requis}"
 ALPINE_BRANCH="${ALPINE_BRANCH:-v3.24}"
 ALPINE_MIRROR="${ALPINE_MIRROR:-https://dl-cdn.alpinelinux.org/alpine}"
-ROOTFS_WORKDIR="${ROOTFS_WORKDIR:-/root/monodon-build/rootfs}"
+ROOTFS_WORKDIR="${ROOTFS_WORKDIR:-/root/solon-build/rootfs}"
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-1767225600}" # 2026-01-01T00:00:00Z
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TOOLS="$HERE/../tools"
@@ -67,19 +67,19 @@ echo "==> Installation des paquets"
 printf '%s\n%s\n' "$MAIN" "$COMMUNITY" > "$ROOT/etc/apk/repositories"
 "$APK" --root "$ROOT" info -v | sort > "$OUT/packages.txt"
 
-echo "==> Agent Monodon et configuration"
-install -m 0755 "$AGENT" "$ROOT/sbin/monodon-agent"
-install -d "$ROOT/etc/docker" "$ROOT/etc/monodon" "$ROOT/var/lib/docker" "$ROOT/var/lib/containerd" \
-           "$ROOT/var/lib/monodon" "$ROOT/mnt/host" "$ROOT/run"
+echo "==> Agent Solon et configuration"
+install -m 0755 "$AGENT" "$ROOT/sbin/solon-agent"
+install -d "$ROOT/etc/docker" "$ROOT/etc/solon" "$ROOT/var/lib/docker" "$ROOT/var/lib/containerd" \
+           "$ROOT/var/lib/solon" "$ROOT/mnt/host" "$ROOT/run"
 install -m 0644 "$HERE/files/daemon.json" "$ROOT/etc/docker/daemon.json"
 install -d "$ROOT/usr/local/bin"
-install -m 0755 "$HERE/files/monodon-debug" "$ROOT/usr/local/bin/monodon-debug"
+install -m 0755 "$HERE/files/solon-debug" "$ROOT/usr/local/bin/solon-debug"
 install -m 0644 "$HERE/files/containerd.toml" "$ROOT/etc/containerd/config.toml" 2>/dev/null || {
     install -d "$ROOT/etc/containerd"; install -m 0644 "$HERE/files/containerd.toml" "$ROOT/etc/containerd/config.toml"; }
-echo "monodon" > "$ROOT/etc/hostname"
+echo "solon" > "$ROOT/etc/hostname"
 printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > "$ROOT/etc/resolv.conf"  # remplacé par l'agent au démarrage
-echo "$ALPINE_BRANCH" > "$ROOT/etc/monodon/alpine-branch"
-date -u -d "@$SOURCE_DATE_EPOCH" +%Y-%m-%dT%H:%M:%SZ > "$ROOT/etc/monodon/build-date"
+echo "$ALPINE_BRANCH" > "$ROOT/etc/solon/alpine-branch"
+date -u -d "@$SOURCE_DATE_EPOCH" +%Y-%m-%dT%H:%M:%SZ > "$ROOT/etc/solon/build-date"
 
 echo "==> Nettoyage"
 rm -rf "$ROOT/var/cache/apk"/* "$ROOT/usr/share/man" "$ROOT/usr/share/doc" "$ROOT/usr/share/info" \
@@ -93,7 +93,7 @@ SIZE_MB=$(( $(du -sm "$ROOT" | cut -f1) * 115 / 100 + 24 ))
 echo "==> Image ext4 (${SIZE_MB} Mio, lecture seule, sans journal)"
 IMG="$WORK/rootfs.img"
 rm -f "$IMG"
-E2FSPROGS_FAKE_TIME="$SOURCE_DATE_EPOCH" mkfs.ext4 -q -F -b 4096 -d "$ROOT" -L monodon-root \
+E2FSPROGS_FAKE_TIME="$SOURCE_DATE_EPOCH" mkfs.ext4 -q -F -b 4096 -d "$ROOT" -L solon-root \
     -O ^has_journal,^huge_file -m 0 -E root_owner=0:0,hash_seed=00000000-0000-0000-0000-000000000000 \
     -U 5ec7a0a0-0000-4000-8000-000000000001 "$IMG" "${SIZE_MB}M"
 e2fsck -fn "$IMG" >/dev/null

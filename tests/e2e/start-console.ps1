@@ -5,13 +5,13 @@ param(
     [switch]$Release
 )
 . (Join-Path $PSScriptRoot "common.ps1")
-if ($Release) { $Svc = Join-Path $Repo "target\release\monodon-service.exe" }
+if ($Release) { $Svc = Join-Path $Repo "target\release\solon-service.exe" }
 $cmd = Join-Path $Build "service-console.cmd"
 @"
 @echo off
-set MONODON_ROOT=$Root
-set MONODON_IMAGE_DIR=$ImageDir
-set RUST_LOG=info,guest=info,monodon_service=debug
+set SOLON_ROOT=$Root
+set SOLON_IMAGE_DIR=$ImageDir
+set RUST_LOG=info,guest=info,solon_service=debug
 "$Svc" console --start > "$ConsoleLog" 2>&1
 "@ | Set-Content -Path $cmd -Encoding ascii
 Remove-Item $ConsoleLog -ErrorAction SilentlyContinue
