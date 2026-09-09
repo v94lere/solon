@@ -704,3 +704,26 @@ Le retour au nom Solon a été fait par échange mécanique des deux noms dans t
 (dossier de données, étiquette de disque, marqueurs du fichier `hosts`, autorité, désinstallation de l'ancienne
 version) s'applique désormais à l'installation **Monodon** du PC de test. Image du moteur **0.1.0-dev.19** ; la
 chaîne de version du noyau `6.18.40.1-solon` est de nouveau cohérente sans recompilation.
+
+## Galerie de piles et détection de projet (9 septembre 2026)
+
+Ce que l'utilisateur voit : un bouton **New stack…** dans Containers (et une carte dans l'écran d'accueil vide)
+ouvre une galerie de douze piles prêtes (WordPress, Odoo 18, PostgreSQL + Adminer, MariaDB + Adminer, MongoDB +
+Mongo Express, Redis, n8n, Nextcloud, Ghost, Gitea, Uptime Kuma, site statique Nginx). Choisir une pile montre le
+`compose.yaml` proposé (modifiable), demande le dossier parent et le nom du projet, puis **Create** écrit les
+fichiers et ouvre la vue projet ; **Create and start** enchaîne sur `Up`. Quand **Open a project…** tombe sur un
+dossier sans fichier Compose, Solon le sonde et propose un environnement en tête de la même galerie (Dockerfile,
+modules Odoo, Node.js avec le framework repéré, Python/Django, PHP, Go, Rust, Java, .NET, Ruby, site statique).
+
+| Élément | Mesure / choix |
+|---|---|
+| Sonde d'un dossier (`stack_probe`) | premier niveau seulement, plus un niveau pour les `__manifest__.py` Odoo ; `node_modules` et dossiers cachés ignorés |
+| Écriture (`project_scaffold`) | refuse d'écraser un fichier existant et les chemins qui sortent du dossier ; test unitaire `sonde_et_ecriture` |
+| Images des piles | miroir `public.ecr.aws/docker/library` (pas de limite de débit Docker Hub) ; Gitea, n8n, Uptime Kuma, Odoo sur leur registre d'origine |
+| Test galerie → Redis | dossier `stacks-out\redis\compose.yaml` créé, vue projet ouverte (0/0 running) |
+| Test détection → dossier `package.json` (vue, script `dev`) | suggestion « Node.js 22 (vue) », port 5173, `npm run dev -- --host 0.0.0.0` ; fichier écrit dans le dossier sondé |
+| Langue | cartes, résumés et commentaires des `compose.yaml` en anglais par défaut, français quand l'interface est en français |
+
+Non couvert : lecture d'un `compose.yaml` distant (catalogue en ligne), mots de passe générés (les modèles gardent
+des valeurs de démonstration explicites, à changer avant tout usage sérieux), démarrage direct d'un conteneur seul
+sans projet Compose.

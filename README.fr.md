@@ -100,6 +100,12 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
   suivante le réveille en une fraction de seconde, avant d'être servie. Les bases de données et les tâches de fond
   qui ne parlent qu'en interne ne sont jamais concernées ; un bouton « Keep awake » dans la fiche exclut un
   conteneur ; l'état « Asleep » apparaît dans la liste.
+- **Piles prêtes et détection de projet** : « New stack… » ouvre une galerie (WordPress, Odoo 18, PostgreSQL,
+  MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Uptime Kuma, site statique Nginx) : on choisit, on
+  désigne un dossier, on relit le `compose.yaml` généré, « Créer et démarrer ». Ouvrir un dossier sans fichier
+  Compose fait regarder à Solon ce qu'il contient (package.json, requirements.txt, Dockerfile, composer.json,
+  go.mod, Cargo.toml, pom.xml, .csproj, Gemfile, modules Odoo…) et proposer un environnement, modifiable
+  avant création. Rien n'est jamais écrasé.
 - **Fiche d'un conteneur** (clic sur son nom) : onglet **Overview** avec image, commande, dates, politique de
   redémarrage, réseaux (adresse, passerelle, alias), ports, montages, variables d'environnement, étiquettes, et
   **copie de fichiers** dans les deux sens (`docker cp` sans ligne de commande). Onglets Logs, Terminal, Inspect.

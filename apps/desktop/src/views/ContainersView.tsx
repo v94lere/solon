@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLogs, IconPlay, IconRestart, IconStop, IconTrash } from "../components/Icons";
-import { compose, containers, engine, formatBytes, type ContainerSummary, type StatSample } from "../api";
+import { compose, containers, engine, formatBytes, stacks, type ContainerSummary, type Probe, type StatSample } from "../api";
+import { StackDialog } from "../components/StackDialog";
 import { markUserAction } from "../engine";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { PortLinks } from "../components/PortLinks";
@@ -42,7 +43,7 @@ function stateClass(state: string) {
   }
 }
 
-export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string) => void; onOpenProject: (dir: string) => void }) {
+export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string) => void; onOpenProject: (dir: string, autoUp?: boolean) => void }) {
   const { t } = useTranslation();
   const { snapshot } = useEngine();
   const sleeping = snapshot?.sleeping ?? [];
@@ -57,6 +58,7 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
   const [error, setError] = useState<string | null>(null);
   const [recent] = useState<string[]>(loadRecentProjects);
   const [hello, setHello] = useState<"idle" | "running" | "done">("idle");
+  const [stackDialog, setStackDialog] = useState<{ open: boolean; probe: Probe | null }>({ open: false, probe: null });
 
   const query = useQuery({ queryKey: ["containers", showStopped], queryFn: () => containers.list(showStopped) });
 
@@ -120,7 +122,9 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
     try {
       const p = await compose.detect(chosen);
       if (!p) {
-        setError(t("compose.not_found", { dir: chosen }));
+        // Pas de fichier Compose : on regarde ce que contient le dossier et on propose un environnement.
+        const probe = await stacks.probe(chosen);
+        setStackDialog({ open: true, probe });
         return;
       }
       rememberProject(chosen);
@@ -160,6 +164,10 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
               <IconFolderOpen />
               {t("compose.open")}
             </button>
+            <button type="button" className="btn btn-sm" onClick={() => setStackDialog({ open: true, probe: null })}>
+              <IconGlobe />
+              {t("stacks.new")}
+            </button>
             {recent.length > 0 && (
               <select className="input input-sm max-w-64" value="" onChange={(e) => { if (e.target.value) onOpenProject(e.target.value); }} aria-label={t("compose.recent")}>
                 <option value="">{t("compose.recent")}</option>
@@ -168,9 +176,9 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
             )}
           </>
         }
-        search={<input type="search" className="input w-64" placeholder={t("containers.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("containers.search")} />}
+        search={<input type="search" className="input w-56" placeholder={t("containers.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("containers.search")} />}
       >
-        <label className="flex items-center gap-2 text-[13px]" style={{ color: "var(--ink-2)" }}>
+        <label className="flex items-center gap-2 whitespace-nowrap text-[13px]" style={{ color: "var(--ink-2)" }}>
           <input type="checkbox" checked={showStopped} onChange={(e) => setShowStopped(e.target.checked)} />
           {t("containers.show_stopped")}
         </label>
@@ -199,6 +207,12 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
                 <h4>{t("containers.start.compose_title")}</h4>
                 <p>{t("containers.start.compose_body")}</p>
                 <button type="button" className="btn btn-sm" onClick={() => void pickProject()}>{t("compose.open")}</button>
+              </div>
+              <div className="start-card">
+                <div className="start-icon"><IconGlobe /></div>
+                <h4>{t("containers.start.stack_title")}</h4>
+                <p>{t("containers.start.stack_body")}</p>
+                <button type="button" className="btn btn-sm" onClick={() => setStackDialog({ open: true, probe: null })}>{t("stacks.new")}</button>
               </div>
               <div className="start-card">
                 <div className="start-icon"><IconGlobe /></div>
@@ -250,6 +264,15 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
         )}
       </div>
 
+      <StackDialog
+        open={stackDialog.open}
+        probe={stackDialog.probe}
+        onClose={() => setStackDialog({ open: false, probe: null })}
+        onCreated={(dir, autoUp) => {
+          setStackDialog({ open: false, probe: null });
+          onOpenProject(dir, autoUp);
+        }}
+      />
       <ConfirmDialog
         open={removing !== null}
         title={t("containers.remove_confirm.title", { name: removing?.Names?.[0]?.replace(/^\//, "") ?? "" })}

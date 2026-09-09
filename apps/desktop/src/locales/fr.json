@@ -134,7 +134,9 @@
       "compose_body": "Choisissez un dossier contenant compose.yaml : Solon montre ses services, les journaux mêlés et les boutons Up / Down.",
       "cli_title": "Utiliser la commande docker",
       "cli_body": "La commande docker est déjà dans votre PATH et parle à Solon. Tout ce que vous lancez apparaît ici.",
-      "cli_hint": "Chaque conteneur en marche reçoit aussi https://<nom>.solon.local, avec ou sans port publié."
+      "cli_hint": "Chaque conteneur en marche reçoit aussi https://<nom>.solon.local, avec ou sans port publié.",
+      "stack_title": "Partir d'une pile prête",
+      "stack_body": "WordPress, Odoo, PostgreSQL, n8n, Nextcloud, Redis… un compose.yaml écrit pour vous, démarré en un clic, avec son adresse solon.local."
     },
     "none_running": "Aucun conteneur en marche",
     "none_running_hint": "Les conteneurs arrêtés sont masqués.",
@@ -499,5 +501,25 @@
       "body": "Un dossier est supprimé avec tout son contenu. Irréversible.",
       "confirm": "Supprimer"
     }
+  },
+  "stacks": {
+    "new": "Nouvelle pile…",
+    "title": "Piles prêtes",
+    "title_for": "Environnement pour {{name}}",
+    "search": "Chercher une pile",
+    "suggested": "Détecté dans ce dossier",
+    "nothing_detected": "Aucun fichier de projet connu dans ce dossier. Choisissez une pile ci-dessous.",
+    "gallery": "Galerie",
+    "back": "Retour",
+    "parent_dir": "Créer dans",
+    "choose": "Choisir…",
+    "project_name": "Nom du projet",
+    "pick_dir": "Choisir le dossier qui contiendra le projet",
+    "will_write": "compose.yaml sera écrit dans {{dir}}",
+    "will_write_here": "compose.yaml sera écrit dans {{dir}}",
+    "extra_files": "{{count}} fichier(s) de plus",
+    "need_dir": "Choisissez d'abord un dossier.",
+    "create": "Créer",
+    "create_up": "Créer et démarrer"
   }
 }

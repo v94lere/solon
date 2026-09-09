@@ -19,7 +19,7 @@ function stateClass(state: string) {
 }
 
 /** Un projet Compose : ses services, ses journaux mêlés, Up / Down / Rebuild, ouverture du dossier. */
-export function ProjectView({ dir, onBack, onOpenContainer }: { dir: string; onBack: () => void; onOpenContainer: (id: string) => void }) {
+export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { dir: string; autoUp?: boolean; onBack: () => void; onOpenContainer: (id: string) => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [project, setProject] = useState<ComposeProject | null | undefined>(undefined);
@@ -31,13 +31,21 @@ export function ProjectView({ dir, onBack, onOpenContainer }: { dir: string; onB
   const [showOutput, setShowOutput] = useState(false);
   const query = useQuery({ queryKey: ["containers", true], queryFn: () => containers.list(true), refetchInterval: 5000 });
 
+  const autoStarted = useRef(false);
   useEffect(() => {
     setProject(undefined);
+    autoStarted.current = false;
     compose.detect(dir).then((p) => {
       setProject(p);
       if (p) rememberProject(dir);
+      // Projet créé depuis la galerie : démarrage immédiat, une seule fois.
+      if (p && autoUp && !autoStarted.current) {
+        autoStarted.current = true;
+        void run("up", ["up", "-d"]);
+      }
     }).catch((e: unknown) => { setProject(null); setError(String(e)); });
-  }, [dir]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dir, autoUp]);
 
   const services = useMemo<ContainerSummary[]>(() => {
     const list = (query.data ?? []).filter((c) => samePath(projectDirOf(c), dir) || (project?.name && projectNameOf(c) === project.name && !projectDirOf(c)));

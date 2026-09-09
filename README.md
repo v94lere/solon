@@ -104,6 +104,12 @@ dot depending on the engine state.
   terminal, inspection. A **published port is a link**, and so is the local domain. Compose projects live
   here: "Open a project…" picks a folder containing `compose.yaml`, and clicking a group header opens the
   project screen (services, merged logs, Up / Down / Rebuild with live output, Explorer, VS Code).
+- **Ready-made stacks and project detection**: "New stack…" opens a gallery (WordPress, Odoo 18, PostgreSQL,
+  MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Uptime Kuma, static Nginx site): pick one, choose a
+  folder, review the generated `compose.yaml`, "Create and start". Opening a folder that has no Compose file
+  makes Solon look at what it contains (package.json, requirements.txt, Dockerfile, composer.json, go.mod,
+  Cargo.toml, pom.xml, .csproj, Gemfile, Odoo modules…) and propose an environment for it, editable before
+  creation. Nothing is ever overwritten.
 - **Container page**: Overview (image, command, dates, restart policy, networks, ports, mounts, environment,
   labels, file copy), Logs (search, wrap, colours), Files, Terminal, Debug shell, Inspect. Start, stop, restart,
   remove and "Keep awake" in the header.

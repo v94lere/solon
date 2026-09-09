@@ -133,6 +133,7 @@ function Shell() {
   const [section, setSection] = useState<Section>("containers");
   const [selected, setSelected] = useState<string | null>(null);
   const [project, setProject] = useState<string | null>(null);
+  const [projectAutoUp, setProjectAutoUp] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<boolean>(loadCollapsed);
   // Le terminal n'est monté qu'à la première visite, puis reste vivant (masqué) entre deux sections.
@@ -161,8 +162,9 @@ function Shell() {
     go("containers");
     setSelected(id);
   }, [go]);
-  const openProject = useCallback((dir: string) => {
+  const openProject = useCallback((dir: string, autoUp = false) => {
     go("containers");
+    setProjectAutoUp(autoUp);
     setProject(dir);
   }, [go]);
   const toggleTerminal = useCallback(() => {
@@ -216,8 +218,8 @@ function Shell() {
   else if (section === "terminal") content = null; // rendu à part, pour rester monté
   else if (section === "containers") {
     if (selected) content = <ContainerDetail id={selected} onBack={() => setSelected(null)} />;
-    else if (project) content = <ProjectView dir={project} onBack={() => setProject(null)} onOpenContainer={openContainer} />;
-    else content = <ContainersView onOpen={setSelected} onOpenProject={setProject} />;
+    else if (project) content = <ProjectView dir={project} autoUp={projectAutoUp} onBack={() => setProject(null)} onOpenContainer={openContainer} />;
+    else content = <ContainersView onOpen={setSelected} onOpenProject={openProject} />;
   } else if (section === "images") content = <ImagesView />;
   else if (section === "volumes") content = <VolumesView />;
   else if (section === "networks") content = <NetworksView />;

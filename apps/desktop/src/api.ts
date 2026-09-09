@@ -293,6 +293,34 @@ export const files = {
   upload: (target: FilesTarget, destPath: string, source: string) => invoke<void>("files_upload", { target, destPath, source }),
 };
 
+// ---- Piles prêtes et détection de projet ----
+export interface Probe {
+  dir: string;
+  name: string;
+  has_compose: boolean;
+  has_dockerfile: boolean;
+  node_scripts: string[];
+  node_framework: string | null;
+  python_requirements: boolean;
+  python_pyproject: boolean;
+  python_entries: string[];
+  php_composer: boolean;
+  php_files: number;
+  go_mod: boolean;
+  cargo: boolean;
+  java_maven: boolean;
+  java_gradle: boolean;
+  dotnet_projects: string[];
+  ruby_gemfile: boolean;
+  index_html: boolean;
+  odoo_addons: string[];
+}
+export const stacks = {
+  probe: (dir: string) => invoke<Probe>("stack_probe", { dir }),
+  /** Écrit les fichiers dans `dir` (créé au besoin) sans écraser ; renvoie le dossier du projet. */
+  scaffold: (dir: string, files: { path: string; content: string }[]) => invoke<string>("project_scaffold", { dir, files }),
+};
+
 export const machineShell = {
   /** `command` : lancée dans le pseudo-terminal à la place du shell interactif (`sh -lc`). */
   open: (cols: number, rows: number, onOutput: (o: ExecOutput) => void, command?: string) => {

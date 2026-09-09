@@ -134,7 +134,9 @@
       "compose_body": "Pick a folder containing compose.yaml: Solon shows its services, merged logs and Up / Down buttons.",
       "cli_title": "Use the docker command",
       "cli_body": "The docker CLI is already on your PATH and talks to Solon. Anything you start shows up here.",
-      "cli_hint": "Every running container also gets https://<name>.solon.local, with or without published ports."
+      "cli_hint": "Every running container also gets https://<name>.solon.local, with or without published ports.",
+      "stack_title": "Start from a ready-made stack",
+      "stack_body": "WordPress, Odoo, PostgreSQL, n8n, Nextcloud, Redis… a compose.yaml written for you, started in one click, with its solon.local address."
     },
     "none_running": "No running container",
     "none_running_hint": "Stopped containers are hidden.",
@@ -354,7 +356,7 @@
     "open": "Open a project…",
     "pick": "Choose a folder containing compose.yaml",
     "recent": "Recent projects",
-    "not_found": "No compose.yaml found in {{dir}}",
+    "not_found": "No compose.yaml in {{dir}}",
     "up": "Up",
     "down": "Down",
     "ps": "Status",
@@ -499,5 +501,25 @@
       "body": "Folders are deleted with everything inside. This cannot be undone.",
       "confirm": "Delete"
     }
+  },
+  "stacks": {
+    "new": "New stack…",
+    "title": "Ready-made stacks",
+    "title_for": "Environment for {{name}}",
+    "search": "Search a stack",
+    "suggested": "Detected in this folder",
+    "nothing_detected": "No known project files in this folder. Pick a stack below.",
+    "gallery": "Gallery",
+    "back": "Back",
+    "parent_dir": "Create in",
+    "choose": "Choose…",
+    "project_name": "Project name",
+    "pick_dir": "Choose the folder that will contain the project",
+    "will_write": "compose.yaml will be written in {{dir}}",
+    "will_write_here": "compose.yaml will be written in {{dir}}",
+    "extra_files": "{{count}} more file(s)",
+    "need_dir": "Choose a folder first.",
+    "create": "Create",
+    "create_up": "Create and start"
   }
 }

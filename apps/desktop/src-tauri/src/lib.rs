@@ -9,6 +9,7 @@ mod docker;
 mod files;
 mod service;
 mod shell;
+mod stacks;
 mod tray;
 
 use std::sync::Arc;
@@ -198,6 +199,8 @@ pub fn run() {
             files::files_delete,
             files::files_download,
             files::files_upload,
+            stacks::stack_probe,
+            stacks::project_scaffold,
             docker::container_start,
             docker::container_stop,
             docker::container_restart,
