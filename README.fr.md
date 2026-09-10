@@ -27,7 +27,7 @@ moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une ic
 
 ## Comparatif : Docker Desktop et Solon
 
-Même machine (Windows 11 Pro, 24 cœurs logiques, NVMe), même pile Compose (Odoo 18 Community + PostgreSQL 16,
+Même machine (Windows 11 Pro, 24 cœurs logiques, NVMe), même pile Compose (une application web Python et sa base PostgreSQL 16,
 `bench/compose.yaml`), chaque moteur avec ses réglages par défaut : Docker Desktop 4.66.1 sur WSL2 avec tous les
 cœurs et 6,6 Go visibles par les conteneurs ; Solon 0.1.0 avec 22 processeurs et 2 Go. Docker Desktop a été
 mesuré le 3 septembre 2026, puis désinstallé de la machine de test ; Solon a été remesuré le 10 septembre 2026
@@ -37,11 +37,11 @@ avec le même script. Détails et chiffres bruts : `docs/measurements.md`.
 |---|---|---|---|
 | Moteur prêt après l'ordre de démarrage | 6,1 s | **2,6 à 3,4 s** (1,1 s si la machine tourne encore) | 2× plus rapide |
 | Mémoire au repos, aucun conteneur | 1 998 Mo | **430 à 520 Mo** | 4× plus léger |
-| Mémoire avec Odoo + PostgreSQL, au repos | 5 146 Mo | **1 196 Mo** | 4× plus léger |
+| Mémoire avec l'application web + PostgreSQL, au repos | 5 146 Mo | **1 196 Mo** | 4× plus léger |
 | `compose down` puis `up -d`, images présentes | 7,1 s | **5,2 s** | |
-| Odoo répond après `up` | 1,5 s | 1,0 à 2,5 s | équivalent |
-| Page de connexion Odoo, moyenne de 5 chargements | 27 à 46 ms | 48 à 88 ms | équivalent |
-| Création d'une base Odoo avec données de démonstration (CPU, surtout mono-thread) | 13,6 s | 12,9 à 13,4 s | équivalent |
+| L'application web répond après `up` | 1,5 s | 1,0 à 2,5 s | équivalent |
+| Page de connexion de l'application, moyenne de 5 chargements | 27 à 46 ms | 48 à 88 ms | équivalent |
+| Initialisation de la base de l'application avec données d'exemple (CPU, surtout mono-thread) | 13,6 s | 12,9 à 13,4 s | équivalent |
 | Écritures synchrones sur un volume Docker (`pg_test_fsync`, fdatasync / fsync) | 154 / 79 ops/s | **240 à 290 / 132 à 137 ops/s** | 1,7× plus rapide |
 | Dossier Windows monté dans un conteneur, 5 000 fichiers (listage / attributs / lectures / écritures) | 9P | **solonfs** : 6,6× / 94× / 3,6 à 9× / 4× plus rapide | |
 | `docker run --rm busybox true`, à chaud | non mesuré | 0,55 s | |
@@ -130,11 +130,11 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
   suivante le réveille en une fraction de seconde, avant d'être servie. Les bases de données et les tâches de fond
   qui ne parlent qu'en interne ne sont jamais concernées ; un bouton « Keep awake » dans la fiche exclut un
   conteneur ; l'état « Asleep » apparaît dans la liste.
-- **Piles prêtes et détection de projet** : « New stack… » ouvre une galerie (WordPress, Odoo 18, PostgreSQL,
+- **Piles prêtes et détection de projet** : « New stack… » ouvre une galerie (WordPress, PostgreSQL,
   MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Uptime Kuma, site statique Nginx) : on choisit, on
   désigne un dossier, on relit le `compose.yaml` généré, « Créer et démarrer ». Ouvrir un dossier sans fichier
   Compose fait regarder à Solon ce qu'il contient (package.json, requirements.txt, Dockerfile, composer.json,
-  go.mod, Cargo.toml, pom.xml, .csproj, Gemfile, modules Odoo…) et proposer un environnement, modifiable
+  go.mod, Cargo.toml, pom.xml, .csproj, Gemfile…) et proposer un environnement, modifiable
   avant création. Rien n'est jamais écrasé.
 - **Fiche d'un conteneur** (clic sur son nom) : onglet **Overview** avec image, commande, dates, politique de
   redémarrage, réseaux (adresse, passerelle, alias), ports, montages, variables d'environnement, étiquettes, et
@@ -184,7 +184,7 @@ qui les dirige vers le moteur Solon. Dans un **nouveau** terminal :
 
 ```powershell
 docker version
-docker compose -f examples\odoo18\compose.yaml up -d
+docker compose -f examples\wordpress\compose.yaml up -d
 ```
 
 Le lanceur respecte vos choix : `-H`, `--context`, `DOCKER_HOST` ou `DOCKER_CONTEXT` l'emportent, donc Docker
