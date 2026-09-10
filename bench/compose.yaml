@@ -1,0 +1,34 @@
+# Pile de mesure : Odoo 18 Community + PostgreSQL 16, port 18069 pour ne gêner aucun projet existant.
+# Utilisée par bench.ps1 ; identique pour Docker Desktop et Solon.
+services:
+  db:
+    image: public.ecr.aws/docker/library/postgres:16
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  odoo:
+    image: public.ecr.aws/docker/library/odoo:18.0
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "18069:8069"
+    environment:
+      HOST: db
+      USER: odoo
+      PASSWORD: odoo
+    volumes:
+      - web:/var/lib/odoo
+
+volumes:
+  db:
+  web:

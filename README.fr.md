@@ -25,6 +25,36 @@ moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une ic
 - **Aucune télémétrie, aucune requête réseau sortante** en dehors de ce que vos conteneurs et vos
   `docker pull` demandent.
 
+## Comparatif : Docker Desktop et Solon
+
+Même machine (Windows 11 Pro, 24 cœurs logiques, NVMe), même pile Compose (Odoo 18 Community + PostgreSQL 16,
+`bench/compose.yaml`), chaque moteur avec ses réglages par défaut : Docker Desktop 4.66.1 sur WSL2 avec tous les
+cœurs et 6,6 Go visibles par les conteneurs ; Solon 0.1.0 avec 22 processeurs et 2 Go. Docker Desktop a été
+mesuré le 3 septembre 2026, puis désinstallé de la machine de test ; Solon a été remesuré le 10 septembre 2026
+avec le même script. Détails et chiffres bruts : `docs/measurements.md`.
+
+| | Docker Desktop | Solon | |
+|---|---|---|---|
+| Moteur prêt après l'ordre de démarrage | 6,1 s | **2,6 à 3,4 s** (1,1 s si la machine tourne encore) | 2× plus rapide |
+| Mémoire au repos, aucun conteneur | 1 998 Mo | **430 à 520 Mo** | 4× plus léger |
+| Mémoire avec Odoo + PostgreSQL, au repos | 5 146 Mo | **1 196 Mo** | 4× plus léger |
+| `compose down` puis `up -d`, images présentes | 7,1 s | **5,2 s** | |
+| Odoo répond après `up` | 1,5 s | 1,0 à 2,5 s | équivalent |
+| Page de connexion Odoo, moyenne de 5 chargements | 27 à 46 ms | 48 à 88 ms | équivalent |
+| Création d'une base Odoo avec données de démonstration (CPU, surtout mono-thread) | 13,6 s | 12,9 à 13,4 s | équivalent |
+| Écritures synchrones sur un volume Docker (`pg_test_fsync`, fdatasync / fsync) | 154 / 79 ops/s | **240 à 290 / 132 à 137 ops/s** | 1,7× plus rapide |
+| Dossier Windows monté dans un conteneur, 5 000 fichiers (listage / attributs / lectures / écritures) | 9P | **solonfs** : 6,6× / 94× / 3,6 à 9× / 4× plus rapide | |
+| `docker run --rm busybox true`, à chaud | non mesuré | 0,55 s | |
+
+Ce que cela dit, honnêtement : Solon gagne nettement sur ce qui coûte tous les jours (démarrage, mémoire,
+partage de fichiers, écritures disque) ; sur le calcul pur les deux moteurs sont équivalents ; la latence web est
+identique. Les deux gardent le cache disque de l'invité en mémoire : Solon est plafonné par son allocation (2 Go
+par défaut), Docker Desktop est monté à 5 Go.
+
+Pour reproduire : `powershell -ExecutionPolicy Bypass -File bench\bench.ps1` sur le moteur visé par votre
+commande `docker` (`-Docker "C:\Program Files\Solon\bin\docker.exe"` pour Solon). Le script ne touche qu'un
+projet Compose nommé `solon-bench` sur le port 18069 et le supprime à la fin.
+
 ## Prérequis
 
 | Prérequis | Détail |
@@ -232,6 +262,7 @@ perdues, comme sur toute machine Linux.
 - `ARCHITECTURE.md` : choix techniques (virtualisation HCS, image Linux, HvSocket, 9P, réseau), résultats
   mesurés bloc par bloc, registre des risques.
 - `docs/measurements.md` : toutes les mesures et les faits établis.
+- `bench/` : le script de comparaison et sa pile Compose (voir le comparatif plus haut).
 - `tests/e2e/` : scénarios de bout en bout.
 - `CONTRIBUTING.md` : comment contribuer.
 

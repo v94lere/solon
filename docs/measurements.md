@@ -763,3 +763,34 @@ graphique unique avec trois onglets (CPU, Memory, Network) et un sélecteur de f
 applique `docker rename`, Échap annule. Rappel affiché : un conteneur géré par Compose reprend son nom au prochain
 `Up` ; le nom qui compte est celui du service dans le fichier Compose. Les projets ne sont pas renommables depuis
 Solon (décision de Valère : conteneurs seulement).
+
+## Comparatif pour le README et script `bench/` (10 septembre 2026)
+
+Docker Desktop n'est plus installé sur la machine de test (retiré le 6 septembre) : ses chiffres restent ceux du
+3 septembre 2026 (4.66.1, WSL2, réglages par défaut), même machine. Solon a été remesuré aujourd'hui avec le nouveau
+script `bench/bench.ps1` (pile `bench/compose.yaml` : Odoo 18 + PostgreSQL 16, projet `solon-bench`, port 18069,
+supprimé à la fin), pendant que trois autres piles tournaient (six conteneurs : deux Odoo, un WordPress).
+
+| Mesure (Solon 0.1.0, 22 processeurs, 2 Go, 10 septembre) | Résultat |
+|---|---|
+| `docker run --rm busybox true`, image présente, 3 essais | 0,55 / 0,56 / 0,53 s (premier appel d'une session : 1,7 s) |
+| `compose down` / `compose up -d` (images présentes) | 1,4–1,7 s / 3,5–6,3 s (6,3 s sur le projet `odoo18` de Valère avec `config/` et `addons/` partagés, 3,5 s sur la pile de mesure sans partage) |
+| Odoo répond (HTTP 200) après `up` | 1,0–2,5 s |
+| Page de connexion Odoo, moyenne de 5 | 48 ms via `odoo.odoo18.solon.local` (min 45, max 53) ; 370 ms sans base (sélecteur de bases, page plus lourde : le script mesure désormais après création de la base) |
+| Création d'une base Odoo avec démo | **13,4 s** (13,6 s pour Docker Desktop le 3 septembre ; 17,9 s pour Solon le 3 septembre : l'écart a disparu, sans doute avec l'image dev.19) |
+| `pg_test_fsync` 8 ko, volume Docker | fdatasync 240 ops/s (4,2 ms) ; fsync 132 ops/s (7,6 ms) — Docker Desktop : 154 / 79 |
+| Mémoire Windows du moteur, quatre piles (huit conteneurs) au repos 120 s | 1 648 Mo (vmmem 1 570 + solon 39 + solon-service 15 + vmwp 24) ; avec les trois piles de Valère seules : 1 253 Mo |
+| Empreinte disque | `C:\Program Files\Solon` 405 Mo ; `data.vhdx` 9,1 Go pour 9 images et 6 volumes (dynamique) |
+
+Non remesuré aujourd'hui : le temps de démarrage du moteur (l'interface était fermée dans la barre des tâches et
+Valère utilisait le PC ; valeurs du 3 septembre reprises : 2,6–3,4 s complet, 1,1 s rattachement).
+
+Le script détecte le moteur (`docker info` ou le contexte contenant « solon »), additionne les processus Windows
+correspondants (`vmmem`, `solon`, `solon-service`, `vmwp` ; côté Docker Desktop `vmmemWSL`, `Docker Desktop*`,
+`com.docker*`) et imprime un tableau Markdown. Fichier enregistré en UTF-8 avec BOM (PowerShell 5.1 lit sinon les
+accents en ANSI), messages de progression de docker sur stderr ignorés (`$ErrorActionPreference = "Continue"`).
+
+Seconde exécution du script (après réordonnancement : base créée avant la mesure de page) : `run busybox` 0,55–0,59 s,
+`down` 1,6 s, `up -d` 3,2 s, HTTP 200 après 2,5 s, création de base **12,9 s**, page de connexion **88 ms** via
+`localhost:18069` (relais de port ; 48 ms via le domaine `solon.local`), fdatasync 277 ops/s, fsync 121 ops/s,
+mémoire 1 205 Mo avec six autres conteneurs. Le README reprend ces fourchettes.

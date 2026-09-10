@@ -41,6 +41,35 @@ volumes, networks, terminal, logs, a system-tray icon, and a few things nothing 
   to Windows automatically.
 - **No telemetry, no outgoing network request** other than what your containers and your `docker pull` ask for.
 
+## Benchmark: Docker Desktop vs Solon
+
+Same machine (Windows 11 Pro, 24 logical cores, NVMe), same Compose stack (Odoo 18 Community + PostgreSQL 16,
+`bench/compose.yaml`), each engine with its default settings: Docker Desktop 4.66.1 on WSL2 with every core
+and 6.6 GB visible to containers; Solon 0.1.0 with 22 processors and 2 GB. Docker Desktop was measured on
+3 September 2026, then uninstalled from the test machine; Solon was re-measured on 10 September 2026 with the
+same script. Details and raw numbers: `docs/measurements.md`.
+
+| | Docker Desktop | Solon | |
+|---|---|---|---|
+| Engine ready after you ask for it | 6.1 s | **2.6 to 3.4 s** (1.1 s when the machine is still up) | 2× faster |
+| Memory at rest, no container | 1,998 MB | **430 to 520 MB** | 4× lighter |
+| Memory with Odoo + PostgreSQL running, at rest | 5,146 MB | **1,196 MB** | 4× lighter |
+| `compose down` then `up -d`, images present | 7.1 s | **5.2 s** | |
+| Odoo answers after `up` | 1.5 s | 1.0 to 2.5 s | same |
+| Odoo login page, average of 5 loads | 27 to 46 ms | 48 to 88 ms | same |
+| Create an Odoo database with demo data (CPU, mostly single-threaded) | 13.6 s | 12.9 to 13.4 s | same |
+| Synchronous writes on a Docker volume (`pg_test_fsync`, fdatasync / fsync) | 154 / 79 ops/s | **240 to 290 / 132 to 137 ops/s** | 1.7× faster |
+| Windows folder mounted in a container, 5,000 files (listing / attributes / reads / writes) | 9P | **solonfs**: 6.6× / 94× / 3.6 to 9× / 4× faster | |
+| `docker run --rm busybox true`, warm | not measured | 0.55 s | |
+
+What this says, honestly: Solon wins clearly on what costs you every day (start-up time, memory, file sharing,
+disk writes); on pure CPU work the two engines are equivalent; web latency is identical. Both keep the guest's
+disk cache in memory: Solon is capped by its allocation (2 GB by default), Docker Desktop grew to 5 GB.
+
+Reproduce it: `powershell -ExecutionPolicy Bypass -File bench\bench.ps1` on the engine your `docker` command
+points at (`-Docker "C:\Program Files\Solon\bin\docker.exe"` for Solon). The script only touches a Compose
+project named `solon-bench` on port 18069 and removes it when done.
+
 ## Requirements
 
 | Requirement | Detail |
@@ -209,6 +238,7 @@ the engine. Unsynced writes of the last two seconds may be lost, as on any Linux
 - `ARCHITECTURE.md`: technical choices (HCS virtualization, Linux image, HvSocket, solonfs, network),
   measured results block by block, risk register. In French.
 - `docs/measurements.md`: every measurement and established fact. In French.
+- `bench/`: the comparison script and its Compose stack (see the benchmark above).
 - `tests/e2e/`: end-to-end scenarios.
 - `CONTRIBUTING.md`: how to contribute; `SECURITY.md`: how to report a vulnerability;
   `CODE_OF_CONDUCT.md`.
