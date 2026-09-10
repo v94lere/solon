@@ -33,9 +33,11 @@ export function forgetProject(dir: string) {
   }
 }
 
-/** `/mnt/host/c/Users/x/proj` (chemin vu par le moteur) → `C:\Users\x\proj`. */
+/** `/mnt/host/c/Users/x/proj` (chemin vu par le moteur) → `C:\Users\x\proj`. Un projet lancé avec le CLI
+ *  Windows porte déjà un chemin Windows dans son étiquette : il est gardé tel quel. */
 export function hostPathFromGuest(guest: string | undefined): string | null {
   if (!guest) return null;
+  if (/^[a-z]:[\\/]/i.test(guest)) return guest.replace(/\//g, "\\");
   const m = /^\/mnt\/host\/([a-z])(\/.*)?$/i.exec(guest);
   if (!m) return null;
   return `${m[1].toUpperCase()}:${(m[2] ?? "/").replace(/\//g, "\\")}`;

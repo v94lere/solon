@@ -817,3 +817,8 @@ installer sur Windows.
 Limites connues : les scripts `docker/start.sh` doivent garder des fins de ligne Unix (un éditeur Windows qui les
 convertit en CRLF casse `sh`) ; les kits installent leurs dépendances à chaque démarrage quand le cache est vide
 (quelques secondes pour Python, davantage pour Next.js la première fois).
+
+Défaut vu au passage : un projet Compose lancé depuis le CLI Windows (`docker compose -f C:\…\compose.yaml up`)
+porte un chemin Windows dans son étiquette `working_dir`, et non `/mnt/host/c/…` comme ceux lancés par
+l'application ; la liste n'affichait alors pas la flèche vers la vue projet. Corrigé : le chemin Windows est accepté
+tel quel.
