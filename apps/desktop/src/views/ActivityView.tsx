@@ -51,6 +51,21 @@ function push(list: Pt[], p: Pt): Pt[] {
 
 const emptyHistory = (): History => ({ cpu: [], mem: [], net: [] });
 
+/** Teinte par conteneur : celle de l'avatar, écartée d'un cran tant qu'elle est trop proche d'une déjà prise
+ *  (deux rouges côte à côte ne se distinguent pas sur une courbe). Déterministe pour un même ensemble de noms. */
+function distinctHues(names: string[]): Map<string, number> {
+  const out = new Map<string, number>();
+  const taken: number[] = [];
+  const dist = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
+  for (const n of [...names].sort()) {
+    let h = hueOf(n);
+    for (let k = 0; k < 12 && taken.some((t) => dist(t, h) < 28); k++) h = (h + 47) % 360;
+    taken.push(h);
+    out.set(n, h);
+  }
+  return out;
+}
+
 /** Activité : mesures en temps réel du moteur (processeur, mémoire, stockage, réseau) et des conteneurs. */
 export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string) => void }) {
   const { t } = useTranslation();
@@ -170,13 +185,14 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
     });
   }, [running.data, perContainer, sort]);
 
+  const hues = useMemo(() => distinctHues((running.data ?? []).map((c) => (c.Names?.[0] ?? c.Id.slice(0, 12)).replace(/^\//, ""))), [running.data]);
   // Séries du graphique : le moteur en fond, puis un conteneur par courbe (couleur de son avatar).
   const chartSeries = useMemo<ChartSeries[]>(() => {
     const out: ChartSeries[] = [{ id: ENGINE_ID, name: t("activity.engine"), hue: null, points: engineHist[metric], area: true }];
     const byName = (running.data ?? []).map((c) => ({ id: c.Id, name: (c.Names?.[0] ?? c.Id.slice(0, 12)).replace(/^\//, "") })).sort((a, b) => a.name.localeCompare(b.name));
-    for (const { id, name } of byName) out.push({ id, name, hue: hueOf(name), points: contHist[id]?.[metric] ?? [] });
+    for (const { id, name } of byName) out.push({ id, name, hue: hues.get(name) ?? hueOf(name), points: contHist[id]?.[metric] ?? [] });
     return out;
-  }, [running.data, contHist, engineHist, metric, t]);
+  }, [running.data, contHist, engineHist, metric, t, hues]);
 
   // Limite mémoire en pointillé quand un seul conteneur est isolé et qu'il en a une (sinon Docker
   // renvoie la mémoire totale du moteur, qui n'est pas une limite).
@@ -193,7 +209,7 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
   const arrow = (key: SortKey) => (sort.key === key ? (sort.desc ? " ↓" : " ↑") : "");
   const reserved = settings.data ? settings.data.memory_mb * 1024 * 1024 : 0;
   const pct = (a: number, b: number) => (b > 0 ? Math.min(100, (100 * a) / b) : 0);
-  const fmtPct = (v: number) => `${v >= 100 ? v.toFixed(0) : v.toFixed(1)} %`;
+  const fmtPct = (v: number) => `${Number.isInteger(v) || v >= 100 ? v.toFixed(0) : v.toFixed(1)} %`;
   const fmtRate = (v: number) => `${formatBytes(v)}/s`;
   const windowLabel = (w: WindowMs) => (w === 60_000 ? t("activity.window.m1") : w === 600_000 ? t("activity.window.m10") : t("activity.window.h1"));
 
@@ -297,7 +313,7 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
                 <tr key={c.Id}>
                   <td>
                     <button type="button" className="font-medium hover:underline" onClick={() => onOpenContainer(c.Id)} style={{ color: "var(--ink)" }}>
-                      <i className="chart-swatch chart-swatch-inline" style={{ background: `hsl(${hueOf(name)} 62% var(--chart-l))` }} />
+                      <i className="chart-swatch chart-swatch-inline" style={{ background: `hsl(${hues.get(name) ?? hueOf(name)} 62% var(--chart-l))` }} />
                       {name}
                     </button>
                   </td>
