@@ -130,9 +130,11 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
   suivante le réveille en une fraction de seconde, avant d'être servie. Les bases de données et les tâches de fond
   qui ne parlent qu'en interne ne sont jamais concernées ; un bouton « Keep awake » dans la fiche exclut un
   conteneur ; l'état « Asleep » apparaît dans la liste.
-- **Piles prêtes et détection de projet** : « New stack… » ouvre une galerie (WordPress, PostgreSQL,
-  MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Uptime Kuma, site statique Nginx) : on choisit, on
-  désigne un dossier, on relit le `compose.yaml` généré, « Créer et démarrer ». Ouvrir un dossier sans fichier
+- **Piles prêtes et détection de projet** : « New stack… » ouvre une galerie : des kits de
+  démarrage qui génèrent un projet au premier lancement (Django + PostgreSQL, Flask + Redis, FastAPI +
+  PostgreSQL, Next.js), des applications prêtes (WordPress, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud,
+  Ghost, Gitea, Uptime Kuma, Jupyter Lab, site statique Nginx) et des outils de développement (Mailpit) : on
+  choisit, on désigne un dossier, on relit le `compose.yaml` généré, « Créer et démarrer ». Ouvrir un dossier sans fichier
   Compose fait regarder à Solon ce qu'il contient (package.json, requirements.txt, Dockerfile, composer.json,
   go.mod, Cargo.toml, pom.xml, .csproj, Gemfile…) et proposer un environnement, modifiable
   avant création. Rien n'est jamais écrasé.

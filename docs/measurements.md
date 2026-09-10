@@ -794,3 +794,26 @@ Seconde exécution du script (après réordonnancement : base créée avant la m
 `down` 1,6 s, `up -d` 3,2 s, HTTP 200 après 2,5 s, création de base **12,9 s**, page de connexion **88 ms** via
 `localhost:18069` (relais de port ; 48 ms via le domaine `solon.local`), fdatasync 277 ops/s, fsync 121 ops/s,
 mémoire 1 205 Mo avec six autres conteneurs. Le README reprend ces fourchettes.
+
+## Kits de démarrage dans la galerie (10 septembre 2026, soir)
+
+Six cartes de plus, à la demande de Valère (sans regroupement en onglets) : **Django + PostgreSQL**, **Flask +
+Redis**, **FastAPI + PostgreSQL**, **Next.js**, **Jupyter Lab**, **Mailpit**. Les quatre premiers sont des kits de
+démarrage : le dossier du projet est monté dans le conteneur ; un script `docker/start.sh` installe les
+dépendances (cache pip ou `node_modules` dans un volume Docker), génère le squelette officiel au premier
+démarrage si le dossier n'en a pas (`django-admin startproject`, `create-next-app` dans un dossier temporaire puis
+copie, car il refuse un dossier non vide), puis lance le serveur de développement avec rechargement. Rien à
+installer sur Windows.
+
+| Kit | Vérifié avec `docker compose up -d` depuis le CLI (fichiers produits par le gabarit) |
+|---|---|
+| Django 5 + PostgreSQL 16 | squelette généré dans le dossier Windows (`manage.py`, `config/`), `settings.py` patché (`dj_database_url`, `ALLOWED_HOSTS = ["*"]`), `migrate` puis `runserver` ; page d'accueil HTTP 200 |
+| Flask 3 + Redis 7 | HTTP 200 après 12 s (installation de pip comprise), compteur de visites en Redis |
+| FastAPI + PostgreSQL 16 | `/health` renvoie la version de PostgreSQL, `/docs` HTTP 200, `api.<projet>.solon.local` OK |
+| Next.js (TypeScript, App Router, Tailwind) | application générée, `npm install` dans le volume, page HTTP 200 ; détection des changements par sondage (`WATCHPACK_POLLING`) |
+| Jupyter Lab (`quay.io/jupyter/scipy-notebook`) | `/lab?token=solon` HTTP 200, dossier du projet comme espace de travail |
+| Mailpit | mail envoyé en SMTP sur 1025 depuis PowerShell, relu dans l'API `/api/v1/messages` |
+
+Limites connues : les scripts `docker/start.sh` doivent garder des fins de ligne Unix (un éditeur Windows qui les
+convertit en CRLF casse `sh`) ; les kits installent leurs dépendances à chaque démarrage quand le cache est vide
+(quelques secondes pour Python, davantage pour Next.js la première fois).

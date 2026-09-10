@@ -55,6 +55,330 @@ export const TEMPLATES: StackTemplate[] = [
     ],
   },
   {
+    id: "django",
+    name: "Django + PostgreSQL",
+    tagline: { en: "Start a Django 5 project: skeleton generated on first start, PostgreSQL 16, live reload.", fr: "Démarrer un projet Django 5 : squelette généré au premier démarrage, PostgreSQL 16, rechargement à chaud." },
+    tags: ["python", "web", "postgres", "starter"],
+    open: "http://web.{project}.solon.local/",
+    defaultName: "django-app",
+    files: [
+      {
+        path: "compose.yaml",
+        content:
+          header("Django 5 + PostgreSQL 16 (development)", "First Up generates the project (django-admin startproject config .), then runs migrate and runserver. Open http://web.<project>.solon.local/ or http://localhost:8000. Code in this folder is live.") +
+          `services:
+  db:
+    image: ${LIB}/postgres:16
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  web:
+    image: ${LIB}/python:3.12-slim
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/app
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - .:/app
+      - pip-cache:/root/.cache/pip
+    command: sh docker/start.sh
+
+volumes:
+  db:
+  pip-cache:
+`,
+      },
+      { path: "requirements.txt", content: "django>=5.1,<6\npsycopg[binary]>=3.2\ndj-database-url>=2.2\n" },
+      {
+        path: "docker/start.sh",
+        content: `#!/bin/sh
+# Development entry point: installs requirements, creates the project on first run, migrates, serves.
+set -e
+pip install -q -r requirements.txt
+if [ ! -f manage.py ]; then
+  echo "No manage.py: creating a new Django project in this folder..."
+  django-admin startproject config .
+  python - <<'PY'
+import pathlib, re
+p = pathlib.Path("config/settings.py")
+s = p.read_text()
+s = s.replace("from pathlib import Path", "from pathlib import Path\\nimport os\\nimport dj_database_url", 1)
+s = re.sub(r"DATABASES = \\{.*?\\n\\}\\n", "DATABASES = {\\"default\\": dj_database_url.config(default=os.environ[\\"DATABASE_URL\\"])}\\n", s, count=1, flags=re.S)
+s = s.replace("ALLOWED_HOSTS = []", "ALLOWED_HOSTS = [\\"*\\"]  # local development behind Solon", 1)
+p.write_text(s)
+PY
+fi
+python manage.py migrate
+exec python manage.py runserver 0.0.0.0:8000
+`,
+      },
+    ],
+  },
+  {
+    id: "flask",
+    name: "Flask + Redis",
+    tagline: { en: "Start a Flask 3 app with a Redis cache; debug server with live reload on port 5000.", fr: "Démarrer une application Flask 3 avec un cache Redis ; serveur de débogage avec rechargement, port 5000." },
+    tags: ["python", "web", "redis", "starter"],
+    open: "http://web.{project}.solon.local/",
+    defaultName: "flask-app",
+    files: [
+      {
+        path: "compose.yaml",
+        content:
+          header("Flask 3 + Redis 7 (development)", "app.py is served with live reload. Open http://web.<project>.solon.local/ or http://localhost:5000.") +
+          `services:
+  redis:
+    image: ${LIB}/redis:7
+
+  web:
+    image: ${LIB}/python:3.12-slim
+    working_dir: /app
+    depends_on: [redis]
+    ports:
+      - "5000:5000"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - .:/app
+      - pip-cache:/root/.cache/pip
+    command: sh docker/start.sh
+
+volumes:
+  pip-cache:
+`,
+      },
+      { path: "requirements.txt", content: "flask>=3.0,<4\nredis>=5.0\n" },
+      {
+        path: "app.py",
+        content: `import os
+
+import redis
+from flask import Flask
+
+app = Flask(__name__)
+cache = redis.Redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
+
+
+@app.get("/")
+def index():
+    visits = cache.incr("visits")
+    return f"<h1>Hello from Flask</h1><p>This page was served {visits} times.</p>"
+`,
+      },
+      {
+        path: "docker/start.sh",
+        content: `#!/bin/sh
+set -e
+pip install -q -r requirements.txt
+exec flask --app app run --debug --host 0.0.0.0 --port 5000
+`,
+      },
+    ],
+  },
+  {
+    id: "fastapi",
+    name: "FastAPI + PostgreSQL",
+    tagline: { en: "Start a FastAPI service with PostgreSQL 16; interactive docs at /docs, live reload.", fr: "Démarrer un service FastAPI avec PostgreSQL 16 ; documentation interactive sur /docs, rechargement à chaud." },
+    tags: ["python", "api", "postgres", "starter"],
+    open: "http://api.{project}.solon.local/docs",
+    defaultName: "fastapi-app",
+    files: [
+      {
+        path: "compose.yaml",
+        content:
+          header("FastAPI + PostgreSQL 16 (development)", "main.py is served by uvicorn with reload. Open http://api.<project>.solon.local/docs or http://localhost:8000/docs.") +
+          `services:
+  db:
+    image: ${LIB}/postgres:16
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    image: ${LIB}/python:3.12-slim
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/app
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - .:/app
+      - pip-cache:/root/.cache/pip
+    command: sh docker/start.sh
+
+volumes:
+  db:
+  pip-cache:
+`,
+      },
+      { path: "requirements.txt", content: "fastapi[standard]>=0.115\npsycopg[binary]>=3.2\n" },
+      {
+        path: "main.py",
+        content: `import os
+
+import psycopg
+from fastapi import FastAPI
+
+app = FastAPI(title="My API")
+
+
+@app.get("/")
+def root():
+    return {"message": "Hello from FastAPI"}
+
+
+@app.get("/health")
+def health():
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        version = conn.execute("select version()").fetchone()[0]
+    return {"database": version}
+`,
+      },
+      {
+        path: "docker/start.sh",
+        content: `#!/bin/sh
+set -e
+pip install -q -r requirements.txt
+exec uvicorn main:app --reload --host 0.0.0.0 --port 8000
+`,
+      },
+    ],
+  },
+  {
+    id: "nextjs",
+    name: "Next.js",
+    tagline: { en: "Start a Next.js app (TypeScript, App Router, Tailwind): generated on first start, dev server on 3000.", fr: "Démarrer une application Next.js (TypeScript, App Router, Tailwind) : générée au premier démarrage, serveur de dev sur 3000." },
+    tags: ["node", "react", "web", "starter"],
+    open: "http://web.{project}.solon.local/",
+    defaultName: "next-app",
+    files: [
+      {
+        path: "compose.yaml",
+        content:
+          header("Next.js (development)", "First Up runs create-next-app in this folder; node_modules live in a Docker volume for speed. Open http://web.<project>.solon.local/ or http://localhost:3000.") +
+          `services:
+  web:
+    image: ${LIB}/node:22
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    environment:
+      # File changes on the Windows side are detected by polling.
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    command: sh docker/start.sh
+
+volumes:
+  node_modules:
+`,
+      },
+      {
+        path: "docker/start.sh",
+        content: `#!/bin/sh
+# Development entry point: creates the app on first run (in a scratch folder, then copied here because
+# create-next-app refuses a non-empty folder), installs dependencies, starts the dev server.
+set -e
+if [ ! -f package.json ]; then
+  echo "No package.json: creating a new Next.js app..."
+  npx --yes create-next-app@latest /tmp/next-app --ts --eslint --app --src-dir --tailwind --import-alias "@/*" --use-npm --skip-install --yes
+  cp -a /tmp/next-app/. /app/
+fi
+[ -d node_modules/next ] || npm install
+exec npm run dev -- --hostname 0.0.0.0 --port 3000
+`,
+      },
+    ],
+  },
+  {
+    id: "jupyter",
+    name: "Jupyter Lab",
+    tagline: { en: "Notebooks with Python, pandas, matplotlib, scikit-learn; this folder is your workspace.", fr: "Notebooks avec Python, pandas, matplotlib, scikit-learn ; ce dossier est votre espace de travail." },
+    tags: ["python", "data", "notebooks"],
+    open: "http://jupyter.{project}.solon.local/lab?token=solon",
+    defaultName: "notebooks",
+    files: [
+      {
+        path: "compose.yaml",
+        content:
+          header("Jupyter Lab (scipy stack)", "Open http://jupyter.<project>.solon.local/lab?token=solon or http://localhost:8888/?token=solon. Notebooks are saved in this folder.") +
+          `services:
+  jupyter:
+    image: quay.io/jupyter/scipy-notebook:latest
+    ports:
+      - "8888:8888"
+    environment:
+      JUPYTER_TOKEN: solon
+    volumes:
+      - .:/home/jovyan/work
+    command: start-notebook.py --ServerApp.root_dir=/home/jovyan/work
+`,
+      },
+    ],
+  },
+  {
+    id: "mailpit",
+    name: "Mailpit",
+    tagline: { en: "Catches every e-mail your apps send: SMTP on port 1025, inbox in the browser.", fr: "Capture tous les e-mails envoyés par vos applications : SMTP sur le port 1025, boîte de réception dans le navigateur." },
+    tags: ["mail", "dev-tools"],
+    open: "http://mailpit.{project}.solon.local/",
+    defaultName: "mailpit",
+    files: [
+      {
+        path: "compose.yaml",
+        content:
+          header("Mailpit", "Point your app's SMTP at host mailpit (or localhost) port 1025, no auth; read the mail at http://mailpit.<project>.solon.local/ or http://localhost:8025.") +
+          `services:
+  mailpit:
+    image: docker.io/axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    volumes:
+      - data:/data
+
+volumes:
+  data:
+`,
+      },
+    ],
+  },
+  {
     id: "wordpress",
     name: "WordPress",
     tagline: { en: "WordPress site or blog with its MariaDB database.", fr: "Site ou blog WordPress avec sa base MariaDB." },
