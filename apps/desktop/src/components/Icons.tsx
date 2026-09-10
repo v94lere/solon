@@ -44,3 +44,9 @@ export const IconTerminal = () => (
     <path d="m5 7 5 5-5 5M12 17h7" />
   </svg>
 );
+export const IconFile = () => (
+  <svg {...base}>
+    <path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8z" />
+    <path d="M14 3v5h5M9 13h6M9 17h6" />
+  </svg>
+);

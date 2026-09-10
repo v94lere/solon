@@ -355,6 +355,8 @@ export interface ComposeChunk {
 }
 export const compose = {
   detect: (dir: string) => invoke<ComposeProject | null>("compose_detect", { dir }),
+  read: (dir: string) => invoke<string>("compose_read", { dir }),
+  write: (dir: string, content: string) => invoke<void>("compose_write", { dir, content }),
   run: (dir: string, args: string[], timeoutS?: number) => invoke<ComposeResult>("compose_run", { dir, args, timeoutS: timeoutS ?? null }),
   /** Sortie en flux ; la promesse se résout avec le code de sortie. */
   stream: (dir: string, args: string[], onChunk: (c: ComposeChunk) => void) => {

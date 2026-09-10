@@ -217,7 +217,7 @@ function Shell() {
   else if (!ready) content = <SetupScreen />;
   else if (section === "terminal") content = null; // rendu à part, pour rester monté
   else if (section === "containers") {
-    if (selected) content = <ContainerDetail id={selected} onBack={() => setSelected(null)} />;
+    if (selected) content = <ContainerDetail id={selected} onBack={() => setSelected(null)} onOpenProject={(d) => { setSelected(null); openProject(d); }} />;
     else if (project) content = <ProjectView dir={project} autoUp={projectAutoUp} onBack={() => setProject(null)} onOpenContainer={openContainer} />;
     else content = <ContainersView onOpen={setSelected} onOpenProject={openProject} />;
   } else if (section === "images") content = <ImagesView />;

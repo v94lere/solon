@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { containers } from "../api";
+import { LABEL_PROJECT, LABEL_WORKDIR, hostPathFromGuest } from "../projects";
 import { LogsPanel } from "../components/LogsPanel";
 import { TerminalPanel } from "../components/TerminalPanel";
 import { DebugPanel } from "../components/DebugPanel";
@@ -53,7 +54,7 @@ const TAB_ICONS: Record<Tab, JSX.Element> = {
   ),
 };
 
-export function ContainerDetail({ id, onBack }: { id: string; onBack: () => void }) {
+export function ContainerDetail({ id, onBack, onOpenProject }: { id: string; onBack: () => void; onOpenProject?: (dir: string) => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("overview");
@@ -64,6 +65,7 @@ export function ContainerDetail({ id, onBack }: { id: string; onBack: () => void
   const name = inspect.data?.Name?.replace(/^\//, "") ?? id.slice(0, 12);
   const running = inspect.data?.State?.Running ?? false;
   const image = inspect.data?.Config?.Image;
+  const projectDir = hostPathFromGuest(inspect.data?.Config?.Labels?.[LABEL_WORKDIR]);
   const tabs: Tab[] = ["overview", "logs", "files", "terminal", "debug", "inspect"];
   const { snapshot } = useEngine();
   const asleep = inspect.data?.State?.Status === "paused" && (snapshot?.sleeping ?? []).includes(id);
@@ -106,6 +108,11 @@ export function ContainerDetail({ id, onBack }: { id: string; onBack: () => void
           <span className="pill pill-sleep" title={t("containers.sleeping_hint")}>{t("containers.sleeping")}</span>
         ) : (
           <span className={`pill ${running ? "pill-ok" : "pill-muted"}`}>{t(`containers.state.${inspect.data?.State?.Status ?? "created"}`, { defaultValue: inspect.data?.State?.Status })}</span>
+        )}
+        {projectDir && onOpenProject && (
+          <button type="button" className="btn btn-ghost btn-sm" title={projectDir} onClick={() => onOpenProject(projectDir)}>
+            {t("detail.project")} · {inspect.data?.Config?.Labels?.[LABEL_PROJECT]}
+          </button>
         )}
         <span className="flex-1" />
         <button type="button" className={`btn btn-ghost btn-sm ${keepAwake ? "is-on" : ""}`} title={t("detail.keep_awake_help")} aria-pressed={keepAwake} onClick={() => void toggleKeepAwake()}>

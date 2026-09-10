@@ -222,7 +222,8 @@
     },
     "keep_awake": "Keep awake",
     "keep_awake_on": "Kept awake",
-    "keep_awake_help": "Never put this container to sleep, even when idle."
+    "keep_awake_help": "Never put this container to sleep, even when idle.",
+    "project": "Project"
   },
   "common": {
     "loading": "Loading…",
@@ -414,7 +415,16 @@
       "service": "Service",
       "container": "Container"
     },
-    "exit_code": "exit code {{code}}"
+    "exit_code": "exit code {{code}}",
+    "tabs": {
+      "logs": "Logs",
+      "compose": "Compose"
+    },
+    "save": "Save",
+    "save_up": "Save and Up",
+    "reload": "Reload",
+    "unsaved": "Unsaved changes",
+    "saved": "Saved"
   },
   "machine": {
     "terminal": "Terminal",

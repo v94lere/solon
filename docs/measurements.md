@@ -735,3 +735,12 @@ en commentaires) que l'on remplace par le sien ; nom de projet proposé `my-stac
 Compose ne contient rien de reconnu, la même pile est proposée sous le message « No known project files… » comme
 porte de sortie. Vérifié : carte affichée en première position, formulaire pré-rempli, dossier vide → proposition
 « Blank compose.yaml ».
+
+### Onglet Compose dans la vue projet (10 septembre 2026)
+
+La vue projet gagne deux onglets sous la liste des services : **Logs** (inchangé) et **Compose**, qui affiche le
+fichier Compose du projet, modifiable dans Solon. Boutons Reload, Save (Ctrl+S) et **Save and Up** (enregistre puis
+relance `up -d`). L'écriture passe par un fichier temporaire renommé ensuite : jamais de fichier à moitié écrit.
+Une pastille « Unsaved changes » signale les modifications non enregistrées. Depuis la fiche d'un conteneur issu
+d'un projet, un bouton « Project · nom » ouvre directement cette vue. Motivation : Valère ne trouvait pas où voir
+le compose de ses conteneurs (Solon n'affichait que le chemin et renvoyait vers VS Code ou l'Explorateur).

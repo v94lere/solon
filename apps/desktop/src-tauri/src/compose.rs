@@ -2,7 +2,7 @@
 //! partage 9P du lecteur (service `EnsureShare`), puis `docker compose` s'exécute via l'agent.
 //! La sortie est capturée en fin d'exécution (pas de flux) : suffisant pour le MVP, documenté.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 use solon_core::ipc::{ServiceCommand, ShareInfo};
@@ -152,6 +152,31 @@ pub fn compose_detect(dir: String) -> Result<Option<ComposeProject>, String> {
         }
     }
     Ok(None)
+}
+
+fn compose_file(dir: &str) -> Result<PathBuf, String> {
+    let p = compose_detect(dir.to_owned())?
+        .ok_or_else(|| format!("aucun fichier Compose dans {dir}"))?;
+    Ok(Path::new(&p.dir).join(&p.file))
+}
+
+/// Contenu du fichier Compose du projet.
+#[tauri::command]
+pub fn compose_read(dir: String) -> Result<String, String> {
+    std::fs::read_to_string(compose_file(&dir)?).map_err(|e| e.to_string())
+}
+
+/// Remplace le fichier Compose : écriture dans un fichier temporaire puis renommage, pour ne
+/// jamais laisser un fichier à moitié écrit si l'application s'arrête au mauvais moment.
+#[tauri::command]
+pub fn compose_write(dir: String, content: String) -> Result<(), String> {
+    let target = compose_file(&dir)?;
+    let tmp = target.with_extension("solon-tmp");
+    std::fs::write(&tmp, content).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, &target).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        e.to_string()
+    })
 }
 
 #[derive(Debug, Clone, Serialize)]

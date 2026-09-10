@@ -222,7 +222,8 @@
     },
     "keep_awake": "Garder éveillé",
     "keep_awake_on": "Toujours éveillé",
-    "keep_awake_help": "Ne jamais endormir ce conteneur, même inactif."
+    "keep_awake_help": "Ne jamais endormir ce conteneur, même inactif.",
+    "project": "Projet"
   },
   "common": {
     "loading": "Chargement…",
@@ -414,7 +415,16 @@
       "service": "Service",
       "container": "Conteneur"
     },
-    "exit_code": "code de sortie {{code}}"
+    "exit_code": "code de sortie {{code}}",
+    "tabs": {
+      "logs": "Journaux",
+      "compose": "Compose"
+    },
+    "save": "Enregistrer",
+    "save_up": "Enregistrer et Up",
+    "reload": "Recharger",
+    "unsaved": "Modifications non enregistrées",
+    "saved": "Enregistré"
   },
   "machine": {
     "terminal": "Terminal",

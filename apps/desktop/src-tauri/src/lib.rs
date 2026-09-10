@@ -171,6 +171,8 @@ pub fn run() {
             engine_metrics,
             system_accent_color,
             compose::compose_detect,
+            compose::compose_read,
+            compose::compose_write,
             compose::compose_run,
             compose::compose_stream,
             engine_status,

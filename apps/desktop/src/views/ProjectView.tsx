@@ -7,7 +7,7 @@ import { markUserAction } from "../engine";
 import { projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, serviceNameOf } from "../projects";
 import { MultiLogsPanel } from "../components/MultiLogsPanel";
 import { PortLinks } from "../components/PortLinks";
-import { IconLogs, IconPlay, IconRestart, IconStop } from "../components/Icons";
+import { IconFile, IconLogs, IconPlay, IconRestart, IconStop } from "../components/Icons";
 
 function stateClass(state: string) {
   switch (state) {
@@ -30,6 +30,42 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
   const [error, setError] = useState<string | null>(null);
   const [showOutput, setShowOutput] = useState(false);
   const query = useQuery({ queryKey: ["containers", true], queryFn: () => containers.list(true), refetchInterval: 5000 });
+  const [tab, setTab] = useState<"logs" | "compose">("logs");
+  const [yaml, setYaml] = useState("");
+  const [savedYaml, setSavedYaml] = useState("");
+  const [saving, setSaving] = useState(false);
+  const dirty = yaml !== savedYaml;
+
+  // Le fichier Compose est lu dès que le projet est reconnu (et relu à la demande).
+  async function loadYaml() {
+    try {
+      const text = await compose.read(dir);
+      setYaml(text);
+      setSavedYaml(text);
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+  useEffect(() => {
+    if (project) void loadYaml();
+    else { setYaml(""); setSavedYaml(""); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project]);
+
+  async function saveYaml(): Promise<boolean> {
+    setSaving(true);
+    setError(null);
+    try {
+      await compose.write(dir, yaml);
+      setSavedYaml(yaml);
+      return true;
+    } catch (e) {
+      setError(String(e));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const autoStarted = useRef(false);
   useEffect(() => {
@@ -181,9 +217,38 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
         </div>
       )}
 
-      <div className="mx-4 mb-4 min-h-0 flex-1">
+      <div role="tablist" className="tabs mx-4 mb-2">
+        <button role="tab" type="button" aria-selected={tab === "logs"} onClick={() => setTab("logs")} className="tab"><IconLogs />{t("project.tabs.logs")}</button>
+        <button role="tab" type="button" aria-selected={tab === "compose"} onClick={() => setTab("compose")} className="tab">
+          <IconFile />{t("project.tabs.compose")}
+          {dirty && <span className="pill pill-warn" style={{ marginLeft: 4 }}>{t("project.unsaved")}</span>}
+        </button>
+      </div>
+      <div className="mx-4 mb-4 min-h-0 flex-1" hidden={tab !== "logs"}>
         <MultiLogsPanel sources={logSources} />
       </div>
+      {tab === "compose" && (
+        <div className="card mx-4 mb-4 flex min-h-0 flex-1 flex-col">
+          <div className="flex items-center gap-2 border-b px-3 py-1.5" style={{ borderColor: "var(--line)" }}>
+            <span className="mono text-xs" style={{ color: "var(--ink-2)" }}>{project?.file ?? "compose.yaml"}</span>
+            <span className="kbd-hint">{dirty ? t("project.unsaved") : t("project.saved")}</span>
+            <span className="flex-1" />
+            <button type="button" className="btn btn-ghost btn-sm" disabled={saving || !project} onClick={() => void loadYaml()}>{t("project.reload")}</button>
+            <button type="button" className="btn btn-sm" disabled={saving || !dirty || !project} onClick={() => void saveYaml()}>{t("project.save")}</button>
+            <button type="button" className="btn btn-primary btn-sm" disabled={saving || busy !== null || !project} onClick={() => void (async () => { if (await saveYaml()) await run("up", ["up", "-d", "--remove-orphans"]); })()}>{t("project.save_up")}</button>
+          </div>
+          <textarea
+            className="mono min-h-0 flex-1 resize-none p-3 text-xs leading-5"
+            style={{ background: "transparent", color: "var(--ink)", border: 0, outline: "none", userSelect: "text" }}
+            spellCheck={false}
+            value={yaml}
+            disabled={!project}
+            aria-label={project?.file ?? "compose.yaml"}
+            onChange={(e) => setYaml(e.target.value)}
+            onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); if (dirty) void saveYaml(); } }}
+          />
+        </div>
+      )}
     </div>
   );
 }
