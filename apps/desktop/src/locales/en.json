@@ -223,7 +223,9 @@
     "keep_awake": "Keep awake",
     "keep_awake_on": "Kept awake",
     "keep_awake_help": "Never put this container to sleep, even when idle.",
-    "project": "Project"
+    "project": "Project",
+    "rename": "Rename",
+    "rename_hint": "Letters, digits, dot, underscore and dash. A Compose-managed container gets its name back at the next Up."
   },
   "common": {
     "loading": "Loading…",
@@ -234,7 +236,8 @@
     "language": "Language",
     "theme": "Theme",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "ok": "OK"
   },
   "settings": {
     "title": "Settings",
@@ -477,7 +480,21 @@
       "network": "Network",
       "trend": "CPU, last minute"
     },
-    "empty_hint": "Start a container to see its CPU, memory and network here."
+    "empty_hint": "Start a container to see its CPU, memory and network here.",
+    "engine": "Engine",
+    "limit": "limit",
+    "legend_hint": "Click a name to isolate it, its swatch to hide it",
+    "window": {
+      "label": "Time window",
+      "m1": "1 min",
+      "m10": "10 min",
+      "h1": "1 h"
+    },
+    "unit": {
+      "cpu": "% of one core (the engine = all its cores)",
+      "mem": "memory used",
+      "net": "network, in and out"
+    }
   },
   "files": {
     "path": "Path",

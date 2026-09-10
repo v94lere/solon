@@ -204,6 +204,7 @@ pub fn run() {
             stacks::stack_probe,
             stacks::project_scaffold,
             docker::container_start,
+            docker::container_rename,
             docker::container_stop,
             docker::container_restart,
             docker::container_kill,

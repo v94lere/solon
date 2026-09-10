@@ -10,7 +10,7 @@ import { TerminalPanel } from "../components/TerminalPanel";
 import { DebugPanel } from "../components/DebugPanel";
 import { FilesPanel } from "../components/FilesPanel";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { IconLogs, IconPlay, IconRestart, IconStop, IconTerminal, IconTrash } from "../components/Icons";
+import { IconLogs, IconPencil, IconPlay, IconRestart, IconStop, IconTerminal, IconTrash } from "../components/Icons";
 import { Avatar, imageBase } from "../components/ui";
 import { markUserAction } from "../engine";
 import { useQueryClient } from "@tanstack/react-query";
@@ -66,6 +66,24 @@ export function ContainerDetail({ id, onBack, onOpenProject }: { id: string; onB
   const running = inspect.data?.State?.Running ?? false;
   const image = inspect.data?.Config?.Image;
   const projectDir = hostPathFromGuest(inspect.data?.Config?.Labels?.[LABEL_WORKDIR]);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  async function doRename() {
+    if (renaming === null) return;
+    const next = renaming.trim();
+    if (!next || next === name) { setRenaming(null); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      await containers.rename(id, next);
+      setRenaming(null);
+      await queryClient.invalidateQueries({ queryKey: ["container", id] });
+      await queryClient.invalidateQueries({ queryKey: ["containers"] });
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   const tabs: Tab[] = ["overview", "logs", "files", "terminal", "debug", "inspect"];
   const { snapshot } = useEngine();
   const asleep = inspect.data?.State?.Status === "paused" && (snapshot?.sleeping ?? []).includes(id);
@@ -102,7 +120,28 @@ export function ContainerDetail({ id, onBack, onOpenProject }: { id: string; onB
           ← {t("detail.back")}
         </button>
         <Avatar label={imageBase(image)} seed={imageBase(image)} size={30} title={image} />
-        <h1 className="text-base font-semibold">{name}</h1>
+        {renaming !== null ? (
+          <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); void doRename(); }}>
+            <input
+              className="input input-sm mono"
+              autoFocus
+              value={renaming}
+              pattern="[a-zA-Z0-9][a-zA-Z0-9_.-]*"
+              title={t("detail.rename_hint")}
+              aria-label={t("detail.rename")}
+              onChange={(e) => setRenaming(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Escape") setRenaming(null); }}
+              style={{ width: Math.max(12, renaming.length + 2) + "ch" }}
+            />
+            <button type="submit" className="btn btn-sm btn-primary" disabled={busy || !renaming.trim() || renaming === name}>{t("common.ok")}</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRenaming(null)}>{t("common.cancel")}</button>
+          </form>
+        ) : (
+          <button type="button" className="title-edit" title={t("detail.rename")} onClick={() => setRenaming(name)}>
+            <h1 className="text-base font-semibold">{name}</h1>
+            <IconPencil />
+          </button>
+        )}
         {image && <span className="mono kbd-hint max-w-[320px] truncate" title={image}>{image}</span>}
         {asleep ? (
           <span className="pill pill-sleep" title={t("containers.sleeping_hint")}>{t("containers.sleeping")}</span>

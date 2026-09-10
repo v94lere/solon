@@ -223,7 +223,9 @@
     "keep_awake": "Garder éveillé",
     "keep_awake_on": "Toujours éveillé",
     "keep_awake_help": "Ne jamais endormir ce conteneur, même inactif.",
-    "project": "Projet"
+    "project": "Projet",
+    "rename": "Renommer",
+    "rename_hint": "Lettres, chiffres, point, souligné et tiret. Un conteneur géré par Compose reprend son nom au prochain Up."
   },
   "common": {
     "loading": "Chargement…",
@@ -234,7 +236,8 @@
     "language": "Langue",
     "theme": "Thème",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "ok": "OK"
   },
   "settings": {
     "title": "Réglages",
@@ -477,7 +480,21 @@
       "network": "Réseau",
       "trend": "Processeur, dernière minute"
     },
-    "empty_hint": "Démarrez un conteneur pour voir ici son processeur, sa mémoire et son réseau."
+    "empty_hint": "Démarrez un conteneur pour voir ici son processeur, sa mémoire et son réseau.",
+    "engine": "Moteur",
+    "limit": "limite",
+    "legend_hint": "Cliquez un nom pour l'isoler, sa pastille pour le masquer",
+    "window": {
+      "label": "Fenêtre de temps",
+      "m1": "1 min",
+      "m10": "10 min",
+      "h1": "1 h"
+    },
+    "unit": {
+      "cpu": "% d'un cœur (le moteur = tous ses cœurs)",
+      "mem": "mémoire utilisée",
+      "net": "réseau, entrée et sortie"
+    }
   },
   "files": {
     "path": "Chemin",

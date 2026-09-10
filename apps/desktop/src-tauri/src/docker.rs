@@ -163,6 +163,25 @@ pub async fn container_start(state: State<'_>, id: String) -> Result<(), String>
         .map_err(err)
 }
 
+/// Renomme un conteneur (`docker rename`). Un conteneur géré par Compose reprendra son nom au
+/// prochain `up` : pour ceux-là, c'est le nom du service dans le fichier Compose qui compte.
+#[tauri::command]
+pub async fn container_rename(state: State<'_>, id: String, name: String) -> Result<(), String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("empty name".into());
+    }
+    let options = bollard::query_parameters::RenameContainerOptionsBuilder::default()
+        .name(name)
+        .build();
+    state
+        .docker()
+        .await?
+        .rename_container(&id, options)
+        .await
+        .map_err(err)
+}
+
 #[tauri::command]
 pub async fn container_stop(state: State<'_>, id: String) -> Result<(), String> {
     state

@@ -744,3 +744,22 @@ relance `up -d`). L'écriture passe par un fichier temporaire renommé ensuite :
 Une pastille « Unsaved changes » signale les modifications non enregistrées. Depuis la fiche d'un conteneur issu
 d'un projet, un bouton « Project · nom » ouvre directement cette vue. Motivation : Valère ne trouvait pas où voir
 le compose de ses conteneurs (Solon n'affichait que le chemin et renvoyait vers VS Code ou l'Explorateur).
+
+## Graphiques d'Activity et renommage des conteneurs (10 septembre 2026)
+
+**Activity.** Les quatre tuiles (processeur, mémoire, stockage, réseau) restent, sans courbes ; en dessous, un
+graphique unique avec trois onglets (CPU, Memory, Network) et un sélecteur de fenêtre (1 min, 10 min, 1 h) :
+
+| Élément | Choix |
+|---|---|
+| Axes | temps en heure locale (secondes affichées sur 1 min), quatre repères ; échelle verticale « ronde » (1, 2, 2,5, 5 × 10ⁿ ; puissances de 2 pour les octets) avec un plancher pour ne pas zoomer sur du bruit (10 %, 64 MiB, 10 kB/s) |
+| Survol | ligne verticale, point sur chaque courbe, infobulle avec l'heure et la valeur exacte de chaque série, triées par valeur |
+| Une courbe par conteneur | couleur = teinte de l'avatar (stable) ; légende à droite avec la valeur courante ; clic sur le nom = isoler (re-clic = tout montrer), clic sur la pastille = masquer |
+| Moteur | série de fond grise avec aire ; sur Memory elle est masquée par défaut (elle écraserait l'échelle) ; unité CPU : 100 % = un cœur, le moteur exprimé sur la même échelle (% × cœurs) comme `docker stats` |
+| Limite mémoire | pointillé orange avec sa valeur quand un seul conteneur est isolé et qu'il a une vraie limite (Docker renvoie la mémoire du moteur sinon : ignorée au-delà de 95 %) |
+| Historique | 1 h en mémoire de l'application, moteur toutes les 2 s, conteneurs au rythme du flux `stats` ; perdu à la fermeture (lot « historique » non fait) |
+
+**Renommage.** Fiche du conteneur : cliquer sur le nom (crayon au survol) ouvre un champ ; Entrée ou OK
+applique `docker rename`, Échap annule. Rappel affiché : un conteneur géré par Compose reprend son nom au prochain
+`Up` ; le nom qui compte est celui du service dans le fichier Compose. Les projets ne sont pas renommables depuis
+Solon (décision de Valère : conteneurs seulement).

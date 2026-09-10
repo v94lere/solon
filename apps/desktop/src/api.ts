@@ -173,6 +173,7 @@ export const containers = {
   copyFrom: (id: string, path: string, destDir: string) => invoke<string>("container_copy_from", { id, path, destDir }),
   copyTo: (id: string, source: string, dest: string) => invoke<void>("container_copy_to", { id, source, dest }),
   start: (id: string) => invoke<void>("container_start", { id }),
+  rename: (id: string, name: string) => invoke<void>("container_rename", { id, name }),
   stop: (id: string) => invoke<void>("container_stop", { id }),
   restart: (id: string) => invoke<void>("container_restart", { id }),
   kill: (id: string) => invoke<void>("container_kill", { id }),

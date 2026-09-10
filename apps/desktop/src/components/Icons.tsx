@@ -50,3 +50,9 @@ export const IconFile = () => (
     <path d="M14 3v5h5M9 13h6M9 17h6" />
   </svg>
 );
+export const IconPencil = () => (
+  <svg {...base}>
+    <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z" />
+    <path d="m13.5 6.5 3 3" />
+  </svg>
+);
