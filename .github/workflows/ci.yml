@@ -22,6 +22,20 @@ jobs:
           targets: x86_64-unknown-linux-musl
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Placeholder bundle resources
+        # tauri-build vérifie que chaque fichier de `bundle.resources` existe (service compilé, CLI Docker,
+        # image du moteur…) : ils ne sont pas dans le dépôt, on crée des fichiers vides pour la vérification.
+        shell: pwsh
+        run: |
+          $conf = Get-Content apps/desktop/src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          foreach ($rel in $conf.bundle.resources.PSObject.Properties.Name) {
+            $path = Join-Path apps/desktop/src-tauri $rel
+            if (-not (Test-Path $path)) {
+              New-Item -ItemType Directory -Force (Split-Path $path) | Out-Null
+              New-Item -ItemType File $path | Out-Null
+              "placeholder: $path"
+            }
+          }
       - name: Format
         run: cargo fmt --all -- --check
       - name: Check (Windows crates)
