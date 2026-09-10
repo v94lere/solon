@@ -131,7 +131,7 @@ export function ContainerDetail({ id, onBack, onOpenProject }: { id: string; onB
               aria-label={t("detail.rename")}
               onChange={(e) => setRenaming(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Escape") setRenaming(null); }}
-              style={{ width: Math.max(12, renaming.length + 2) + "ch" }}
+              style={{ width: Math.max(14, renaming.length + 4) + "ch" }}
             />
             <button type="submit" className="btn btn-sm btn-primary" disabled={busy || !renaming.trim() || renaming === name}>{t("common.ok")}</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRenaming(null)}>{t("common.cancel")}</button>
