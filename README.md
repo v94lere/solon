@@ -1,4 +1,4 @@
-# Solon
+# <img src="apps/desktop/src/assets/logo.png" alt="Containers list" width="60"> Solon
 
 *Version française : [README.fr.md](README.fr.md).*
 
