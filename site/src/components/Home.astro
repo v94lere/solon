@@ -1,0 +1,140 @@
+---
+// Page d'accueil complète (une par langue) : promesse, chiffres, fonctions, captures, comparatif, piles, versions, limites.
+import { dict, REPO, RELEASES, LATEST, type Lang } from "../i18n";
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = dict[lang];
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+// Versions publiées, lues au moment de la construction (le site est statique, aucune requête chez le visiteur).
+interface Release { name: string; tag_name: string; published_at: string; html_url: string; body: string; assets: { name: string; browser_download_url: string; size: number }[] }
+let releases: Release[] = [];
+try {
+  const r = await fetch("https://api.github.com/repos/v94lere/solon/releases?per_page=5", { headers: { Accept: "application/vnd.github+json", "User-Agent": "solon-site-build" } });
+  if (r.ok) releases = (await r.json()) as Release[];
+} catch {
+  releases = [];
+}
+const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { year: "numeric", month: "long", day: "numeric" });
+const fmtSize = (n: number) => `${(n / 1048576).toFixed(0)} MB`;
+
+const KITS = ["Django + PostgreSQL", "Flask + Redis", "FastAPI + PostgreSQL", "Next.js"];
+const APPS = ["WordPress", "PostgreSQL + Adminer", "MariaDB + Adminer", "MongoDB + Mongo Express", "Redis", "n8n", "Nextcloud", "Ghost", "Gitea", "Uptime Kuma", "Jupyter Lab", "Static site (Nginx)"];
+const TOOLS = ["Mailpit", lang === "fr" ? "Blank compose.yaml" : "Blank compose.yaml"];
+---
+<section class="hero wrap">
+  <div class="hero-text">
+    <span class="kicker">{t.hero.kicker}</span>
+    <h1>{t.hero.title}</h1>
+    <p class="lead">{t.hero.lead}</p>
+    <div class="cta">
+      <a class="btn btn-primary" href={LATEST} rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>
+        {t.hero.download}
+      </a>
+      <a class="btn" href={REPO} rel="noopener">GitHub</a>
+      <code class="small">{t.hero.winget}</code>
+    </div>
+    <p class="small">{t.hero.requirements}</p>
+    <p class="small">{t.hero.unsigned}</p>
+  </div>
+  <figure class="shot" style="margin:0">
+    <img src={`${base}/shots/activity.png`} alt={lang === "fr" ? "Page Activity de Solon : courbes CPU par conteneur" : "Solon's Activity page: CPU curves per container"} width="1196" height="799" loading="eager" />
+  </figure>
+</section>
+
+<section class="wrap numbers" aria-label="Key numbers">
+  {t.numbers.map((n) => (
+    <div class="number"><b>{n.value}</b><span>{n.label}</span><small>{n.note}</small></div>
+  ))}
+</section>
+
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="section-head"><h2>{t.features.title}</h2></div>
+    <div class="grid">
+      {t.features.items.map((f) => (
+        <article class="card"><h3>{f.title}</h3><p>{f.body}</p></article>
+      ))}
+    </div>
+    <div class="shots" style="margin-top: 28px">
+      <figure>
+        <div class="shot"><img src={`${base}/shots/containers.png`} alt="" width="1196" height="799" loading="lazy" /></div>
+        <figcaption>{lang === "fr" ? "Conteneurs groupés par projet Compose, chacun avec son adresse solon.local." : "Containers grouped by Compose project, each with its solon.local address."}</figcaption>
+      </figure>
+      <figure>
+        <div class="shot"><img src={`${base}/shots/detail.png`} alt="" width="1196" height="799" loading="lazy" /></div>
+        <figcaption>{lang === "fr" ? "La fiche d'un conteneur : réseau, montages, environnement, fichiers, terminal, shell de débogage." : "A container's page: network, mounts, environment, files, terminal, debug shell."}</figcaption>
+      </figure>
+      <figure>
+        <div class="shot"><img src={`${base}/shots/gallery.png`} alt="" width="1196" height="799" loading="lazy" /></div>
+        <figcaption>{lang === "fr" ? "La galerie de piles prêtes et de kits de démarrage." : "The gallery of ready-made stacks and starter kits."}</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="compare">
+  <div class="wrap">
+    <div class="section-head"><h2>{t.compare.title}</h2><p class="lead">{t.compare.lead}</p></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>{t.compare.cols.map((c) => <th>{c}</th>)}</tr></thead>
+        <tbody>
+          {t.compare.rows.map((r) => (
+            <tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="honest">{t.compare.honest} <a href={`${REPO}/tree/main/bench`} rel="noopener">bench/</a></p>
+  </div>
+</section>
+
+<section class="section" id="stacks">
+  <div class="wrap">
+    <div class="section-head"><h2>{t.stacks.title}</h2><p class="lead">{t.stacks.lead}</p></div>
+    <div class="stack-groups">
+      <article class="card">
+        <h3>{t.stacks.kits}</h3>
+        <p>{t.stacks.kitsBody}</p>
+        <div class="chips">{KITS.map((k) => <span class="chip"><b>{k}</b></span>)}</div>
+      </article>
+      <article class="card">
+        <h3>{t.stacks.apps}</h3>
+        <div class="chips">{APPS.map((k) => <span class="chip">{k}</span>)}</div>
+      </article>
+      <article class="card">
+        <h3>{t.stacks.tools}</h3>
+        <div class="chips">{TOOLS.map((k) => <span class="chip">{k}</span>)}</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="releases">
+  <div class="wrap">
+    <div class="section-head"><h2>{t.releases.title}</h2><p class="lead">{t.releases.lead}</p></div>
+    <div class="grid">
+      {releases.length === 0 && <a class="btn" href={RELEASES} rel="noopener">{t.releases.view}</a>}
+      {releases.map((r) => (
+        <article class="release">
+          <header><h3>{r.name || r.tag_name}</h3><time datetime={r.published_at}>{fmtDate(r.published_at)}</time></header>
+          <div class="body">{(r.body ?? "").replace(/^#+\s*/gm, "").replace(/\*\*/g, "").split("\n---")[0]}</div>
+          <div class="assets">
+            {r.assets.map((a) => <a href={a.browser_download_url} rel="noopener">{a.name} · {fmtSize(a.size)}</a>)}
+            <a href={r.html_url} rel="noopener">{t.releases.view}</a>
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<section class="section" id="limits">
+  <div class="wrap">
+    <div class="section-head"><h2>{t.limits.title}</h2></div>
+    <ul class="limits">{t.limits.items.map((l) => <li>{l}</li>)}</ul>
+  </div>
+</section>

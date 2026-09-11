@@ -241,6 +241,7 @@ the engine. Unsynced writes of the last two seconds may be lost, as on any Linux
   measured results block by block, risk register. In French.
 - `docs/measurements.md`: every measurement and established fact. In French.
 - `bench/`: the comparison script and its Compose stack (see the benchmark above).
+- `site/`: the presentation website (Astro, static), published to GitHub Pages by the `Site` workflow.
 - `tests/e2e/`: end-to-end scenarios.
 - `CONTRIBUTING.md`: how to contribute; `SECURITY.md`: how to report a vulnerability;
   `CODE_OF_CONDUCT.md`.

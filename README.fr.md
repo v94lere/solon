@@ -265,6 +265,7 @@ perdues, comme sur toute machine Linux.
   mesurés bloc par bloc, registre des risques.
 - `docs/measurements.md` : toutes les mesures et les faits établis.
 - `bench/` : le script de comparaison et sa pile Compose (voir le comparatif plus haut).
+- `site/` : le site de présentation (Astro, statique), publié sur GitHub Pages par le workflow « Site ».
 - `tests/e2e/` : scénarios de bout en bout.
 - `CONTRIBUTING.md` : comment contribuer.
 

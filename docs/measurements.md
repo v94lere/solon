@@ -856,3 +856,15 @@ par `NetworkSettings.Networks`. Pastille : **En service · n** (vert, n conteneu
 **Arrêtés · n** (orange, tous arrêtés), **Inutilisé** (gris) ; l'infobulle liste les conteneurs. Une case « Inutilisés
 seulement » filtre la liste pour faire le ménage ; côté réseaux, elle exclut `bridge`, `host` et `none`, qui ne se
 suppriment pas. Aucune requête supplémentaire côté moteur : `docker ps -a` porte déjà ces informations.
+
+## Site de présentation (11 septembre 2026)
+
+Option retenue par Valère : site statique **Astro** dans `site/`, une page par langue (anglais à la racine,
+français sous `/fr/`), publié sur GitHub Pages par `.github/workflows/site.yml` à chaque changement du dossier.
+Contenu : promesse en une phrase, trois chiffres, six fonctions, trois captures de l'application installée
+(conteneurs, fiche, galerie ; Activity en visuel principal), le tableau du comparatif avec sa phrase honnête, les
+piles et kits, les dernières versions lues depuis l'API GitHub **au moment de la construction** (aucune requête
+chez le visiteur, cohérent avec « aucune télémétrie »), les limites connues. Palette et police de l'application
+(Urbanist via Google Fonts, seule ressource externe), thème clair ou sombre selon le système. Sans domaine, le site
+vit sous `/solon/` ; avec un domaine, définir les variables de dépôt `SITE_URL` et `SITE_BASE=/`. Rendu vérifié en
+local avec Edge sans fenêtre avant toute publication.

@@ -1,0 +1,67 @@
+---
+// Gabarit commun : en-tête avec navigation et bascule de langue, pied de page.
+import "../styles/global.css";
+import { dict, langPath, REPO, LATEST, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+  title: string;
+  description: string;
+}
+const { lang, title, description } = Astro.props;
+const t = dict[lang];
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const here = (l: Lang) => `${base}${langPath(l)}`;
+const anchor = (id: string) => `${base}${langPath(lang)}#${id}`;
+---
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href={`${base}/logo.png`} />
+    <link rel="alternate" hreflang="en" href={`${Astro.site}${langPath("en").slice(1)}`} />
+    <link rel="alternate" hreflang="fr" href={`${Astro.site}${langPath("fr").slice(1)}`} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={`${Astro.site}${base.replace(/^\//, "")}${base ? "/" : ""}shots/activity.png`} />
+    <meta name="theme-color" content="#f860c0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <a class="logo" href={here(lang)}><img src={`${base}/logo.png`} alt="" width="30" height="30" /> Solon</a>
+        <nav class="nav" aria-label="Main">
+          <a href={anchor("features")}>{t.nav.features}</a>
+          <a href={anchor("compare")}>{t.nav.compare}</a>
+          <a href={anchor("stacks")}>{t.nav.stacks}</a>
+          <a href={anchor("releases")}>{t.nav.releases}</a>
+          <a href={REPO} rel="noopener">{t.nav.github}</a>
+          <a class="btn btn-primary" href={LATEST} rel="noopener" style="padding: 7px 14px">{t.nav.download}</a>
+          <span class="lang" aria-label="Language">
+            <a href={here("en")} aria-current={lang === "en" ? "true" : undefined}>EN</a>
+            <a href={here("fr")} aria-current={lang === "fr" ? "true" : undefined}>FR</a>
+          </span>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="foot">
+      <div class="wrap">
+        <span>{t.footer.made}</span>
+        <span class="links">
+          <a href={`${REPO}/blob/main/LICENSE`} rel="noopener">{t.footer.licence}</a>
+          <a href={REPO} rel="noopener">{t.footer.source}</a>
+          <a href={`${REPO}/issues`} rel="noopener">{t.footer.issues}</a>
+          <a href={`${REPO}/blob/main/SECURITY.md`} rel="noopener">{t.footer.security}</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

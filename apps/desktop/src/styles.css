@@ -520,16 +520,17 @@ select {
 .list-card { container-type: inline-size; overflow-x: hidden; }
 .list-card .table { table-layout: fixed; width: 100%; }
 .list-card th, .list-card td { overflow: hidden; text-overflow: ellipsis; }
-.list-card th.col-status { width: 64px; }
-.list-card th.col-cpu { width: 100px; }
+.list-card th.col-status { width: 70px; }
+.list-card th.col-cpu { width: 104px; }
+.list-card .spark-cell { width: 44px; }
 .list-card th.col-mem { width: 84px; }
 .list-card th.col-memwide { width: 150px; }
 .list-card th.col-net { width: 190px; }
 .list-card th.col-trend { width: 160px; }
-.list-card th.col-actions { width: 140px; }
+.list-card th.col-actions { width: 132px; }
 .list-card th.col-actions-wide { width: 200px; }
-.list-card th.col-image { width: 18%; }
-.list-card th.col-ports { width: 30%; }
+.list-card th.col-image { width: 14%; }
+.list-card th.col-ports { width: 26%; }
 .list-card th.col-container { width: 22%; }
 .list-card th.col-id { width: 130px; }
 .list-card th.col-size { width: 90px; }
