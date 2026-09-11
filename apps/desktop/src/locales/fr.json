@@ -141,7 +141,8 @@
     "none_running": "Aucun conteneur en marche",
     "none_running_hint": "Les conteneurs arrêtés sont masqués.",
     "sleeping": "Endormi",
-    "sleeping_hint": "Mis en pause par Solon après une période d'inactivité. Se réveille à la première requête."
+    "sleeping_hint": "Mis en pause par Solon après une période d'inactivité. Se réveille à la première requête.",
+    "exited_quickly": "{{name}} a démarré, fait son travail et s'est arrêté avec le code {{code}} en moins de deux secondes. C'est normal pour une image ponctuelle comme hello-world : son résultat est dans les journaux."
   },
   "detail": {
     "tabs": {

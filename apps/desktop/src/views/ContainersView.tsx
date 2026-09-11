@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLogs, IconPlay, IconRestart, IconStop, IconTrash } from "../components/Icons";
 import { compose, containers, engine, formatBytes, stacks, type ContainerSummary, type Probe, type StatSample } from "../api";
 import { StackDialog } from "../components/StackDialog";
+import { checkExitedQuickly, type ExitedQuickly } from "../exited";
 import { markUserAction } from "../engine";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { PortLinks } from "../components/PortLinks";
@@ -101,13 +102,17 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string,
     return [...map.entries()].sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)));
   }, [rows]);
 
-  async function act(id: string, action: () => Promise<void>) {
+  const [exited, setExited] = useState<ExitedQuickly | null>(null);
+  async function act(id: string, action: () => Promise<void>, checkStart = false) {
     markUserAction(id);
     setBusy(id);
     setError(null);
+    setExited(null);
     try {
       await action();
       await queryClient.invalidateQueries({ queryKey: ["containers"] });
+      // Démarrage d'un conteneur qui se termine tout de suite : on le dit, sinon « il ne se passe rien ».
+      if (checkStart) setExited(await checkExitedQuickly(id));
     } catch (e) {
       setError(String(e));
     } finally {
@@ -191,6 +196,13 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string,
       {error && (
         <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>
           {error}
+        </div>
+      )}
+      {exited && (
+        <div className="notice mx-4 mb-2" role="status">
+          <span>{t("containers.exited_quickly", { name: exited.name, code: exited.code })}</span>
+          <button type="button" className="btn btn-sm" onClick={() => { const e = exited; setExited(null); onOpen(e.id, "logs"); }}>{t("containers.actions.logs")}</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setExited(null)}>{t("common.close")}</button>
         </div>
       )}
       <div className="card list-card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
@@ -320,7 +332,7 @@ function GroupRows({
   sleeping: string[];
   busy: string | null;
   onOpen: (id: string) => void;
-  onAct: (id: string, action: () => Promise<void>) => Promise<void>;
+  onAct: (id: string, action: () => Promise<void>, checkStart?: boolean) => Promise<void>;
   onRemove: (c: ContainerSummary) => void;
   onOpenProject: (dir: string) => void;
 }) {
@@ -414,7 +426,7 @@ function GroupRows({
                     </button>
                   </>
                 ) : (
-                  <button type="button" className="icon-btn" title={t("containers.actions.start")} aria-label={t("containers.actions.start")} disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.start(c.Id))}>
+                  <button type="button" className="icon-btn" title={t("containers.actions.start")} aria-label={t("containers.actions.start")} disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.start(c.Id), true)}>
                     <IconPlay />
                   </button>
                 )}

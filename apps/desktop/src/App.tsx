@@ -159,8 +159,9 @@ function Shell() {
     setSelected(null);
     setProject(null);
   }, []);
-  const openContainer = useCallback((id: string) => {
+  const openContainer = useCallback((id: string, tab?: DetailTab) => {
     go("containers");
+    setSelectedTab(tab ?? "overview");
     setSelected(id);
   }, [go]);
   const openProject = useCallback((dir: string, autoUp = false) => {
@@ -221,7 +222,7 @@ function Shell() {
     if (selected) content = <ContainerDetail key={selected} id={selected} initialTab={selectedTab} onBack={() => setSelected(null)} onOpenProject={(d) => { setSelected(null); openProject(d); }} />;
     else if (project) content = <ProjectView dir={project} autoUp={projectAutoUp} onBack={() => setProject(null)} onOpenContainer={openContainer} />;
     else content = <ContainersView onOpen={(id, tab) => { setSelectedTab(tab ?? "overview"); setSelected(id); }} onOpenProject={openProject} />;
-  } else if (section === "images") content = <ImagesView />;
+  } else if (section === "images") content = <ImagesView onOpenContainer={openContainer} />;
   else if (section === "volumes") content = <VolumesView />;
   else if (section === "networks") content = <NetworksView />;
   else content = <ActivityView onOpenContainer={openContainer} />;

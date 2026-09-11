@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { images } from "../api";
 
 /** Lancer un conteneur depuis une image : nom, ports publiés, variables, commande. */
-export function RunImageDialog({ image, onClose, onStarted }: { image: string; onClose: () => void; onStarted: () => void }) {
+export function RunImageDialog({ image, onClose, onStarted }: { image: string; onClose: () => void; onStarted: (id: string) => void }) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDialogElement>(null);
   const [name, setName] = useState("");
@@ -28,14 +28,14 @@ export function RunImageDialog({ image, onClose, onStarted }: { image: string; o
           if (!m) throw new Error(t("images.run.bad_port", { value: p }));
           return { host: Number(m[1]), container: Number(m[2]), proto: m[3] ?? "tcp" };
         });
-      await images.run({
+      const id = await images.run({
         image,
         name: name.trim() || null,
         cmd: cmd.trim() ? cmd.trim().split(/\s+/) : null,
         env: env.split(/\n/).map((l) => l.trim()).filter(Boolean),
         ports: portList,
       });
-      onStarted();
+      onStarted(id);
     } catch (e) {
       setError(String(e));
     } finally {

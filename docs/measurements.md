@@ -881,3 +881,11 @@ arrêté et le bouton ▶ le relance pour une fraction de seconde. Deux causes d
 clic : le nom `hello-world` déjà pris. Corrections : le bouton retire un hello-world précédent avant de relancer,
 puis ouvre directement l'onglet Journaux de la fiche (nouvelle propriété `initialTab` de la fiche) ; le texte de
 la carte explique que le conteneur affiche un message puis s'arrête.
+
+Suite : « quand j'appuie sur Run il ne se passe rien ». Un second conteneur `hello-world` a été créé à 19:44:18,
+démarré à 19:44:27, terminé à 19:44:27,95 (90 ms, code 0) : le démarrage fonctionne, le conteneur s'arrête
+aussitôt et rien ne le signale. Ajout d'un **avis** dans Containers et Images : après un ▶ ou un Run, Solon attend
+1,5 s, inspecte le conteneur et, s'il n'est plus en cours, affiche « … a démarré, fait son travail et s'est arrêté
+avec le code n en moins de deux secondes. C'est normal pour une image ponctuelle comme hello-world : son résultat
+est dans les journaux », avec un bouton Logs. Le dialogue Run renvoie désormais l'identifiant créé ;
+`openContainer(id, onglet)` permet d'ouvrir une fiche sur ses journaux depuis n'importe quelle page.

@@ -141,7 +141,8 @@
     "none_running": "No running container",
     "none_running_hint": "Stopped containers are hidden.",
     "sleeping": "Asleep",
-    "sleeping_hint": "Paused by Solon after a period of inactivity. Wakes up on the first request."
+    "sleeping_hint": "Paused by Solon after a period of inactivity. Wakes up on the first request.",
+    "exited_quickly": "{{name}} started, did its job and exited with code {{code}} within two seconds. That is normal for a one-shot image such as hello-world: its output is in the logs."
   },
   "detail": {
     "tabs": {

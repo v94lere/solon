@@ -3,12 +3,13 @@ import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { containers, formatBytes, images, type ImageSummary } from "../api";
 import { imageUsage } from "../usage";
+import { checkExitedQuickly, type ExitedQuickly } from "../exited";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { JsonDialog } from "../components/JsonDialog";
 import { RunImageDialog } from "../components/RunImageDialog";
 import { EmptyState, IconLayers, PageHeader, SkeletonRows, UsagePill } from "../components/ui";
 
-export function ImagesView() {
+export function ImagesView({ onOpenContainer }: { onOpenContainer?: (id: string, tab?: "logs") => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState("");
@@ -16,6 +17,7 @@ export function ImagesView() {
   const [running, setRunning] = useState<ImageSummary | null>(null);
   const [inspecting, setInspecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exited, setExited] = useState<ExitedQuickly | null>(null);
   const query = useQuery({ queryKey: ["images"], queryFn: images.list });
   const all = useQuery({ queryKey: ["containers", true], queryFn: () => containers.list(true), refetchInterval: 5000 });
   const [unusedOnly, setUnusedOnly] = useState(false);
@@ -51,6 +53,13 @@ export function ImagesView() {
       {error && (
         <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>
           {error}
+        </div>
+      )}
+      {exited && (
+        <div className="notice mx-4 mb-2" role="status">
+          <span>{t("containers.exited_quickly", { name: exited.name, code: exited.code })}</span>
+          {onOpenContainer && <button type="button" className="btn btn-sm" onClick={() => { const e = exited; setExited(null); onOpenContainer(e.id, "logs"); }}>{t("containers.actions.logs")}</button>}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setExited(null)}>{t("common.close")}</button>
         </div>
       )}
       <div className="card list-card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
@@ -114,9 +123,10 @@ export function ImagesView() {
         <RunImageDialog
           image={running.RepoTags?.[0] ?? running.Id}
           onClose={() => setRunning(null)}
-          onStarted={() => {
+          onStarted={(id) => {
             setRunning(null);
             void queryClient.invalidateQueries({ queryKey: ["containers"] });
+            void checkExitedQuickly(id).then(setExited);
           }}
         />
       )}
