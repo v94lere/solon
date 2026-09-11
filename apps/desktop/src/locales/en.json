@@ -548,5 +548,13 @@
     "need_dir": "Choose a folder first.",
     "create": "Create",
     "create_up": "Create and start"
+  },
+  "usage": {
+    "column": "Used",
+    "in_use": "In use · {{count}}",
+    "stopped": "Stopped · {{count}}",
+    "unused": "Unused",
+    "only_unused": "Unused only",
+    "used_by": "Used by: {{names}}"
   }
 }

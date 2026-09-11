@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { networks, type Network } from "../api";
+import { containers, networks, type Network } from "../api";
+import { networkUsage } from "../usage";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { JsonDialog } from "../components/JsonDialog";
-import { EmptyState, IconGlobe, PageHeader, SkeletonRows } from "../components/ui";
+import { EmptyState, IconGlobe, PageHeader, SkeletonRows, UsagePill } from "../components/ui";
 
 const BUILTIN = new Set(["bridge", "host", "none"]);
 
@@ -17,12 +18,15 @@ export function NetworksView() {
   const [inspecting, setInspecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const query = useQuery({ queryKey: ["networks"], queryFn: networks.list });
+  const all = useQuery({ queryKey: ["containers", true], queryFn: () => containers.list(true), refetchInterval: 5000 });
+  const [unusedOnly, setUnusedOnly] = useState(false);
 
   const rows = useMemo(() => {
     const f = filter.trim().toLowerCase();
-    const list = query.data ?? [];
-    return (f ? list.filter((n) => n.Name.toLowerCase().includes(f) || (n.Driver ?? "").includes(f)) : list).slice().sort((a, b) => a.Name.localeCompare(b.Name));
-  }, [query.data, filter]);
+    const list = (query.data ?? []).map((n) => ({ n, usage: networkUsage(all.data ?? [], n.Name) }));
+    const shown = unusedOnly ? list.filter((r) => r.usage.total === 0 && !BUILTIN.has(r.n.Name)) : list;
+    return (f ? shown.filter((r) => r.n.Name.toLowerCase().includes(f) || (r.n.Driver ?? "").includes(f)) : shown).slice().sort((a, b) => a.n.Name.localeCompare(b.n.Name));
+  }, [query.data, all.data, filter, unusedOnly]);
 
   async function act(action: () => Promise<unknown>) {
     setError(null);
@@ -46,7 +50,12 @@ export function NetworksView() {
           </form>
         }
         search={<input type="search" className="input w-56" placeholder={t("networks.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("networks.search")} />}
-      />
+      >
+        <label className="flex items-center gap-2 whitespace-nowrap text-[13px]" style={{ color: "var(--ink-2)" }}>
+          <input type="checkbox" checked={unusedOnly} onChange={(e) => setUnusedOnly(e.target.checked)} />
+          {t("usage.only_unused")}
+        </label>
+      </PageHeader>
       {error && <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>}
       <div className="card list-card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
         {query.isLoading ? (
@@ -58,6 +67,7 @@ export function NetworksView() {
             <thead>
               <tr>
                 <th>{t("networks.columns.name")}</th>
+                <th className="col-usage">{t("usage.column")}</th>
                 <th className="col-driver">{t("networks.columns.driver")}</th>
                 <th className="col-subnet">{t("networks.columns.subnet")}</th>
                 <th className="col-id">{t("networks.columns.id")}</th>
@@ -65,9 +75,10 @@ export function NetworksView() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((n) => (
+              {rows.map(({ n, usage }) => (
                 <tr key={n.Id} tabIndex={0}>
                   <td className="font-medium">{n.Name}</td>
+                  <td className="col-usage"><UsagePill usage={usage} /></td>
                   <td className="col-driver">{n.Driver}</td>
                   <td className="col-subnet mono">{(n.IPAM?.Config ?? []).map((c) => c.Subnet).filter(Boolean).join(", ")}</td>
                   <td className="col-id mono">{n.Id.slice(0, 12)}</td>

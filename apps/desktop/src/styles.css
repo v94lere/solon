@@ -533,10 +533,12 @@ select {
 .list-card th.col-container { width: 22%; }
 .list-card th.col-id { width: 130px; }
 .list-card th.col-size { width: 90px; }
-.list-card th.col-date { width: 170px; }
+.list-card th.col-date { width: 150px; }
 .list-card th.col-driver { width: 90px; }
 .list-card th.col-subnet { width: 150px; }
-.list-card th.col-mount { width: 36%; }
+.list-card th.col-mount { width: 24%; }
+.list-card th.col-usage { width: 118px; }
+.usage-pill { white-space: nowrap; }
 .list-card td.col-ports .port-link, .list-card td.col-ports > span > span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .name-image { display: none; font-size: 11px; color: var(--ink-3); }
 @container (max-width: 920px) {

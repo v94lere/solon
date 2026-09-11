@@ -144,6 +144,8 @@ export interface ContainerSummary {
   Labels: Record<string, string>;
   State: string;
   Status: string;
+  Mounts?: { Type?: string; Name?: string; Source?: string; Destination?: string }[];
+  NetworkSettings?: { Networks?: Record<string, unknown> };
 }
 
 export interface StatSample {

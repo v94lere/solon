@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { volumes, type Volume } from "../api";
+import { containers, volumes, type Volume } from "../api";
+import { volumeUsage } from "../usage";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { JsonDialog } from "../components/JsonDialog";
 import { FilesPanel } from "../components/FilesPanel";
-import { EmptyState, IconDisk, PageHeader, SkeletonRows } from "../components/ui";
+import { EmptyState, IconDisk, PageHeader, SkeletonRows, UsagePill } from "../components/ui";
 
 export function VolumesView() {
   const { t } = useTranslation();
@@ -17,12 +18,15 @@ export function VolumesView() {
   const [browsing, setBrowsing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const query = useQuery({ queryKey: ["volumes"], queryFn: volumes.list });
+  const all = useQuery({ queryKey: ["containers", true], queryFn: () => containers.list(true), refetchInterval: 5000 });
+  const [unusedOnly, setUnusedOnly] = useState(false);
 
   const rows = useMemo(() => {
     const f = filter.trim().toLowerCase();
-    const list = query.data?.Volumes ?? [];
-    return (f ? list.filter((v) => v.Name.toLowerCase().includes(f)) : list).slice().sort((a, b) => a.Name.localeCompare(b.Name));
-  }, [query.data, filter]);
+    const list = (query.data?.Volumes ?? []).map((v) => ({ v, usage: volumeUsage(all.data ?? [], v.Name) }));
+    const shown = unusedOnly ? list.filter((r) => r.usage.total === 0) : list;
+    return (f ? shown.filter((r) => r.v.Name.toLowerCase().includes(f)) : shown).slice().sort((a, b) => a.v.Name.localeCompare(b.v.Name));
+  }, [query.data, all.data, filter, unusedOnly]);
 
   async function act(action: () => Promise<unknown>) {
     setError(null);
@@ -70,7 +74,12 @@ export function VolumesView() {
           </form>
         }
         search={<input type="search" className="input w-56" placeholder={t("volumes.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("volumes.search")} />}
-      />
+      >
+        <label className="flex items-center gap-2 whitespace-nowrap text-[13px]" style={{ color: "var(--ink-2)" }}>
+          <input type="checkbox" checked={unusedOnly} onChange={(e) => setUnusedOnly(e.target.checked)} />
+          {t("usage.only_unused")}
+        </label>
+      </PageHeader>
       {error && <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>}
       <div className="card list-card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
         {query.isLoading ? (
@@ -82,6 +91,7 @@ export function VolumesView() {
             <thead>
               <tr>
                 <th>{t("volumes.columns.name")}</th>
+                <th className="col-usage">{t("usage.column")}</th>
                 <th className="col-driver">{t("volumes.columns.driver")}</th>
                 <th className="col-date">{t("volumes.columns.created")}</th>
                 <th className="col-mount">{t("volumes.columns.mountpoint")}</th>
@@ -89,11 +99,12 @@ export function VolumesView() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((v) => (
+              {rows.map(({ v, usage }) => (
                 <tr key={v.Name} tabIndex={0}>
                   <td>
                     <button type="button" className="block max-w-full truncate text-left font-medium hover:underline" title={v.Name} style={{ color: "var(--ink)" }} onClick={() => setBrowsing(v.Name)}>{v.Name}</button>
                   </td>
+                  <td className="col-usage"><UsagePill usage={usage} /></td>
                   <td className="col-driver">{v.Driver}</td>
                   <td className="col-date">{v.CreatedAt ? new Date(v.CreatedAt).toLocaleString() : "—"}</td>
                   <td className="col-mount mono" title={v.Mountpoint}>{v.Mountpoint}</td>

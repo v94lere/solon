@@ -548,5 +548,13 @@
     "need_dir": "Choisissez d'abord un dossier.",
     "create": "Créer",
     "create_up": "Créer et démarrer"
+  },
+  "usage": {
+    "column": "Utilisation",
+    "in_use": "En service · {{count}}",
+    "stopped": "Arrêtés · {{count}}",
+    "unused": "Inutilisé",
+    "only_unused": "Inutilisés seulement",
+    "used_by": "Utilisé par : {{names}}"
   }
 }

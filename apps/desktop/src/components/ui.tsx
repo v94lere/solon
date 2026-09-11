@@ -1,6 +1,8 @@
 // Briques visuelles partagées : en-tête de page, état vide, squelettes de chargement, pastille
 // d'initiale colorée, courbe glissante, mini-jauge.
 import { useId, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import type { Usage } from "../usage";
 
 /** En-tête commun à tous les écrans : titre, compteur, actions au centre, recherche à droite. */
 export function PageHeader({ title, count, actions, search, children }: { title: string; count?: string; actions?: ReactNode; search?: ReactNode; children?: ReactNode }) {
@@ -161,3 +163,12 @@ export const IconFolderOpen = () => (
     <path d="M3 11h18" />
   </svg>
 );
+
+/** « Utilisé » ou non par des conteneurs : vert si au moins un tourne, neutre s'ils sont tous arrêtés, gris sinon. */
+export function UsagePill({ usage }: { usage: Usage }) {
+  const { t } = useTranslation();
+  if (usage.total === 0) return <span className="pill pill-muted usage-pill">{t("usage.unused")}</span>;
+  const title = t("usage.used_by", { names: usage.names.join(", ") });
+  if (usage.running > 0) return <span className="pill pill-ok usage-pill" title={title}>{t("usage.in_use", { count: usage.running })}</span>;
+  return <span className="pill pill-warn usage-pill" title={title}>{t("usage.stopped", { count: usage.total })}</span>;
+}

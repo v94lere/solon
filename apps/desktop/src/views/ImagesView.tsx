@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { formatBytes, images, type ImageSummary } from "../api";
+import { containers, formatBytes, images, type ImageSummary } from "../api";
+import { imageUsage } from "../usage";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { JsonDialog } from "../components/JsonDialog";
 import { RunImageDialog } from "../components/RunImageDialog";
-import { EmptyState, IconLayers, PageHeader, SkeletonRows } from "../components/ui";
+import { EmptyState, IconLayers, PageHeader, SkeletonRows, UsagePill } from "../components/ui";
 
 export function ImagesView() {
   const { t } = useTranslation();
@@ -16,15 +17,18 @@ export function ImagesView() {
   const [inspecting, setInspecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const query = useQuery({ queryKey: ["images"], queryFn: images.list });
+  const all = useQuery({ queryKey: ["containers", true], queryFn: () => containers.list(true), refetchInterval: 5000 });
+  const [unusedOnly, setUnusedOnly] = useState(false);
 
   const rows = useMemo(() => {
     const f = filter.trim().toLowerCase();
     const list = (query.data ?? []).flatMap((img) => {
       const tags = img.RepoTags && img.RepoTags.length > 0 ? img.RepoTags : ["<none>:<none>"];
-      return tags.map((tag) => ({ img, tag }));
+      return tags.map((tag) => ({ img, tag, usage: imageUsage(all.data ?? [], img) }));
     });
-    return (f ? list.filter((r) => r.tag.toLowerCase().includes(f) || r.img.Id.includes(f)) : list).sort((a, b) => b.img.Created - a.img.Created);
-  }, [query.data, filter]);
+    const shown = unusedOnly ? list.filter((r) => r.usage.total === 0) : list;
+    return (f ? shown.filter((r) => r.tag.toLowerCase().includes(f) || r.img.Id.includes(f)) : shown).sort((a, b) => b.img.Created - a.img.Created);
+  }, [query.data, all.data, filter, unusedOnly]);
 
   async function act(action: () => Promise<unknown>) {
     setError(null);
@@ -38,7 +42,12 @@ export function ImagesView() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader title={t("images.title")} count={t("images.count", { count: rows.length })} search={<input type="search" className="input w-64" placeholder={t("images.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("images.search")} />} />
+      <PageHeader title={t("images.title")} count={t("images.count", { count: rows.length })} search={<input type="search" className="input w-64" placeholder={t("images.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("images.search")} />}>
+        <label className="flex items-center gap-2 whitespace-nowrap text-[13px]" style={{ color: "var(--ink-2)" }}>
+          <input type="checkbox" checked={unusedOnly} onChange={(e) => setUnusedOnly(e.target.checked)} />
+          {t("usage.only_unused")}
+        </label>
+      </PageHeader>
       {error && (
         <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>
           {error}
@@ -56,6 +65,7 @@ export function ImagesView() {
             <thead>
               <tr>
                 <th>{t("images.columns.tag")}</th>
+                <th className="col-usage">{t("usage.column")}</th>
                 <th className="col-id">{t("images.columns.id")}</th>
                 <th className="col-size text-right">{t("images.columns.size")}</th>
                 <th className="col-date">{t("images.columns.created")}</th>
@@ -63,9 +73,10 @@ export function ImagesView() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ img, tag }) => (
+              {rows.map(({ img, tag, usage }) => (
                 <tr key={`${img.Id}-${tag}`} tabIndex={0}>
                   <td className="font-medium">{tag}</td>
+                  <td className="col-usage"><UsagePill usage={usage} /></td>
                   <td className="col-id mono">{img.Id.replace(/^sha256:/, "").slice(0, 12)}</td>
                   <td className="col-size mono text-right">{formatBytes(img.Size)}</td>
                   <td className="col-date">{new Date(img.Created * 1000).toLocaleString()}</td>

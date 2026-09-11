@@ -846,3 +846,13 @@ par script) : en largeur fixe, une cellule d'en-tête en `display: none` **laiss
 invisibles en occupaient 137. Une colonne repliée est donc mise à **largeur 0** (et remplissage 0), pas en
 `display: none` : le Nom remonte à 183 px. Vérifié ensuite dans l'application à 700 px de fenêtre sur les cinq
 listes : aucune barre horizontale.
+
+## Colonne « Utilisation » dans Images, Volumes et Networks (11 septembre 2026)
+
+Demande de Valère : savoir d'un coup d'œil ce qui est utilisé ou non. Chaque liste rapproche ses objets de la liste
+de **tous** les conteneurs (actifs ou arrêtés, rafraîchie toutes les 5 s, déjà en cache pour la liste des
+conteneurs) : images par identifiant `ImageID` ou par étiquette, volumes par les montages de type `volume`, réseaux
+par `NetworkSettings.Networks`. Pastille : **En service · n** (vert, n conteneurs en cours ou en veille),
+**Arrêtés · n** (orange, tous arrêtés), **Inutilisé** (gris) ; l'infobulle liste les conteneurs. Une case « Inutilisés
+seulement » filtre la liste pour faire le ménage ; côté réseaux, elle exclut `bridge`, `host` et `none`, qui ne se
+suppriment pas. Aucune requête supplémentaire côté moteur : `docker ps -a` porte déjà ces informations.
