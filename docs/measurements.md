@@ -868,3 +868,16 @@ chez le visiteur, cohérent avec « aucune télémétrie »), les limites connue
 (Urbanist via Google Fonts, seule ressource externe), thème clair ou sombre selon le système. Sans domaine, le site
 vit sous `/solon/` ; avec un domaine, définir les variables de dépôt `SITE_URL` et `SITE_BASE=/`. Rendu vérifié en
 local avec Edge sans fenêtre avant toute publication.
+
+## Test « machine vierge » n° 2 et bouton hello-world (11 septembre 2026, soir)
+
+Valère a tout désinstallé (Solon avec ses 18 Go de données de test, restes de Docker Desktop mis de côté en
+`*.bak-20260911-1928`, WSL absent, Hyper-V et Plateforme de machine virtuelle laissés activés) puis réinstallé Solon
+0.1.1 depuis la release GitHub : « installation nickel », moteur prêt en 2,25 s après le démarrage de la machine.
+Retour : « le hello-world ne fonctionne pas ». Constat : il a fonctionné (conteneur `hello-world` créé, code de
+sortie 0, message « Hello from Docker! » dans ses journaux, image tirée du miroir ECR en quelques secondes) mais
+rien ne le montrait : hello-world affiche son message et s'arrête aussitôt, la liste ne montre qu'un conteneur
+arrêté et le bouton ▶ le relance pour une fraction de seconde. Deux causes d'échec réel possibles au deuxième
+clic : le nom `hello-world` déjà pris. Corrections : le bouton retire un hello-world précédent avant de relancer,
+puis ouvre directement l'onglet Journaux de la fiche (nouvelle propriété `initialTab` de la fiche) ; le texte de
+la carte explique que le conteneur affiche un message puis s'arrête.

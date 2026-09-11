@@ -43,7 +43,7 @@ function stateClass(state: string) {
   }
 }
 
-export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string) => void; onOpenProject: (dir: string, autoUp?: boolean) => void }) {
+export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string, tab?: "logs") => void; onOpenProject: (dir: string, autoUp?: boolean) => void }) {
   const { t } = useTranslation();
   const { snapshot } = useEngine();
   const sleeping = snapshot?.sleeping ?? [];
@@ -139,10 +139,15 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
     setHello("running");
     setError(null);
     try {
-      const r = await engine.exec(`docker pull -q ${HELLO_IMAGE} >/dev/null && docker run --name hello-world ${HELLO_IMAGE}`, 180);
+      // Rejouable : un hello-world d'un essai précédent est retiré d'abord (sinon « name already in use »).
+      const r = await engine.exec(`docker rm -f hello-world >/dev/null 2>&1; docker pull -q ${HELLO_IMAGE} >/dev/null && docker run --name hello-world ${HELLO_IMAGE}`, 180);
       if (r.code !== 0) throw new Error(r.stderr.trim() || r.stdout.trim() || `exit ${r.code}`);
       await queryClient.invalidateQueries({ queryKey: ["containers"] });
       setHello("done");
+      // hello-world affiche son message puis s'arrête : on ouvre ses journaux pour que ce soit visible.
+      const all = await containers.list(true);
+      const created = all.find((c) => (c.Names ?? []).some((n) => n.replace(/^\//, "") === "hello-world"));
+      if (created) onOpen(created.Id, "logs");
     } catch (e) {
       setError(String(e));
       setHello("idle");

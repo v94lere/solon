@@ -9,7 +9,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { ProjectView } from "./views/ProjectView";
 import { SetupScreen } from "./views/SetupScreen";
 import { ContainersView } from "./views/ContainersView";
-import { ContainerDetail } from "./views/ContainerDetail";
+import { ContainerDetail, type Tab as DetailTab } from "./views/ContainerDetail";
 import { ImagesView } from "./views/ImagesView";
 import { VolumesView } from "./views/VolumesView";
 import { NetworksView } from "./views/NetworksView";
@@ -132,6 +132,7 @@ function Shell() {
   const { ready } = useEngine();
   const [section, setSection] = useState<Section>("containers");
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState<DetailTab>("overview");
   const [project, setProject] = useState<string | null>(null);
   const [projectAutoUp, setProjectAutoUp] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -217,9 +218,9 @@ function Shell() {
   else if (!ready) content = <SetupScreen />;
   else if (section === "terminal") content = null; // rendu à part, pour rester monté
   else if (section === "containers") {
-    if (selected) content = <ContainerDetail id={selected} onBack={() => setSelected(null)} onOpenProject={(d) => { setSelected(null); openProject(d); }} />;
+    if (selected) content = <ContainerDetail key={selected} id={selected} initialTab={selectedTab} onBack={() => setSelected(null)} onOpenProject={(d) => { setSelected(null); openProject(d); }} />;
     else if (project) content = <ProjectView dir={project} autoUp={projectAutoUp} onBack={() => setProject(null)} onOpenContainer={openContainer} />;
-    else content = <ContainersView onOpen={setSelected} onOpenProject={openProject} />;
+    else content = <ContainersView onOpen={(id, tab) => { setSelectedTab(tab ?? "overview"); setSelected(id); }} onOpenProject={openProject} />;
   } else if (section === "images") content = <ImagesView />;
   else if (section === "volumes") content = <VolumesView />;
   else if (section === "networks") content = <NetworksView />;

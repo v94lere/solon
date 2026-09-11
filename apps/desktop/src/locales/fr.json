@@ -127,7 +127,7 @@
       "title": "Aucun conteneur pour l'instant",
       "hint": "Trois façons de commencer.",
       "hello_title": "Lancer un premier conteneur",
-      "hello_body": "Télécharge la minuscule image hello-world et l'exécute une fois. Elle apparaît ici, arrêtée, en quelques secondes.",
+      "hello_body": "Télécharge la minuscule image hello-world et l'exécute une fois : elle affiche un message puis s'arrête. Solon ouvre alors ses journaux pour le lire ; le conteneur arrêté reste dans cette liste.",
       "hello_action": "Lancer hello-world",
       "hello_running": "En cours…",
       "compose_title": "Ouvrir un projet Compose",

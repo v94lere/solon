@@ -17,7 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { engine } from "../api";
 import { useEngine } from "../engine";
 
-type Tab = "overview" | "logs" | "files" | "terminal" | "debug" | "inspect";
+export type Tab = "overview" | "logs" | "files" | "terminal" | "debug" | "inspect";
 
 interface Inspect {
   Id?: string;
@@ -54,10 +54,10 @@ const TAB_ICONS: Record<Tab, JSX.Element> = {
   ),
 };
 
-export function ContainerDetail({ id, onBack, onOpenProject }: { id: string; onBack: () => void; onOpenProject?: (dir: string) => void }) {
+export function ContainerDetail({ id, onBack, onOpenProject, initialTab }: { id: string; onBack: () => void; onOpenProject?: (dir: string) => void; initialTab?: Tab }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(initialTab ?? "overview");
   const [busy, setBusy] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);

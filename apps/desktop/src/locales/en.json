@@ -127,7 +127,7 @@
       "title": "No container yet",
       "hint": "Three ways to get started.",
       "hello_title": "Run your first container",
-      "hello_body": "Pulls the tiny hello-world image and runs it once. It appears in this list, stopped, in a few seconds.",
+      "hello_body": "Pulls the tiny hello-world image and runs it once: it prints a greeting and exits. Solon then opens its logs so you can read it; the stopped container stays in this list.",
       "hello_action": "Run hello-world",
       "hello_running": "Running…",
       "compose_title": "Open a Compose project",
