@@ -680,7 +680,9 @@ where
                     let _ = tokio::io::copy(&mut client_rx, &mut upstream).await;
                     return Ok(());
                 }
-                Body::Length(n) => forward_exact(&mut client_rx, &mut upstream, &mut buf, n).await?,
+                Body::Length(n) => {
+                    forward_exact(&mut client_rx, &mut upstream, &mut buf, n).await?
+                }
                 Body::Chunked => forward_chunked(&mut client_rx, &mut upstream, &mut buf).await?,
             }
             match read_head(&mut client_rx, &mut buf).await? {
@@ -794,7 +796,11 @@ mod tests {
             "https",
         );
         assert_eq!(body, Body::Upgrade);
-        assert!(String::from_utf8(out).unwrap().contains("Upgrade: websocket\r\n"));
+        assert!(
+            String::from_utf8(out)
+                .unwrap()
+                .contains("Upgrade: websocket\r\n")
+        );
         let (_, body) = rewrite_head(b"GET / HTTP/1.1\r\nHost: a\r\n\r\n", "http");
         assert_eq!(body, Body::Length(0));
     }
@@ -805,14 +811,18 @@ mod tests {
         let mut input = std::io::Cursor::new(b"cd\r\nefgh".to_vec());
         let mut out = Vec::new();
         let mut buf = b"ab".to_vec();
-        forward_exact(&mut input, &mut out, &mut buf, 4).await.unwrap();
+        forward_exact(&mut input, &mut out, &mut buf, 4)
+            .await
+            .unwrap();
         assert_eq!(out, b"abcd");
         assert!(buf.is_empty());
 
         let mut input = std::io::Cursor::new(b"3\r\nabc\r\n0\r\n\r\nSUITE".to_vec());
         let mut out = Vec::new();
         let mut buf = Vec::new();
-        forward_chunked(&mut input, &mut out, &mut buf).await.unwrap();
+        forward_chunked(&mut input, &mut out, &mut buf)
+            .await
+            .unwrap();
         assert_eq!(out, b"3\r\nabc\r\n0\r\n\r\n");
         // Ce qui suit le corps reste dans le tampon pour la requête suivante.
         assert_eq!(buf, b"SUITE");

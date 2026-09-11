@@ -937,7 +937,9 @@ pub async fn docker_reclaim(state: State<'_>) -> Result<ReclaimReport, String> {
     let filters: HashMap<&str, Vec<&str>> = HashMap::from([("dangling", vec!["false"])]);
     let images = docker
         .prune_images(Some(
-            PruneImagesOptionsBuilder::default().filters(&filters).build(),
+            PruneImagesOptionsBuilder::default()
+                .filters(&filters)
+                .build(),
         ))
         .await
         .map_err(err)?;

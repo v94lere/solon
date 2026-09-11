@@ -124,7 +124,11 @@ fn drive_space(path: &std::path::Path) -> Result<(String, u64, u64), String> {
         )
     }
     .map_err(|e| format!("GetDiskFreeSpaceEx({root}) : {e}"))?;
-    Ok((root.trim_end_matches('\\').to_owned(), total, free_to_caller))
+    Ok((
+        root.trim_end_matches('\\').to_owned(),
+        total,
+        free_to_caller,
+    ))
 }
 
 /// Place occupée par le disque de données et place libre sur le lecteur Windows qui l'héberge.
