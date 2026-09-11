@@ -40,7 +40,7 @@ const TOOLS = ["Mailpit", lang === "fr" ? "Blank compose.yaml" : "Blank compose.
     <p class="small">{t.hero.unsigned}</p>
   </div>
   <figure class="shot" style="margin:0">
-    <img src={`${base}/shots/activity.png`} alt={lang === "fr" ? "Page Activity de Solon : courbes CPU par conteneur" : "Solon's Activity page: CPU curves per container"} width="1196" height="799" loading="eager" />
+    <img class="shot-light" src={`${base}/shots/activity-light.png`} alt={lang === "fr" ? "Page Activity de Solon : courbes CPU par conteneur" : "Solon's Activity page: CPU curves per container"} width="1196" height="799" loading="eager" /><img class="shot-dark" src={`${base}/shots/activity-dark.png`} alt={lang === "fr" ? "Page Activity de Solon : courbes CPU par conteneur" : "Solon's Activity page: CPU curves per container"} width="1196" height="799" loading="eager" />
   </figure>
 </section>
 
@@ -60,15 +60,15 @@ const TOOLS = ["Mailpit", lang === "fr" ? "Blank compose.yaml" : "Blank compose.
     </div>
     <div class="shots" style="margin-top: 28px">
       <figure>
-        <div class="shot"><img src={`${base}/shots/containers.png`} alt="" width="1196" height="799" loading="lazy" /></div>
+        <div class="shot"><img class="shot-light" src={`${base}/shots/containers-light.png`} alt="" width="1196" height="799" loading="lazy" /><img class="shot-dark" src={`${base}/shots/containers-dark.png`} alt="" width="1196" height="799" loading="lazy" /></div>
         <figcaption>{lang === "fr" ? "Conteneurs groupés par projet Compose, chacun avec son adresse solon.local." : "Containers grouped by Compose project, each with its solon.local address."}</figcaption>
       </figure>
       <figure>
-        <div class="shot"><img src={`${base}/shots/detail.png`} alt="" width="1196" height="799" loading="lazy" /></div>
+        <div class="shot"><img class="shot-light" src={`${base}/shots/detail-light.png`} alt="" width="1196" height="799" loading="lazy" /><img class="shot-dark" src={`${base}/shots/detail-dark.png`} alt="" width="1196" height="799" loading="lazy" /></div>
         <figcaption>{lang === "fr" ? "La fiche d'un conteneur : réseau, montages, environnement, fichiers, terminal, shell de débogage." : "A container's page: network, mounts, environment, files, terminal, debug shell."}</figcaption>
       </figure>
       <figure>
-        <div class="shot"><img src={`${base}/shots/gallery.png`} alt="" width="1196" height="799" loading="lazy" /></div>
+        <div class="shot"><img class="shot-light" src={`${base}/shots/gallery-light.png`} alt="" width="1196" height="799" loading="lazy" /><img class="shot-dark" src={`${base}/shots/gallery-dark.png`} alt="" width="1196" height="799" loading="lazy" /></div>
         <figcaption>{lang === "fr" ? "La galerie de piles prêtes et de kits de démarrage." : "The gallery of ready-made stacks and starter kits."}</figcaption>
       </figure>
     </div>

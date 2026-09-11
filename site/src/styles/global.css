@@ -21,7 +21,7 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #120a0f;
     --surface: #1c1218;
     --surface-2: #22171d;
@@ -38,6 +38,22 @@
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+    --bg: #120a0f;
+    --surface: #1c1218;
+    --surface-2: #22171d;
+    --surface-3: #2c1f26;
+    --line: #33242c;
+    --ink: #f7eef3;
+    --ink-2: #c9b7c1;
+    --ink-3: #8f7d87;
+    --accent: #f860c0;
+    --accent-ink: #f8a8d8;
+    --accent-soft: #3a1a2c;
+    --brand: #ff4a4a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+  }
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -146,3 +162,21 @@ td:nth-child(3) { font-weight: 650; color: var(--accent-ink); }
 .foot { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--ink-3); font-size: 0.9rem; }
 .foot .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
 .foot .links { margin-left: auto; display: flex; gap: 18px; }
+
+/* Captures : la version claire ou sombre suit le thème de la page. */
+.shot img.shot-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .shot img.shot-light { display: none; }
+  :root:not([data-theme="light"]) .shot img.shot-dark { display: block; }
+}
+:root[data-theme="dark"] .shot img.shot-light { display: none; }
+:root[data-theme="dark"] .shot img.shot-dark { display: block; }
+
+/* Bouton de thème */
+.theme-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; margin-left: 6px; }
+.theme-btn:hover { border-color: var(--accent); color: var(--ink); }
+.theme-btn svg { width: 16px; height: 16px; }
+.theme-btn .moon { display: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .theme-btn .sun { display: none; } :root:not([data-theme="light"]) .theme-btn .moon { display: block; } }
+:root[data-theme="dark"] .theme-btn .sun { display: none; }
+:root[data-theme="dark"] .theme-btn .moon { display: block; }
