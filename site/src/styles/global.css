@@ -105,6 +105,10 @@ img { max-width: 100%; display: block; }
 .hero { padding: 72px 0 40px; display: grid; gap: 40px; grid-template-columns: minmax(0, 1fr); align-items: center; }
 @media (min-width: 900px) { .hero { grid-template-columns: 5fr 6fr; } }
 .hero-text { display: flex; flex-direction: column; gap: 18px; }
+.hero-brand { display: flex; align-items: center; gap: 22px; margin: 4px 0 6px; }
+.hero-brand img { width: clamp(120px, 18vw, 190px); height: auto; filter: drop-shadow(0 14px 30px rgba(224, 24, 24, 0.22)); }
+.hero-brand span { font-size: clamp(3rem, 8vw, 5.6rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: var(--brand); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .kicker { display: inline-flex; align-items: center; gap: 8px; color: var(--accent-ink); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase; }
 .kicker::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
 .hero .lead { font-size: 1.15rem; max-width: 56ch; }

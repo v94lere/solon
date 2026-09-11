@@ -26,7 +26,11 @@ const TOOLS = ["Mailpit", lang === "fr" ? "Blank compose.yaml" : "Blank compose.
 <section class="hero wrap">
   <div class="hero-text">
     <span class="kicker">{t.hero.kicker}</span>
-    <h1>{t.hero.title}</h1>
+    <div class="hero-brand" aria-hidden="true">
+      <img src={`${base}/logo-large.png`} alt="" width="480" height="480" loading="eager" />
+      <span>Solon</span>
+    </div>
+    <h1 class="sr-only">{t.hero.title}</h1>
     <p class="lead">{t.hero.lead}</p>
     <div class="cta">
       <a class="btn btn-primary" href={LATEST} rel="noopener">
