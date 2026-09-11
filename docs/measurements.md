@@ -975,3 +975,32 @@ reste installée sur la machine de test).
    branche depuis `upstream/master`, copie sous `manifests/v/ValereNeveux/Solon/0.1.1/`, `winget validate`, PR
    avec le gabarit du dépôt. La création du fork depuis cette session a été refusée par le garde-fou de
    l'assistant ; la soumission est à lancer par Valère (ou à réessayer avec son accord explicite).
+
+## Version 0.1.2 (12 septembre 2026)
+
+Contenu : les six compléments ci-dessus, plus les correctifs en attente depuis le test « de A à Z » (hello-world
+rejouable et journaux ouverts, avis « terminé aussitôt », champ de renommage) et la **garde d'instance unique**
+(`tauri-plugin-single-instance`, premier plugin enregistré : un second lancement appelle `tray::show_main`).
+
+| Étape | Mesure |
+|---|---|
+| `cargo build --release` service + shim, puis `npm run tauri build` | installateur `Solon_0.1.2_x64-setup.exe`, 106 494 795 octets, SHA-256 `c2c10679…5dc2` |
+| Release GitHub `v0.1.2` (installateur + `SHA256SUMS.txt`, notes EN/FR) | publiée ; le site se reconstruit sur l'événement `release` |
+| Installation silencieuse `/S` par-dessus 0.1.1 (service en marche, application fermée) | 20 s, code 0 ; service `Running`, `solon.exe` en 0.1.2 ; aucune fenêtre ouverte à la fin (l'installateur ne relance pas l'application) |
+| Second lancement de `solon.exe` | aucun nouveau processus : un seul `solon.exe`, fenêtre existante ramenée au premier plan |
+| Démarrage du moteur après l'installation | `last_boot_ms` = 4 561 ; le moteur était **arrêté** après l'installation (`autostart` désactivé, l'application ne l'a pas lancé seule) |
+| En-têtes du mandataire, conteneur d'écho `mendhak/http-https-echo` | HTTPS : `x-forwarded-proto: https`, `x-forwarded-host: solon-hdrtest.solon.local`, `x-forwarded-port: 443`, `x-forwarded-for: 127.0.0.1`, `forwarded: for=127.0.0.1;host=…;proto=https` ; HTTP : `x-forwarded-proto: http` ; conteneur et image supprimés ensuite |
+
+Deux accrocs dans l'intégration continue : (1) `cargo fmt --check` refusait le nouveau code (corrigé, `b029949`) ;
+(2) le déploiement GitHub Pages déclenché par la release a été **refusé** : l'environnement `github-pages`
+n'autorisait que la branche `main`, et une exécution sur l'événement `release` porte la référence du tag. Réglé
+par une règle de déploiement pour les tags `v*` (API `deployment-branch-policies`) et une reconstruction manuelle
+depuis `main`, qui lit la liste des releases au moment du build (bouton Télécharger → 0.1.2).
+
+**Constat à traiter** : l'installation arrête le moteur proprement, et au redémarrage suivant les conteneurs qui
+tournaient ne repartent pas quand leur politique de redémarrage est `no` (cas d'un `compose.yaml` sans
+`restart:`) : la pile `odoo18` de Valère, en marche avant l'installation, est restée `Exited (0)`. Docker ne
+relance après un arrêt propre du démon que les conteneurs `always` / `unless-stopped`. Même effet attendu au
+redémarrage de Windows et après un arrêt du moteur depuis l'application. Piste : mémoriser à l'arrêt les
+conteneurs en marche et les redémarrer une fois le moteur prêt (option « Relancer les conteneurs qui tournaient »).
+Pile relancée à la main (`docker start`).
