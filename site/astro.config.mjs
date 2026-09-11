@@ -2,8 +2,8 @@
 // personnalisé, définir SITE_URL (ex. https://solon.dev) et SITE_BASE=/ au moment du build.
 import { defineConfig } from "astro/config";
 
-const site = process.env.SITE_URL ?? "https://v94lere.github.io";
-const base = process.env.SITE_BASE ?? "/solon";
+const site = process.env.SITE_URL || "https://v94lere.github.io";   // `||` : une variable vide compte comme absente
+const base = process.env.SITE_BASE || "/solon";
 
 export default defineConfig({
   site,
