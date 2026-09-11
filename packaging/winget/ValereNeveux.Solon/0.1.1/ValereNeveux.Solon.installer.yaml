@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.9.0.schema.json
+PackageIdentifier: ValereNeveux.Solon
+PackageVersion: 0.1.1
+MinimumOSVersion: 10.0.19045.0
+InstallerType: nullsoft
+Scope: machine
+InstallModes:
+- interactive
+- silent
+- silentWithProgress
+InstallerSwitches:
+  Silent: /S
+  SilentWithProgress: /S
+UpgradeBehavior: install
+# L'installateur active Hyper-V et la Plateforme de machine virtuelle si besoin : code 3010 = redémarrage requis.
+ExpectedReturnCodes:
+- InstallerReturnCode: 3010
+  ReturnResponse: rebootRequiredToFinish
+ElevationRequirement: elevationRequired
+ReleaseDate: 2026-09-10
+AppsAndFeaturesEntries:
+- DisplayName: Solon
+  Publisher: Solon
+  DisplayVersion: 0.1.1
+  ProductCode: Solon
+Installers:
+- Architecture: x64
+  InstallerUrl: https://github.com/v94lere/solon/releases/download/v0.1.1/Solon_0.1.1_x64-setup.exe
+  InstallerSha256: B976B619CCD3D3242AE4355781D033E84CC7E81FE053021491C9D94D3F7A7324
+ManifestType: installer
+ManifestVersion: 1.9.0

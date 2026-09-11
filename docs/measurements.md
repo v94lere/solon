@@ -889,3 +889,12 @@ aussitôt et rien ne le signale. Ajout d'un **avis** dans Containers et Images :
 avec le code n en moins de deux secondes. C'est normal pour une image ponctuelle comme hello-world : son résultat
 est dans les journaux », avec un bouton Logs. Le dialogue Run renvoie désormais l'identifiant créé ;
 `openContainer(id, onglet)` permet d'ouvrir une fiche sur ses journaux depuis n'importe quelle page.
+
+## Manifeste winget (11 septembre 2026, soir)
+
+Manifestes préparés dans `packaging/winget/ValereNeveux.Solon/0.1.1/` (version, installer, locales en-US et fr-FR),
+identifiant `ValereNeveux.Solon`, type `nullsoft`, portée machine, `/S` silencieux, code 3010 déclaré comme
+« redémarrage requis », correspondance Ajout/Suppression par `ProductCode: Solon` (clé de désinstallation créée
+par l'installateur Tauri, éditeur « Solon »). À soumettre par pull request sur microsoft/winget-pkgs sous
+`manifests/v/ValereNeveux/Solon/0.1.1/` une fois validés par `winget validate`. Les versions suivantes se soumettent
+avec `wingetcreate update` depuis le workflow de release (jeton GitHub nécessaire).
