@@ -160,7 +160,7 @@ export function TimeChart({ series, windowMs, now, format, minMax, binary = fals
               )}
             </g>
           ))}
-          {[0, 0.25, 0.5, 0.75, 1].map((k) => {
+          {(plotW < 420 ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1]).map((k) => {
             const t = t0 + k * windowMs;
             const xx = x(t);
             return (

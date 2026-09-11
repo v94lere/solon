@@ -823,16 +823,26 @@ porte un chemin Windows dans son étiquette `working_dir`, et non `/mnt/host/c/�
 l'application ; la liste n'affichait alors pas la flèche vers la vue projet. Corrigé : le chemin Windows est accepté
 tel quel.
 
-## Colonnes de la liste des conteneurs selon la largeur (11 septembre 2026)
+## Listes sans défilement horizontal (11 septembre 2026)
 
-Toutes les cellules du tableau étant en `white-space: nowrap`, la liste mesurait au minimum ~950 px et défilait
-horizontalement dès que la fenêtre était plus étroite. La carte de la liste devient un conteneur CSS
-(`container-type: inline-size`) et des éléments se cachent selon **sa** largeur (fenêtre moins le menu, soit environ
-250 px de moins) : sous 920 px la courbe CPU, la colonne Image (le nom de l'image passe en petit sous le nom du
-conteneur), les boutons Redémarrer et Journaux de la ligne, et les adresses longues sont tronquées avec « … » ; sous
-780 px la colonne Mémoire et des marges réduites ; sous 680 px la colonne CPU. L'en-tête de la page passe sur deux
-lignes et le champ de recherche rétrécit au lieu de déborder. Tout ce qui disparaît reste dans la fiche du
-conteneur. Vérifié par captures à 1 100, 900 et 800 px de fenêtre : plus de défilement horizontal ; il ne
-réapparaît qu'en dessous d'environ 550 px de carte. Choix de Valère : option « masquer des colonnes » seule, sans
-repli automatique du menu ni passage en cartes. Trois itérations ont été nécessaires : les premiers paliers (1 000
-/ 850 / 700) laissaient les noms et les adresses non coupés déborder.
+Demande de Valère : ne plus jamais voir la barre de défilement horizontale. Première approche (colonnes masquées par
+paliers avec `display: none`, cellules toujours en `nowrap`) insuffisante : les noms et adresses longs continuaient
+de pousser la largeur. Approche retenue, appliquée à Containers, Images, Volumes, Networks, la vue projet et le
+tableau d'Activity :
+
+- la carte de la liste interdit le défilement horizontal (`overflow-x: hidden`) et sert de conteneur CSS ;
+- le tableau est à **largeur fixe** (`table-layout: fixed`) : les colonnes se partagent la carte, les colonnes
+  de chiffres et d'actions ont une largeur en pixels, les colonnes de texte une part en pourcentage ou le reste ;
+  tout texte trop long est tronqué avec « … », l'infobulle donnant la valeur complète ;
+- des colonnes se **replient** selon la largeur de la carte : sous 920 px la courbe CPU, l'image (le nom de l'image
+  passe sous le nom du conteneur), les boutons Redémarrer et Journaux ; sous 780 px la mémoire et les dates ;
+  sous 680 px le CPU, les identifiants et les pilotes ;
+- l'en-tête de page passe sur deux lignes, le champ de recherche rétrécit ;
+- le graphique d'Activity réduit sa légende et espace ses repères de temps sous 760 px.
+
+Piège trouvé avec un banc de test HTML rendu par Edge sans fenêtre (`.local/build/harness.html`, largeurs mesurées
+par script) : en largeur fixe, une cellule d'en-tête en `display: none` **laisse sa colonne exister** comme colonne
+« auto » qui garde sa part de place ; à 442 px, la colonne Nom ne mesurait plus que 46 px alors que trois colonnes
+invisibles en occupaient 137. Une colonne repliée est donc mise à **largeur 0** (et remplissage 0), pas en
+`display: none` : le Nom remonte à 183 px. Vérifié ensuite dans l'application à 700 px de fenêtre sur les cinq
+listes : aucune barre horizontale.

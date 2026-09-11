@@ -48,7 +48,7 @@ export function NetworksView() {
         search={<input type="search" className="input w-56" placeholder={t("networks.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("networks.search")} />}
       />
       {error && <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>}
-      <div className="card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
+      <div className="card list-card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
         {query.isLoading ? (
           <SkeletonRows rows={4} cols={4} />
         ) : rows.length === 0 ? (
@@ -58,19 +58,19 @@ export function NetworksView() {
             <thead>
               <tr>
                 <th>{t("networks.columns.name")}</th>
-                <th>{t("networks.columns.driver")}</th>
-                <th>{t("networks.columns.subnet")}</th>
-                <th>{t("networks.columns.id")}</th>
-                <th />
+                <th className="col-driver">{t("networks.columns.driver")}</th>
+                <th className="col-subnet">{t("networks.columns.subnet")}</th>
+                <th className="col-id">{t("networks.columns.id")}</th>
+                <th className="col-actions-wide" />
               </tr>
             </thead>
             <tbody>
               {rows.map((n) => (
                 <tr key={n.Id} tabIndex={0}>
                   <td className="font-medium">{n.Name}</td>
-                  <td>{n.Driver}</td>
-                  <td className="mono">{(n.IPAM?.Config ?? []).map((c) => c.Subnet).filter(Boolean).join(", ")}</td>
-                  <td className="mono">{n.Id.slice(0, 12)}</td>
+                  <td className="col-driver">{n.Driver}</td>
+                  <td className="col-subnet mono">{(n.IPAM?.Config ?? []).map((c) => c.Subnet).filter(Boolean).join(", ")}</td>
+                  <td className="col-id mono">{n.Id.slice(0, 12)}</td>
                   <td>
                     <div className="flex justify-end gap-1">
                       <button type="button" className="btn btn-ghost btn-sm" onClick={() => setInspecting(n.Id)}>{t("networks.actions.inspect")}</button>

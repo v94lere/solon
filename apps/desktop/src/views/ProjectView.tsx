@@ -150,7 +150,7 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
       </div>
       {error && <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>}
 
-      <div className="card mx-4 mb-3 overflow-auto" style={{ maxHeight: "40%" }}>
+      <div className="card list-card mx-4 mb-3 overflow-auto" style={{ maxHeight: "40%" }}>
         {services.length === 0 ? (
           <p className="p-4" style={{ color: "var(--ink-2)" }}>{t("project.no_services")}</p>
         ) : (
@@ -158,11 +158,11 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
             <thead>
               <tr>
                 <th>{t("project.columns.service")}</th>
-                <th>{t("project.columns.container")}</th>
-                <th>{t("containers.columns.image")}</th>
-                <th>{t("containers.columns.status")}</th>
-                <th>{t("containers.columns.ports")}</th>
-                <th />
+                <th className="col-container">{t("project.columns.container")}</th>
+                <th className="col-image">{t("containers.columns.image")}</th>
+                <th className="col-status">{t("containers.columns.status")}</th>
+                <th className="col-ports">{t("containers.columns.ports")}</th>
+                <th className="col-actions" />
               </tr>
             </thead>
             <tbody>
@@ -172,12 +172,12 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
                 return (
                   <tr key={c.Id}>
                     <td className="font-medium">{serviceNameOf(c)}</td>
-                    <td className="mono">{cname}</td>
-                    <td className="mono max-w-[220px] truncate" title={c.Image}>{c.Image.slice(c.Image.lastIndexOf("/") + 1)}</td>
+                    <td className="col-container mono" title={cname}>{cname}</td>
+                    <td className="col-image mono" title={c.Image}>{c.Image.slice(c.Image.lastIndexOf("/") + 1)}</td>
                     <td>
                       <span className={`pill pill-dot ${stateClass(c.State)}`} role="img" title={c.Status} aria-label={t(`containers.state.${c.State}`, { defaultValue: c.State })} />
                     </td>
-                    <td className="mono"><PortLinks c={c} running={isRunning} /></td>
+                    <td className="col-ports mono"><PortLinks c={c} running={isRunning} /></td>
                     <td>
                       <div className="flex justify-end gap-0.5">
                         {isRunning ? (

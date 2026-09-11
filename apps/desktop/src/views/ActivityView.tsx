@@ -268,7 +268,7 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
         </section>
       </div>
 
-      <div className="card mx-4 mb-3">
+      <div className="card chart-card mx-4 mb-3">
         <div className="flex items-center gap-3 border-b px-3" style={{ borderColor: "var(--line)" }}>
           <div role="tablist" className="tabs" style={{ border: 0 }}>
             {(["cpu", "mem", "net"] as Metric[]).map((m) => (
@@ -277,7 +277,7 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
           </div>
           <span className="kbd-hint">{t(`activity.unit.${metric}`)}</span>
           <span className="flex-1" />
-          <span className="kbd-hint">{t("activity.legend_hint")}</span>
+          <span className="kbd-hint chart-hint">{t("activity.legend_hint")}</span>
         </div>
         <TimeChart
           series={chartSeries}
@@ -294,7 +294,7 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
         />
       </div>
 
-      <div className="card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
+      <div className="card list-card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
         {rows.length === 0 ? (
           <EmptyState icon={<IconPulse />} title={t("activity.empty")} hint={t("activity.empty_hint")} />
         ) : (
@@ -302,10 +302,10 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
             <thead>
               <tr>
                 <th><button type="button" className="th-sort" onClick={() => toggleSort("name")}>{t("activity.columns.name")}{arrow("name")}</button></th>
-                <th className="text-right"><button type="button" className="th-sort" onClick={() => toggleSort("cpu")}>{t("activity.columns.cpu")}{arrow("cpu")}</button></th>
-                <th className="text-right"><button type="button" className="th-sort" onClick={() => toggleSort("mem")}>{t("activity.columns.memory")}{arrow("mem")}</button></th>
-                <th className="text-right"><button type="button" className="th-sort" onClick={() => toggleSort("net")}>{t("activity.columns.network")}{arrow("net")}</button></th>
-                <th>{t("activity.columns.trend")}</th>
+                <th className="col-cpu text-right"><button type="button" className="th-sort" onClick={() => toggleSort("cpu")}>{t("activity.columns.cpu")}{arrow("cpu")}</button></th>
+                <th className="col-memwide text-right"><button type="button" className="th-sort" onClick={() => toggleSort("mem")}>{t("activity.columns.memory")}{arrow("mem")}</button></th>
+                <th className="col-net text-right"><button type="button" className="th-sort" onClick={() => toggleSort("net")}>{t("activity.columns.network")}{arrow("net")}</button></th>
+                <th className="col-trend">{t("activity.columns.trend")}</th>
               </tr>
             </thead>
             <tbody>
@@ -317,10 +317,10 @@ export function ActivityView({ onOpenContainer }: { onOpenContainer: (id: string
                       {name}
                     </button>
                   </td>
-                  <td className="mono text-right whitespace-nowrap">{st ? `${st.sample.cpu_percent.toFixed(1)} %` : "—"}</td>
-                  <td className="mono text-right whitespace-nowrap">{st ? `${formatBytes(st.sample.mem_usage)}${st.sample.mem_limit && now && st.sample.mem_limit < now.memTotal * 0.95 ? ` / ${formatBytes(st.sample.mem_limit)}` : ""}` : "—"}</td>
-                  <td className="mono text-right whitespace-nowrap">{st ? `↓ ${formatBytes(st.rxRate)}/s  ↑ ${formatBytes(st.txRate)}/s` : "—"}</td>
-                  <td className="w-40">
+                  <td className="col-cpu mono text-right whitespace-nowrap">{st ? `${st.sample.cpu_percent.toFixed(1)} %` : "—"}</td>
+                  <td className="col-memwide mono text-right whitespace-nowrap">{st ? `${formatBytes(st.sample.mem_usage)}${st.sample.mem_limit && now && st.sample.mem_limit < now.memTotal * 0.95 ? ` / ${formatBytes(st.sample.mem_limit)}` : ""}` : "—"}</td>
+                  <td className="col-net mono text-right whitespace-nowrap">{st ? `↓ ${formatBytes(st.rxRate)}/s  ↑ ${formatBytes(st.txRate)}/s` : "—"}</td>
+                  <td className="col-trend">
                     <Spark values={st?.cpuHistory ?? []} max={Math.max(100, ...(st?.cpuHistory ?? [0]))} className="spark-row" warn={70} bad={90} />
                   </td>
                 </tr>

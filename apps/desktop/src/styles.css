@@ -512,25 +512,62 @@ select {
 .title-edit svg { width: 13px; height: 13px; color: var(--ink-3); opacity: 0; transition: opacity 120ms; }
 .title-edit:hover svg, .title-edit:focus-visible svg { opacity: 1; }
 
-/* Listes : colonnes masquées selon la largeur de la carte (largeur de la fenêtre moins le menu), pas de
-   défilement horizontal avant ~550 px de carte. Ce qui disparaît reste dans la fiche du conteneur. */
-.list-card { container-type: inline-size; }
+/* Listes : jamais de défilement horizontal. Le tableau est à largeur fixe (les colonnes se partagent la
+   carte, le texte trop long est tronqué avec « … », l'infobulle donne la valeur entière) et des colonnes se
+   replient selon la largeur de la carte (fenêtre moins le menu). Ce qui disparaît reste dans la fiche.
+   Une colonne repliée est mise à largeur 0, pas en display:none : en largeur fixe, une cellule d'en-tête
+   absente laisse sa colonne « auto » et celle-ci garderait sa part de place. */
+.list-card { container-type: inline-size; overflow-x: hidden; }
+.list-card .table { table-layout: fixed; width: 100%; }
+.list-card th, .list-card td { overflow: hidden; text-overflow: ellipsis; }
+.list-card th.col-status { width: 64px; }
+.list-card th.col-cpu { width: 100px; }
+.list-card th.col-mem { width: 84px; }
+.list-card th.col-memwide { width: 150px; }
+.list-card th.col-net { width: 190px; }
+.list-card th.col-trend { width: 160px; }
+.list-card th.col-actions { width: 140px; }
+.list-card th.col-actions-wide { width: 200px; }
+.list-card th.col-image { width: 18%; }
+.list-card th.col-ports { width: 30%; }
+.list-card th.col-container { width: 22%; }
+.list-card th.col-id { width: 130px; }
+.list-card th.col-size { width: 90px; }
+.list-card th.col-date { width: 170px; }
+.list-card th.col-driver { width: 90px; }
+.list-card th.col-subnet { width: 150px; }
+.list-card th.col-mount { width: 36%; }
+.list-card td.col-ports .port-link, .list-card td.col-ports > span > span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .name-image { display: none; font-size: 11px; color: var(--ink-3); }
 @container (max-width: 920px) {
-  .list-card .col-trend, .list-card .col-image, .list-card .col-secondary { display: none; }
+  .list-card th.col-trend, .list-card td.col-trend, .list-card th.col-image, .list-card td.col-image { width: 0 !important; max-width: 0; padding: 0 !important; border-width: 0; }
+  .list-card .col-secondary, .list-card svg.col-trend { display: none; }
   .list-card .name-image { display: block; }
-  .list-card .col-name-inner { max-width: 180px; }
-  /* Adresses longues : tronquées avec « … » (l'infobulle donne l'adresse entière), une par ligne. */
-  .list-card td.col-ports { max-width: 200px; }
-  .list-card td.col-ports .port-link, .list-card td.col-ports > span > span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .list-card th.col-cpu { width: 72px; }
+  .list-card th.col-actions { width: 76px; }
+  .list-card th.col-container { width: 0 !important; max-width: 0; padding: 0 !important; }
+  .list-card td.col-container { width: 0; max-width: 0; padding: 0 !important; }
 }
 @container (max-width: 780px) {
-  .list-card .col-mem { display: none; }
+  .list-card th.col-mem, .list-card td.col-mem, .list-card th.col-date, .list-card td.col-date { width: 0 !important; max-width: 0; padding: 0 !important; border-width: 0; }
   .list-card td, .list-card th { padding-left: 6px; padding-right: 6px; }
-  .list-card td.col-ports { max-width: 180px; }
+  .list-card th.col-actions-wide { width: 160px; }
+  .list-card td .btn-sm { padding-left: 6px; padding-right: 6px; }
+  .list-card th.col-memwide { width: 110px; }
+  .list-card th.col-net { width: 150px; }
 }
 @container (max-width: 680px) {
-  .list-card .col-cpu { display: none; }
-  .list-card .col-name-inner { max-width: 150px; }
-  .list-card td.col-ports { max-width: 160px; }
+  .list-card th.col-cpu, .list-card td.col-cpu, .list-card th.col-id, .list-card td.col-id, .list-card th.col-driver, .list-card td.col-driver { width: 0 !important; max-width: 0; padding: 0 !important; border-width: 0; }
+  .list-card th.col-status { width: 48px; }
+}
+
+/* Graphique d'Activity dans une fenêtre étroite : légende plus étroite, conseil masqué. */
+.chart-card { container-type: inline-size; }
+@container (max-width: 760px) {
+  .chart-card .chart-legend { width: 160px; }
+  .chart-card .chart-hint { display: none; }
+}
+@container (max-width: 560px) {
+  .chart-card .chart-legend { width: 130px; font-size: 11.5px; }
+  .chart-card .chart-legend-value { display: none; }
 }

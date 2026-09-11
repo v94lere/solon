@@ -72,7 +72,7 @@ export function VolumesView() {
         search={<input type="search" className="input w-56" placeholder={t("volumes.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("volumes.search")} />}
       />
       {error && <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>}
-      <div className="card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
+      <div className="card list-card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
         {query.isLoading ? (
           <SkeletonRows rows={4} cols={4} />
         ) : rows.length === 0 ? (
@@ -82,21 +82,21 @@ export function VolumesView() {
             <thead>
               <tr>
                 <th>{t("volumes.columns.name")}</th>
-                <th>{t("volumes.columns.driver")}</th>
-                <th>{t("volumes.columns.created")}</th>
-                <th>{t("volumes.columns.mountpoint")}</th>
-                <th />
+                <th className="col-driver">{t("volumes.columns.driver")}</th>
+                <th className="col-date">{t("volumes.columns.created")}</th>
+                <th className="col-mount">{t("volumes.columns.mountpoint")}</th>
+                <th className="col-actions-wide" />
               </tr>
             </thead>
             <tbody>
               {rows.map((v) => (
                 <tr key={v.Name} tabIndex={0}>
                   <td>
-                    <button type="button" className="font-medium hover:underline" style={{ color: "var(--ink)" }} onClick={() => setBrowsing(v.Name)}>{v.Name}</button>
+                    <button type="button" className="block max-w-full truncate text-left font-medium hover:underline" title={v.Name} style={{ color: "var(--ink)" }} onClick={() => setBrowsing(v.Name)}>{v.Name}</button>
                   </td>
-                  <td>{v.Driver}</td>
-                  <td>{v.CreatedAt ? new Date(v.CreatedAt).toLocaleString() : "—"}</td>
-                  <td className="mono max-w-[320px] truncate" title={v.Mountpoint}>{v.Mountpoint}</td>
+                  <td className="col-driver">{v.Driver}</td>
+                  <td className="col-date">{v.CreatedAt ? new Date(v.CreatedAt).toLocaleString() : "—"}</td>
+                  <td className="col-mount mono" title={v.Mountpoint}>{v.Mountpoint}</td>
                   <td>
                     <div className="flex justify-end gap-1">
                       <button type="button" className="btn btn-ghost btn-sm" onClick={() => setBrowsing(v.Name)}>{t("volumes.actions.files")}</button>

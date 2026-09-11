@@ -233,11 +233,11 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
               <tr>
                 <th>{t("containers.columns.name")}</th>
                 <th className="col-image">{t("containers.columns.image")}</th>
-                <th>{t("containers.columns.status")}</th>
+                <th className="col-status">{t("containers.columns.status")}</th>
                 <th className="col-ports">{t("containers.columns.ports")}</th>
                 <th className="col-cpu text-right">{t("containers.columns.cpu")}</th>
                 <th className="col-mem text-right">{t("containers.columns.memory")}</th>
-                <th />
+                <th className="col-actions" />
               </tr>
             </thead>
             <tbody>
