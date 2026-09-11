@@ -142,6 +142,11 @@ pub fn run() {
         .with_env_filter(std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()))
         .init();
     tauri::Builder::default()
+        // Une seule instance : un second lancement (raccourci, menu Démarrer, fin d'installation) montre la
+        // fenêtre déjà ouverte au lieu d'empiler des processus. Doit être le premier plugin enregistré.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            tray::show_main(app);
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())

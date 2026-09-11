@@ -3577,7 +3577,7 @@ dependencies = [
 
 [[package]]
 name = "solon"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "bollard",
@@ -3590,6 +3590,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-notification",
  "tauri-plugin-opener",
+ "tauri-plugin-single-instance",
  "tauri-plugin-window-state",
  "tokio",
  "tracing",
@@ -3600,7 +3601,7 @@ dependencies = [
 
 [[package]]
 name = "solon-agent"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "fuser",
  "libc",
@@ -3611,7 +3612,7 @@ dependencies = [
 
 [[package]]
 name = "solon-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -3620,14 +3621,14 @@ dependencies = [
 
 [[package]]
 name = "solon-docker-shim"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "solon-hvsock"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "tokio",
  "tracing",
@@ -3636,7 +3637,7 @@ dependencies = [
 
 [[package]]
 name = "solon-prereq"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "solon-core",
  "solon-vm-hcs",
@@ -3647,7 +3648,7 @@ dependencies = [
 
 [[package]]
 name = "solon-service"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "rcgen",
  "rustls",
@@ -3670,7 +3671,7 @@ dependencies = [
 
 [[package]]
 name = "solon-vm-hcs"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -4101,6 +4102,22 @@ dependencies = [
  "thiserror 2.0.20",
  "url",
  "windows 0.61.3",
+ "zbus",
+]
+
+[[package]]
+name = "tauri-plugin-single-instance"
+version = "2.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5cd0cb5c412a5071b69bab6a6df1583cbb89460d4a83b6a24769b08d15b6b1e1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "thiserror 2.0.20",
+ "tokio",
+ "tracing",
+ "windows-sys 0.60.2",
  "zbus",
 ]
 
