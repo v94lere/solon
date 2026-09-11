@@ -928,3 +928,50 @@ envoyées depuis la session principale ; (3) une fois, la fenêtre Solon n'étan
 parties dans VS Code : un garde-fou vérifie désormais le titre de la fenêtre au premier plan avant chaque action ;
 (4) réutiliser un profil Edge tué de force affiche « Restore pages » : profil neuf à chaque enregistrement et
 `--disable-session-crashed-bubble`.
+
+## Avant la campagne : six compléments (12 septembre 2026)
+
+Décidés après la question « que manque-t-il pour lancer la promotion ? » ; livrés ensemble, non publiés (la 0.1.1
+reste installée sur la machine de test).
+
+1. **Nouvelles versions.** L'application interroge `api.github.com/repos/v94lere/solon/releases/latest` dix
+   secondes après l'ouverture (réglable dans Réglages → Mises à jour, et « Vérifier maintenant »). La requête ne
+   porte que l'adresse du dépôt ; aucune donnée sur l'utilisateur ni sur l'installation. Comparaison de versions
+   `a.b.c[-pré]` (`compareVersions`), bandeau en haut de la fenêtre avec Télécharger (l'installateur `*-setup.exe`
+   joint à la release, sinon la page), Notes de version, Plus tard (la version ignorée ne revient pas). La CSP de
+   Tauri autorise désormais `connect-src https://api.github.com`. Sans mise à jour automatique : on informe.
+2. **Ports déjà pris.** Nouvelle commande `ports_probe` : un port est pris si `bind` échoue sur `0.0.0.0` ou
+   `127.0.0.1` (couvre les serveurs Windows et les ports publiés par Solon lui-même, puisque le service les
+   réserve) ; suggestion = le port libre suivant, sans chevauchement entre suggestions. Dans la galerie, les ports
+   hôte du `compose.yaml` en cours d'édition sont vérifiés 400 ms après chaque frappe ; un bandeau nomme le port
+   et propose « Utiliser 8081 au lieu de 8080 » (remplacement dans le texte). Dans la vue projet, un Up qui échoue
+   sur « port is already allocated » / « address already in use » / port réservé affiche une explication avec le
+   port et le suivant libre, et renvoie vers l'onglet Compose. Grammaire des ports : forme courte, adresse et
+   protocole facultatifs, plages, guillemets simples ou doubles, commentaires.
+3. **Mandataire `solon.local` : en-têtes de transfert.** Le relais ne copie plus la connexion telle quelle : chaque
+   en-tête de requête est réécrit (`X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Port`, `X-Forwarded-For`,
+   `X-Real-IP`, `Forwarded`), y compris sur les connexions persistantes (corps `Content-Length` et `chunked` relayés
+   tels quels, requête suivante réécrite à son tour) ; `Connection: upgrade` (WebSocket) bascule en tunnel brut
+   après l'en-tête. Les en-têtes de ce nom envoyés par le client sont remplacés. Réponses copiées sans lecture.
+   L'image officielle WordPress met `$_SERVER['HTTPS']` à `on` d'après `X-Forwarded-Proto` : une installation
+   faite en HTTPS enregistre des adresses `https://` ; une installation déjà faite en http garde son `siteurl`
+   (à changer dans Réglages → Général). Odoo demande `proxy_mode = True`. Tests unitaires : réécriture, corps de
+   longueur connue, corps morcelé avec reste dans le tampon.
+4. **Disque.** Réglages → Disque : occupation du disque du moteur (compteurs déjà remontés par l'agent), place
+   libre du lecteur Windows qui héberge `data.vhdx` (`GetDiskFreeSpaceExW`, nouvelle dépendance `windows` de
+   l'application), taille réelle du fichier VHDX. « Récupérer l'espace » = `prune_images` avec `dangling=false`
+   (images sans conteneur, comme `docker image prune -a`) + `prune_build` (tout le cache), puis `fstrim` de
+   `/var/lib/solon` et `/var/lib/docker` pour que le VHDX dynamique rende les blocs à Windows ; conteneurs et
+   volumes jamais touchés ; estimation affichée avant (somme des tailles des images inutilisées, couches partagées
+   comptées plusieurs fois : ordre de grandeur), bilan réel après. Avertissement quand le lecteur descend sous
+   max(5 Gio, 5 %) : bandeau en haut de la fenêtre, vérifié au lancement puis toutes les dix minutes.
+5. **Page Dépannage** (`/troubleshooting/`, `/fr/depannage/`) : sept problèmes dans l'ordre où on les rencontre
+   (SmartScreen, moteur qui ne démarre pas après l'installation, port pris, conteneur qui se termine aussitôt,
+   réseau et adresses locales, disque plein, Docker Desktop ou WSL présents), la marche à suivre pour signaler
+   avec le zip de diagnostic (contenu et ce qu'il ne contient pas), la table des codes d'erreur du README. Lien
+   dans la barre du site, depuis les README et le gabarit de ticket ; le gabarit demande le zip en premier champ
+   obligatoire et le `config.yml` propose la page avant l'ouverture d'un ticket.
+6. **winget.** Script `.local/build/winget-submit.ps1` : fork, clone partiel (`--filter=blob:none --sparse`),
+   branche depuis `upstream/master`, copie sous `manifests/v/ValereNeveux/Solon/0.1.1/`, `winget validate`, PR
+   avec le gabarit du dépôt. La création du fork depuis cette session a été refusée par le garde-fou de
+   l'assistant ; la soumission est à lancer par Valère (ou à réessayer avec son accord explicite).

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { compose, containers, system, type ComposeProject, type ContainerSummary } from "../api";
+import { compose, containers, host, system, type ComposeProject, type ContainerSummary } from "../api";
+import { portConflictIn } from "../ports";
 import { markUserAction } from "../engine";
 import { projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, serviceNameOf } from "../projects";
 import { MultiLogsPanel } from "../components/MultiLogsPanel";
@@ -96,13 +97,26 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
     setShowOutput(true);
     setOutput([]);
     setExitCode(null);
+    const collected: string[] = [];
     try {
       const code = await compose.stream(dir, args, (c) => {
         if (c.kind === "exit") return;
+        if (collected.length < 2000) collected.push(c.text);
         setOutput((prev) => (prev.length > 4000 ? prev.slice(prev.length - 4000) : prev).concat({ kind: c.kind, text: c.text }));
       });
       setExitCode(code);
-      if (code !== 0) setError(t("project.exit_code", { code }));
+      if (code !== 0) {
+        // Port hôte déjà pris : la cause la plus fréquente d'un Up qui échoue ; on nomme le port,
+        // on propose le suivant libre et on indique où le changer.
+        const port = portConflictIn(collected.join(""));
+        if (port) {
+          const probe = await host.portsProbe([port]).catch(() => []);
+          const next = probe[0]?.suggestion ?? port + 1;
+          setError(t("project.port_conflict", { port, next }));
+        } else {
+          setError(t("project.exit_code", { code }));
+        }
+      }
       await queryClient.invalidateQueries({ queryKey: ["containers"] });
     } catch (e) {
       setError(String(e));

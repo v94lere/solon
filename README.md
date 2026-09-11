@@ -209,6 +209,11 @@ Details and method: `docs/measurements.md`.
 
 ## Troubleshooting
 
+Step-by-step guide for the most common problems (SmartScreen, reboot after enabling Hyper-V, port already in
+use, container that exits at once, network and `solon.local` addresses, disk space):
+**<https://v94lere.github.io/solon/troubleshooting/>**. To report a problem, attach the zip from
+Settings → Diagnostic → "Export a diagnostic…" (logs, state, settings, `docker info`; no credentials).
+
 Error messages carry a **stable code**; logs are in `%ProgramData%\Solon\logs` (service) and can be copied
 from the error screen.
 
@@ -236,7 +241,9 @@ the engine. Unsynced writes of the last two seconds may be lost, as on any Linux
 - **Windows Home** is not supported (missing Hyper-V component).
 - **UDP** published ports are not relayed to `localhost` (TCP only).
 - **One engine per machine**, no multiple profiles.
-- **Not signed** (SmartScreen warning); **no automatic update**: install the new version over the old one.
+- **Not signed** (SmartScreen warning). **No automatic update**: Solon tells you when a new version exists
+  (Settings → Updates, one request to github.com, can be turned off); you download it and install it over the
+  old one.
 - A sleeping container does not run its internal scheduled tasks until something calls it; use "Keep awake"
   on its page if that matters.
 - `curl.exe` on Windows rejects the local HTTPS certificates unless you pass `--ssl-no-revoke` (same as mkcert);

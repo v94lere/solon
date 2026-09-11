@@ -230,6 +230,11 @@ Ce qu'il faut savoir :
 
 ## Dépannage
 
+Guide pas à pas des problèmes les plus fréquents (SmartScreen, redémarrage après l'activation d'Hyper-V, port
+déjà pris, conteneur qui se termine aussitôt, réseau et adresses `solon.local`, espace disque) :
+**<https://v94lere.github.io/solon/fr/depannage/>**. Pour signaler un problème, joignez le zip de
+Réglages → Diagnostic → « Exporter un diagnostic… » (journaux, état, réglages, `docker info` ; aucun identifiant).
+
 Les messages de l'interface portent un **code stable** ; les journaux sont dans
 `%ProgramData%\Solon\logs` (service) et se copient depuis l'écran d'erreur.
 
@@ -264,7 +269,8 @@ perdues, comme sur toute machine Linux.
   Desktop (voir « Utilisation »).
 - **Installeur non signé** (avertissement SmartScreen) ; le chemin « activation de Hyper-V puis redémarrage »
   n'a pas encore été éprouvé sur une machine vierge.
-- Pas de mise à jour automatique (aucune requête réseau) : installer la nouvelle version par-dessus.
+- Pas de mise à jour automatique : Solon signale qu'une nouvelle version existe (Réglages → Mises à jour, une
+  requête vers github.com, désactivable) ; on la télécharge et on l'installe par-dessus.
 
 ## Documentation
 

@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Troubleshooting guide
+    url: https://v94lere.github.io/solon/troubleshooting/
+    about: The most common problems (SmartScreen, reboot after enabling Hyper-V, ports already in use, network, disk space) and what to do, in one page.
   - name: Questions and ideas
     url: https://github.com/v94lere/solon/discussions
     about: Ask how to do something or discuss an idea before opening an issue.

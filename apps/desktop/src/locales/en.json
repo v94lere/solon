@@ -428,7 +428,8 @@
     "save_up": "Save and Up",
     "reload": "Reload",
     "unsaved": "Unsaved changes",
-    "saved": "Saved"
+    "saved": "Saved",
+    "port_conflict": "Port {{port}} is already in use on this PC by another program or another stack. In the Compose tab, change the host port (for example {{port}} → {{next}}), then Save and Up."
   },
   "machine": {
     "terminal": "Terminal",
@@ -548,7 +549,10 @@
     "extra_files": "{{count}} more file(s)",
     "need_dir": "Choose a folder first.",
     "create": "Create",
-    "create_up": "Create and start"
+    "create_up": "Create and start",
+    "port_conflict": "Port {{port}} is already in use on this PC (another program or another stack).",
+    "ports_conflict": "Ports {{ports}} are already in use on this PC (another program or another stack).",
+    "use_port": "Use {{to}} instead of {{from}}"
   },
   "usage": {
     "column": "Used",
@@ -557,5 +561,40 @@
     "unused": "Unused",
     "only_unused": "Unused only",
     "used_by": "Used by: {{names}}"
+  },
+  "updates": {
+    "title": "Updates",
+    "check_at_launch": "Check for a new version when Solon starts",
+    "privacy": "One request to github.com for the list of releases. Nothing about you or your PC is sent, and nothing is installed without you.",
+    "check_now": "Check now",
+    "checking": "Checking…",
+    "up_to_date": "You have the latest version ({{version}}).",
+    "available": "Solon {{version}} is available (you have {{current}}).",
+    "download": "Download",
+    "notes": "Release notes",
+    "later": "Later",
+    "failed": "Could not check: {{detail}}",
+    "last_check": "Last checked {{date}}",
+    "all_releases": "All releases"
+  },
+  "disk": {
+    "title": "Disk",
+    "engine": "Engine storage",
+    "engine_stopped": "Start the engine to see its usage.",
+    "drive": "Windows drive {{drive}}",
+    "used_of": "{{used}} used of {{total}}",
+    "free_of": "{{free}} free of {{total}}",
+    "file": "The engine keeps everything in one file, {{size}} on disk: {{path}}. It grows with use and only gives space back after a clean-up.",
+    "low": "Drive {{drive}} is almost full ({{free}} left). Solon's storage takes {{engine}}; removing unused images gives space back.",
+    "low_short": "This drive is almost full. Windows and Solon both slow down when it is; free some space.",
+    "reclaim": "Reclaim space",
+    "reclaiming": "Cleaning up…",
+    "reclaim_help": "Removes the images no container uses and the build cache, then gives the freed space back to Windows. Containers (running or stopped) and volumes are never touched.",
+    "estimate": "{{count}} unused image(s), about {{size}}.",
+    "nothing_unused": "Every image is used by a container; nothing to remove.",
+    "reclaimed": "Done: {{images}} image(s) and {{cache}} build cache entries removed, {{size}} freed.",
+    "confirm_title": "Reclaim space?",
+    "confirm_body": "{{count}} unused image(s) (about {{size}}) and the build cache will be removed. Pulling them again later takes a download.",
+    "confirm_keeps": "Containers, running or stopped, and volumes are kept."
   }
 }

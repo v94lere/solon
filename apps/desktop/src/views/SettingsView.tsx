@@ -7,6 +7,7 @@ import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { applyAccent, loadAccent, type Accent } from "../accent";
 import { diagnostic } from "../api";
+import { DiskCard, UpdatesCard } from "../components/SettingsExtras";
 
 export function SettingsView() {
   const [diag, setDiag] = useState<string | null>(null);
@@ -94,6 +95,8 @@ export function SettingsView() {
           )}
         </div>
       </section>
+      <UpdatesCard />
+      <DiskCard />
       <section className="card mt-4 p-4">
         <h2 className="font-semibold">{t("settings.engine")}</h2>
         {settings ? (

@@ -375,7 +375,7 @@ pub async fn serve_proxy(
         let domains = domains.clone();
         let sleeper = sleeper.clone();
         tokio::spawn(async move {
-            if let Err(e) = handle(client, domains, sleeper).await {
+            if let Err(e) = handle(client, domains, sleeper, "http").await {
                 tracing::debug!("domaine local : {e}");
             }
         });
@@ -402,7 +402,7 @@ pub async fn serve_tls_proxy(
         tokio::spawn(async move {
             match acceptor.accept(client).await {
                 Ok(tls) => {
-                    if let Err(e) = handle(tls, domains, sleeper).await {
+                    if let Err(e) = handle(tls, domains, sleeper, "https").await {
                         tracing::debug!("domaine local (https) : {e}");
                     }
                 }
@@ -412,28 +412,208 @@ pub async fn serve_tls_proxy(
     }
 }
 
-async fn handle<S>(
-    mut client: S,
-    domains: SharedDomains,
-    sleeper: Arc<crate::sleep::Sleeper>,
-) -> io::Result<()>
-where
-    S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
-{
-    let mut buf = Vec::with_capacity(8192);
-    let head_end = loop {
+/// Lit depuis `r` jusqu'à la fin d'un en-tête HTTP (`\r\n\r\n`) ; `buf` peut déjà contenir un début
+/// (reste de la lecture précédente). Renvoie la longueur de l'en-tête, `None` si la connexion se ferme
+/// ou si l'en-tête dépasse 64 Ko.
+async fn read_head<R: tokio::io::AsyncRead + Unpin>(
+    r: &mut R,
+    buf: &mut Vec<u8>,
+) -> io::Result<Option<usize>> {
+    loop {
         if let Some(p) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
-            break p + 4;
+            return Ok(Some(p + 4));
         }
         if buf.len() > 64 * 1024 {
-            return Ok(());
+            return Ok(None);
         }
         let mut chunk = [0u8; 8192];
-        let n = client.read(&mut chunk).await?;
+        let n = r.read(&mut chunk).await?;
         if n == 0 {
-            return Ok(());
+            return Ok(None);
         }
         buf.extend_from_slice(&chunk[..n]);
+    }
+}
+
+/// Corps annoncé par un en-tête de requête.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Body {
+    Length(u64),
+    Chunked,
+    /// `Connection: upgrade` (WebSocket) : après l'en-tête, la connexion devient un tunnel brut.
+    Upgrade,
+}
+
+/// Réécrit l'en-tête d'une requête : conserve la ligne de requête et les en-têtes du client, remplace
+/// les en-têtes de transfert par ceux du mandataire (`X-Forwarded-Proto`, `X-Forwarded-Host`,
+/// `X-Forwarded-For`, `X-Forwarded-Port`, `X-Real-IP`, `Forwarded`). Les applications derrière un
+/// mandataire (WordPress, Odoo en `proxy_mode`, n8n, Nextcloud…) s'en servent pour générer des liens
+/// `https://` quand la page a été demandée en HTTPS. Renvoie aussi la nature du corps qui suit.
+fn rewrite_head(head: &[u8], scheme: &str) -> (Vec<u8>, Body) {
+    let text = String::from_utf8_lossy(head);
+    let mut lines = text.split("\r\n");
+    let request_line = lines.next().unwrap_or("");
+    let mut out = String::with_capacity(head.len() + 200);
+    out.push_str(request_line);
+    out.push_str("\r\n");
+    let mut host_header = String::new();
+    let mut body = Body::Length(0);
+    let mut upgrade = false;
+    let mut connection_upgrade = false;
+    for line in lines {
+        if line.is_empty() {
+            continue;
+        }
+        let Some((k, v)) = line.split_once(':') else {
+            out.push_str(line);
+            out.push_str("\r\n");
+            continue;
+        };
+        let key = k.trim();
+        let value = v.trim();
+        if key.eq_ignore_ascii_case("host") {
+            host_header = value.to_owned();
+        } else if key.eq_ignore_ascii_case("content-length") {
+            if let Ok(n) = value.parse::<u64>() {
+                if body != Body::Chunked {
+                    body = Body::Length(n);
+                }
+            }
+        } else if key.eq_ignore_ascii_case("transfer-encoding") {
+            if value.to_ascii_lowercase().contains("chunked") {
+                body = Body::Chunked;
+            }
+        } else if key.eq_ignore_ascii_case("upgrade") {
+            upgrade = true;
+        } else if key.eq_ignore_ascii_case("connection") {
+            if value.to_ascii_lowercase().contains("upgrade") {
+                connection_upgrade = true;
+            }
+        } else if key.eq_ignore_ascii_case("x-forwarded-proto")
+            || key.eq_ignore_ascii_case("x-forwarded-host")
+            || key.eq_ignore_ascii_case("x-forwarded-for")
+            || key.eq_ignore_ascii_case("x-forwarded-port")
+            || key.eq_ignore_ascii_case("x-real-ip")
+            || key.eq_ignore_ascii_case("forwarded")
+        {
+            // Remplacés ci-dessous : seul le mandataire fait foi.
+            continue;
+        }
+        out.push_str(line);
+        out.push_str("\r\n");
+    }
+    let port = if scheme == "https" { 443 } else { 80 };
+    out.push_str(&format!("X-Forwarded-Proto: {scheme}\r\n"));
+    if !host_header.is_empty() {
+        out.push_str(&format!("X-Forwarded-Host: {host_header}\r\n"));
+    }
+    out.push_str(&format!("X-Forwarded-Port: {port}\r\n"));
+    out.push_str("X-Forwarded-For: 127.0.0.1\r\n");
+    out.push_str("X-Real-IP: 127.0.0.1\r\n");
+    if host_header.is_empty() {
+        out.push_str(&format!("Forwarded: for=127.0.0.1;proto={scheme}\r\n"));
+    } else {
+        out.push_str(&format!(
+            "Forwarded: for=127.0.0.1;host={host_header};proto={scheme}\r\n"
+        ));
+    }
+    out.push_str("\r\n");
+    if upgrade && connection_upgrade {
+        body = Body::Upgrade;
+    }
+    (out.into_bytes(), body)
+}
+
+/// Relaie exactement `n` octets de `r` vers `w`, en commençant par ce que `buf` contient déjà.
+async fn forward_exact<R, W>(r: &mut R, w: &mut W, buf: &mut Vec<u8>, mut n: u64) -> io::Result<()>
+where
+    R: tokio::io::AsyncRead + Unpin,
+    W: tokio::io::AsyncWrite + Unpin,
+{
+    let take = (buf.len() as u64).min(n) as usize;
+    if take > 0 {
+        w.write_all(&buf[..take]).await?;
+        buf.drain(..take);
+        n -= take as u64;
+    }
+    let mut chunk = [0u8; 16384];
+    while n > 0 {
+        let want = (chunk.len() as u64).min(n) as usize;
+        let got = r.read(&mut chunk[..want]).await?;
+        if got == 0 {
+            return Err(io::ErrorKind::UnexpectedEof.into());
+        }
+        w.write_all(&chunk[..got]).await?;
+        n -= got as u64;
+    }
+    Ok(())
+}
+
+/// Lit une ligne terminée par `\r\n` (rendue sans le terminateur), en complétant `buf` au besoin.
+async fn read_line<R: tokio::io::AsyncRead + Unpin>(
+    r: &mut R,
+    buf: &mut Vec<u8>,
+) -> io::Result<Vec<u8>> {
+    loop {
+        if let Some(p) = buf.windows(2).position(|w| w == b"\r\n") {
+            let line = buf[..p].to_vec();
+            buf.drain(..p + 2);
+            return Ok(line);
+        }
+        if buf.len() > 64 * 1024 {
+            return Err(io::ErrorKind::InvalidData.into());
+        }
+        let mut chunk = [0u8; 8192];
+        let n = r.read(&mut chunk).await?;
+        if n == 0 {
+            return Err(io::ErrorKind::UnexpectedEof.into());
+        }
+        buf.extend_from_slice(&chunk[..n]);
+    }
+}
+
+/// Relaie un corps `Transfer-Encoding: chunked` : chaque morceau (taille en hexadécimal, données,
+/// `\r\n`), puis le morceau vide et les éventuels en-têtes de fin.
+async fn forward_chunked<R, W>(r: &mut R, w: &mut W, buf: &mut Vec<u8>) -> io::Result<()>
+where
+    R: tokio::io::AsyncRead + Unpin,
+    W: tokio::io::AsyncWrite + Unpin,
+{
+    loop {
+        let line = read_line(r, buf).await?;
+        let size_text = String::from_utf8_lossy(&line);
+        let size_text = size_text.split(';').next().unwrap_or("").trim();
+        let size = u64::from_str_radix(size_text, 16).map_err(|_| io::ErrorKind::InvalidData)?;
+        w.write_all(&line).await?;
+        w.write_all(b"\r\n").await?;
+        if size == 0 {
+            // En-têtes de fin, jusqu'à la ligne vide.
+            loop {
+                let trailer = read_line(r, buf).await?;
+                w.write_all(&trailer).await?;
+                w.write_all(b"\r\n").await?;
+                if trailer.is_empty() {
+                    return Ok(());
+                }
+            }
+        }
+        forward_exact(r, w, buf, size + 2).await?;
+    }
+}
+
+async fn handle<S>(
+    client: S,
+    domains: SharedDomains,
+    sleeper: Arc<crate::sleep::Sleeper>,
+    scheme: &'static str,
+) -> io::Result<()>
+where
+    S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
+{
+    let (mut client_rx, mut client) = tokio::io::split(client);
+    let mut buf = Vec::with_capacity(8192);
+    let Some(mut head_end) = read_head(&mut client_rx, &mut buf).await? else {
+        return Ok(());
     };
     let host = String::from_utf8_lossy(&buf[..head_end])
         .lines()
@@ -459,7 +639,7 @@ where
     };
     // Réveille le conteneur s'il dort ; la garde le maintient éveillé le temps de la requête.
     let _guard = sleeper.on_connection_ip(&target.ip.to_string()).await;
-    let mut upstream = match tokio::time::timeout(
+    let upstream = match tokio::time::timeout(
         std::time::Duration::from_secs(5),
         tokio::net::TcpStream::connect((target.ip, target.port)),
     )
@@ -480,9 +660,42 @@ where
             return Ok(());
         }
     };
-    upstream.write_all(&buf).await?;
-    let _ = tokio::io::copy_bidirectional(&mut client, &mut upstream).await;
-    Ok(())
+    // Réponses : copie brute du conteneur vers le client, en parallèle des requêtes.
+    let (mut upstream_rx, mut upstream) = upstream.into_split();
+    let pump = tokio::spawn(async move {
+        let _ = tokio::io::copy(&mut upstream_rx, &mut client).await;
+        let _ = client.shutdown().await;
+    });
+    // Requêtes : chaque en-tête est réécrit (en-têtes `X-Forwarded-*`), le corps relayé tel quel ;
+    // la connexion peut porter plusieurs requêtes (keep-alive) ou devenir un tunnel (WebSocket).
+    let result: io::Result<()> = async {
+        loop {
+            let (head, body) = rewrite_head(&buf[..head_end], scheme);
+            buf.drain(..head_end);
+            upstream.write_all(&head).await?;
+            match body {
+                Body::Upgrade => {
+                    upstream.write_all(&buf).await?;
+                    buf.clear();
+                    let _ = tokio::io::copy(&mut client_rx, &mut upstream).await;
+                    return Ok(());
+                }
+                Body::Length(n) => forward_exact(&mut client_rx, &mut upstream, &mut buf, n).await?,
+                Body::Chunked => forward_chunked(&mut client_rx, &mut upstream, &mut buf).await?,
+            }
+            match read_head(&mut client_rx, &mut buf).await? {
+                Some(n) => head_end = n,
+                None => return Ok(()),
+            }
+        }
+    }
+    .await;
+    let _ = upstream.shutdown().await;
+    if result.is_err() {
+        pump.abort();
+    }
+    let _ = pump.await;
+    result
 }
 
 fn not_found_page(host: &str, domains: &DomainMap) -> String {
@@ -554,6 +767,55 @@ mod tests {
         assert_eq!(m["odoo.odoo18.solon.local"].port, 8069);
         assert_eq!(m["api.solon.local"].port, 3000);
         assert!(!m.contains_key("nada.solon.local"));
+    }
+
+    #[test]
+    fn en_tetes_du_mandataire() {
+        let head = b"GET /wp-admin/ HTTP/1.1\r\nHost: blog.solon.local\r\nX-Forwarded-Proto: http\r\nCookie: a=b\r\nContent-Length: 12\r\n\r\n";
+        let (out, body) = rewrite_head(head, "https");
+        let text = String::from_utf8(out).unwrap();
+        assert!(text.starts_with("GET /wp-admin/ HTTP/1.1\r\nHost: blog.solon.local\r\n"));
+        assert!(text.contains("Cookie: a=b\r\n"));
+        assert_eq!(text.matches("X-Forwarded-Proto").count(), 1);
+        assert!(text.contains("X-Forwarded-Proto: https\r\n"));
+        assert!(text.contains("X-Forwarded-Host: blog.solon.local\r\n"));
+        assert!(text.contains("X-Forwarded-Port: 443\r\n"));
+        assert!(text.contains("Forwarded: for=127.0.0.1;host=blog.solon.local;proto=https\r\n"));
+        assert!(text.ends_with("\r\n\r\n"));
+        assert_eq!(body, Body::Length(12));
+
+        let (_, body) = rewrite_head(
+            b"POST /x HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n",
+            "http",
+        );
+        assert_eq!(body, Body::Chunked);
+        let (out, body) = rewrite_head(
+            b"GET /ws HTTP/1.1\r\nHost: a\r\nConnection: keep-alive, Upgrade\r\nUpgrade: websocket\r\n\r\n",
+            "https",
+        );
+        assert_eq!(body, Body::Upgrade);
+        assert!(String::from_utf8(out).unwrap().contains("Upgrade: websocket\r\n"));
+        let (_, body) = rewrite_head(b"GET / HTTP/1.1\r\nHost: a\r\n\r\n", "http");
+        assert_eq!(body, Body::Length(0));
+    }
+
+    #[tokio::test]
+    async fn relais_des_corps() {
+        // Corps de longueur connue, puis corps morcelé, lus depuis un tampon partiel.
+        let mut input = std::io::Cursor::new(b"cd\r\nefgh".to_vec());
+        let mut out = Vec::new();
+        let mut buf = b"ab".to_vec();
+        forward_exact(&mut input, &mut out, &mut buf, 4).await.unwrap();
+        assert_eq!(out, b"abcd");
+        assert!(buf.is_empty());
+
+        let mut input = std::io::Cursor::new(b"3\r\nabc\r\n0\r\n\r\nSUITE".to_vec());
+        let mut out = Vec::new();
+        let mut buf = Vec::new();
+        forward_chunked(&mut input, &mut out, &mut buf).await.unwrap();
+        assert_eq!(out, b"3\r\nabc\r\n0\r\n\r\n");
+        // Ce qui suit le corps reste dans le tampon pour la requête suivante.
+        assert_eq!(buf, b"SUITE");
     }
 
     #[test]

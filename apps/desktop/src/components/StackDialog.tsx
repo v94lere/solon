@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { stacks, type Probe } from "../api";
+import { host, stacks, type PortProbe, type Probe } from "../api";
+import { publishedHostPorts, replaceHostPort } from "../ports";
 import { TEMPLATES, fillProject, suggestStacks, tx, type StackFile, type StackSuggestion, type StackTemplate } from "../templates";
 import { Avatar } from "./ui";
 import { rememberProject } from "../projects";
@@ -24,6 +25,7 @@ export function StackDialog({ open, probe, onClose, onCreated }: { open: boolean
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conflicts, setConflicts] = useState<PortProbe[]>([]);
   const suggestions = useMemo(() => (probe ? suggestStacks(probe) : []), [probe]);
 
   useEffect(() => {
@@ -34,6 +36,37 @@ export function StackDialog({ open, probe, onClose, onCreated }: { open: boolean
     setDir(probe?.dir ?? "");
     setName(probe?.name ?? "");
   }, [open, probe]);
+
+  // Ports hôte publiés par le compose.yaml en cours d'édition : lesquels sont déjà pris sur ce PC
+  // (autre programme, autre pile Solon) ? Vérifié un peu après chaque frappe.
+  useEffect(() => {
+    if (!pick) {
+      setConflicts([]);
+      return;
+    }
+    const ports = publishedHostPorts(content);
+    if (ports.length === 0) {
+      setConflicts([]);
+      return;
+    }
+    let alive = true;
+    const timer = window.setTimeout(() => {
+      host
+        .portsProbe(ports)
+        .then((r) => {
+          if (alive) setConflicts(r.filter((x) => x.in_use));
+        })
+        .catch(() => {});
+    }, 400);
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+    };
+  }, [pick, content]);
+
+  function fixPort(c: PortProbe) {
+    if (c.suggestion) setContent((cur) => replaceHostPort(cur, c.port, c.suggestion as number));
+  }
 
   // Choix d'un modèle : pré-remplit le nom et le contenu éditable du compose.yaml.
   function choose(p: Pick) {
@@ -143,6 +176,14 @@ export function StackDialog({ open, probe, onClose, onCreated }: { open: boolean
             )}
             <p className="kbd-hint">{probe ? t("stacks.will_write_here", { dir: probe.dir }) : t("stacks.will_write", { dir: `${dir || "…"}\\${slug(name)}` })}{files.length > 1 ? ` · ${t("stacks.extra_files", { count: files.length - 1 })}` : ""}</p>
             <textarea className="input mono min-h-0 flex-1 resize-none p-3 text-xs leading-5" spellCheck={false} value={content} onChange={(e) => setContent(e.target.value)} aria-label="compose.yaml" style={{ height: "100%", userSelect: "text" }} />
+            {conflicts.length > 0 && (
+              <div className="notice" role="status">
+                <span>{conflicts.length === 1 ? t("stacks.port_conflict", { port: conflicts[0].port }) : t("stacks.ports_conflict", { ports: conflicts.map((c) => c.port).join(", ") })}</span>
+                {conflicts.map((c) => c.suggestion && (
+                  <button key={c.port} type="button" className="btn btn-sm" onClick={() => fixPort(c)}>{t("stacks.use_port", { from: c.port, to: c.suggestion })}</button>
+                ))}
+              </div>
+            )}
             {error && <p role="alert" style={{ color: "var(--bad)" }}>{error}</p>}
             <div className="flex items-center gap-2">
               <span className="flex-1" />

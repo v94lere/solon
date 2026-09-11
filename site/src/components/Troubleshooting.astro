@@ -1,0 +1,75 @@
+---
+// Page « Dépannage » : les problèmes les plus probables à la première installation, dans l'ordre où on
+// les rencontre, avec la marche à suivre ; puis comment signaler avec le diagnostic ; puis la table
+// des codes d'erreur (la même que dans le README).
+import { dict, REPO, type Lang } from "../i18n";
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = dict[lang].help;
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const issues = `${REPO}/issues/new?template=bug_report.yml`;
+---
+<section class="section help">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">{t.kicker}</span>
+      <h1>{t.title}</h1>
+      <p class="lead">{t.lead}</p>
+    </div>
+
+    <nav class="help-toc" aria-label={t.tocLabel}>
+      {t.problems.map((p, i) => <a href={`#p${i + 1}`}>{p.title}</a>)}
+      <a href="#report">{t.report.title}</a>
+      <a href="#codes">{t.codes.title}</a>
+    </nav>
+
+    <div class="help-list">
+      {t.problems.map((p, i) => (
+        <article class="help-item" id={`p${i + 1}`}>
+          <header>
+            <h2>{p.title}</h2>
+            <p class="symptom">{p.symptom}</p>
+          </header>
+          <ol>
+            {p.steps.map((s) => <li set:html={s} />)}
+          </ol>
+          {p.note && <p class="note" set:html={p.note} />}
+        </article>
+      ))}
+    </div>
+
+    <article class="help-item help-report" id="report">
+      <header>
+        <h2>{t.report.title}</h2>
+        <p class="symptom">{t.report.lead}</p>
+      </header>
+      <ol>
+        {t.report.steps.map((s) => <li set:html={s} />)}
+      </ol>
+      <p class="note">{t.report.privacy}</p>
+      <p><a class="btn btn-primary" href={issues} rel="noopener">{t.report.button}</a></p>
+    </article>
+
+    <div class="section-head" id="codes" style="margin-top: 48px">
+      <h2>{t.codes.title}</h2>
+      <p class="lead">{t.codes.lead}</p>
+    </div>
+    <div class="table-wrap">
+      <table class="codes">
+        <thead><tr>{t.codes.cols.map((c) => <th>{c}</th>)}</tr></thead>
+        <tbody>
+          {t.codes.rows.map((r) => (
+            <tr>
+              <td><code>{r[0]}</code></td>
+              <td>{r[1]}</td>
+              <td set:html={r[2]} />
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top: 20px" set:html={t.codes.power} />
+    <p class="note"><a href={`${base}${lang === "fr" ? "/fr/" : "/"}`}>{t.back}</a></p>
+  </div>
+</section>

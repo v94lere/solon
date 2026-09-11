@@ -7,6 +7,7 @@ mod compose;
 mod diagnostic;
 mod docker;
 mod files;
+mod host;
 mod service;
 mod shell;
 mod stacks;
@@ -191,6 +192,9 @@ pub fn run() {
             shell::machine_shell_resize,
             shell::machine_shell_close,
             diagnostic::diagnostic_export,
+            host::ports_probe,
+            host::host_disk_info,
+            docker::docker_reclaim,
             set_language,
             docker::containers_list,
             docker::container_inspect,

@@ -915,3 +915,48 @@ pub async fn container_copy_to(
         .await
         .map_err(err)
 }
+
+// ---------------------------------------------------------------------------------------------
+// Récupération d'espace
+// ---------------------------------------------------------------------------------------------
+
+#[derive(Debug, Default, Serialize)]
+pub struct ReclaimReport {
+    pub images_removed: usize,
+    pub build_cache_removed: usize,
+    pub space_reclaimed: u64,
+}
+
+/// Supprime les images qu'aucun conteneur n'utilise (même sens que `docker image prune -a`) et tout
+/// le cache de construction. Les conteneurs, arrêtés ou non, et les volumes ne sont jamais touchés.
+#[tauri::command]
+pub async fn docker_reclaim(state: State<'_>) -> Result<ReclaimReport, String> {
+    use bollard::query_parameters::{PruneBuildOptionsBuilder, PruneImagesOptionsBuilder};
+    let docker = state.docker().await?;
+    let mut report = ReclaimReport::default();
+    let filters: HashMap<&str, Vec<&str>> = HashMap::from([("dangling", vec!["false"])]);
+    let images = docker
+        .prune_images(Some(
+            PruneImagesOptionsBuilder::default().filters(&filters).build(),
+        ))
+        .await
+        .map_err(err)?;
+    report.images_removed = images
+        .images_deleted
+        .as_ref()
+        .map(|v| v.iter().filter(|d| d.deleted.is_some()).count())
+        .unwrap_or(0);
+    report.space_reclaimed += images.space_reclaimed.unwrap_or(0).max(0) as u64;
+    match docker
+        .prune_build(Some(PruneBuildOptionsBuilder::default().all(true).build()))
+        .await
+    {
+        Ok(cache) => {
+            report.build_cache_removed = cache.caches_deleted.as_ref().map(Vec::len).unwrap_or(0);
+            report.space_reclaimed += cache.space_reclaimed.unwrap_or(0).max(0) as u64;
+        }
+        // Le cache de construction est accessoire : une erreur (BuildKit absent) n'annule pas le reste.
+        Err(e) => tracing::warn!("nettoyage du cache de construction : {e}"),
+    }
+    Ok(report)
+}

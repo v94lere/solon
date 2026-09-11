@@ -578,3 +578,13 @@ select {
 /* Avis d'information (conteneur terminé aussitôt, etc.) */
 .notice { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--radius); background: var(--accent-soft); color: var(--ink); font-size: 13px; }
 .notice > span { flex: 1 1 260px; }
+
+/* Bandeaux en haut de la fenêtre (nouvelle version, disque presque plein) et lignes de la carte Disque */
+.notices { display: flex; flex-direction: column; gap: 6px; padding: 8px 16px 0; }
+.notice-bar { border: 1px solid var(--line); }
+.notice.is-warn { background: var(--warn-soft, var(--accent-soft)); }
+.disk-row { display: grid; grid-template-columns: 150px minmax(80px, 1fr) auto; align-items: center; gap: 12px; }
+.disk-row .mini-meter { width: 100%; }
+.disk-label { color: var(--ink-2); font-size: 13px; }
+.disk-value { font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--accent-ink, var(--accent)); cursor: pointer; font: inherit; text-decoration: underline; }

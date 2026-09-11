@@ -428,7 +428,8 @@
     "save_up": "Enregistrer et Up",
     "reload": "Recharger",
     "unsaved": "Modifications non enregistrées",
-    "saved": "Enregistré"
+    "saved": "Enregistré",
+    "port_conflict": "Le port {{port}} est déjà utilisé sur ce PC par un autre programme ou une autre pile. Dans l'onglet Compose, changez le port hôte (par exemple {{port}} → {{next}}), puis Save and Up."
   },
   "machine": {
     "terminal": "Terminal",
@@ -548,7 +549,10 @@
     "extra_files": "{{count}} fichier(s) de plus",
     "need_dir": "Choisissez d'abord un dossier.",
     "create": "Créer",
-    "create_up": "Créer et démarrer"
+    "create_up": "Créer et démarrer",
+    "port_conflict": "Le port {{port}} est déjà utilisé sur ce PC (un autre programme ou une autre pile).",
+    "ports_conflict": "Les ports {{ports}} sont déjà utilisés sur ce PC (un autre programme ou une autre pile).",
+    "use_port": "Utiliser {{to}} au lieu de {{from}}"
   },
   "usage": {
     "column": "Utilisation",
@@ -557,5 +561,40 @@
     "unused": "Inutilisé",
     "only_unused": "Inutilisés seulement",
     "used_by": "Utilisé par : {{names}}"
+  },
+  "updates": {
+    "title": "Mises à jour",
+    "check_at_launch": "Vérifier s'il existe une nouvelle version au démarrage de Solon",
+    "privacy": "Une requête vers github.com pour la liste des versions. Rien sur vous ni sur votre PC n'est envoyé, et rien ne s'installe sans vous.",
+    "check_now": "Vérifier maintenant",
+    "checking": "Vérification…",
+    "up_to_date": "Vous avez la dernière version ({{version}}).",
+    "available": "Solon {{version}} est disponible (vous avez la {{current}}).",
+    "download": "Télécharger",
+    "notes": "Notes de version",
+    "later": "Plus tard",
+    "failed": "Vérification impossible : {{detail}}",
+    "last_check": "Dernière vérification le {{date}}",
+    "all_releases": "Toutes les versions"
+  },
+  "disk": {
+    "title": "Disque",
+    "engine": "Stockage du moteur",
+    "engine_stopped": "Démarrez le moteur pour voir son occupation.",
+    "drive": "Lecteur Windows {{drive}}",
+    "used_of": "{{used}} utilisés sur {{total}}",
+    "free_of": "{{free}} libres sur {{total}}",
+    "file": "Le moteur garde tout dans un seul fichier, {{size}} sur le disque : {{path}}. Il grossit avec l'usage et ne rend l'espace qu'après un nettoyage.",
+    "low": "Le lecteur {{drive}} est presque plein ({{free}} restants). Le stockage de Solon occupe {{engine}} ; supprimer les images inutilisées rend de la place.",
+    "low_short": "Ce lecteur est presque plein. Windows comme Solon ralentissent quand c'est le cas ; libérez de la place.",
+    "reclaim": "Récupérer l'espace",
+    "reclaiming": "Nettoyage…",
+    "reclaim_help": "Supprime les images qu'aucun conteneur n'utilise et le cache de construction, puis rend l'espace libéré à Windows. Les conteneurs (en marche ou arrêtés) et les volumes ne sont jamais touchés.",
+    "estimate": "{{count}} image(s) inutilisée(s), environ {{size}}.",
+    "nothing_unused": "Toutes les images sont utilisées par un conteneur ; rien à supprimer.",
+    "reclaimed": "Terminé : {{images}} image(s) et {{cache}} entrées du cache de construction supprimées, {{size}} libérés.",
+    "confirm_title": "Récupérer l'espace ?",
+    "confirm_body": "{{count}} image(s) inutilisée(s) (environ {{size}}) et le cache de construction seront supprimés. Les retélécharger plus tard prendra un téléchargement.",
+    "confirm_keeps": "Les conteneurs, en marche ou arrêtés, et les volumes sont conservés."
   }
 }

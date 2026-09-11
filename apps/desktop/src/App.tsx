@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { EngineProvider, useEngine } from "./engine";
 import "./accent";
 import { EngineFooter } from "./components/EngineFooter";
+import { Notices } from "./components/Notices";
 import { MachineTerminalPanel } from "./components/MachineTerminalPanel";
 import { CommandPalette } from "./components/CommandPalette";
 import { ProjectView } from "./views/ProjectView";
@@ -231,14 +232,15 @@ function Shell() {
     <div className="flex h-full flex-col">
       <div className="flex min-h-0 flex-1">
         <Nav section={section} collapsed={collapsed} onSelect={go} onToggle={toggleSidebar} />
-        <main className="min-w-0 flex-1 overflow-hidden" style={{ background: "var(--bg)" }}>
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
+          <Notices onOpenSettings={() => go("settings")} />
           {content && (
-            <div key={section} className="page h-full">
+            <div key={section} className="page min-h-0 flex-1">
               {content}
             </div>
           )}
           {terminalMounted && ready && (
-            <div className="h-full" hidden={section !== "terminal"}>
+            <div className="min-h-0 flex-1" hidden={section !== "terminal"}>
               <MachineTerminalPanel />
             </div>
           )}

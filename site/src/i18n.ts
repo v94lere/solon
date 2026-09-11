@@ -6,7 +6,7 @@ export const RELEASES = `${REPO}/releases`;
 export const LATEST = `${REPO}/releases/latest`;
 
 const en = {
-  nav: { features: "Features", compare: "Benchmark", stacks: "Stacks", releases: "Releases", github: "GitHub", download: "Download" },
+  nav: { features: "Features", compare: "Benchmark", stacks: "Stacks", releases: "Releases", help: "Help", github: "GitHub", download: "Download" },
   hero: {
     kicker: "Open source · Windows 10 & 11 Pro · Apache 2.0",
     title: "Docker on Windows, without Docker Desktop or WSL.",
@@ -19,7 +19,7 @@ const en = {
   numbers: [
     { value: "≈ 3 s", label: "engine ready after you ask for it", note: "Docker Desktop: 6.1 s" },
     { value: "4×", label: "less memory at rest and with a stack running", note: "430–520 MB vs 1,998 MB" },
-    { value: "0", label: "telemetry, outgoing requests, licence fees", note: "Apache 2.0" },
+    { value: "0", label: "telemetry, accounts, licence fees", note: "Apache 2.0" },
   ],
   clips: {
     title: "See it in action",
@@ -72,14 +72,130 @@ const en = {
       "Windows Home is not supported: it lacks a Hyper-V component Solon needs for file sharing.",
       "No Kubernetes, no separate Linux machines, no ARM images (x86-64 only).",
       "The installer is not signed yet; signing is the next step before a wider launch.",
+      "No automatic update: Solon tells you when a new version exists (Settings → Updates, can be turned off); you download and install it over the old one.",
       "Tested on the development machine and one fresh machine. Reports from other configurations are very welcome.",
     ],
   },
-  footer: { made: "Made in Luxembourg. No telemetry, no outgoing request other than what your containers ask for.", licence: "Apache 2.0", source: "Source code", issues: "Report a problem", security: "Security" },
+  help: {
+    kicker: "Help",
+    title: "Troubleshooting",
+    lead: "The problems people actually hit with Solon, in the order they meet them, and what to do. Each takes a minute. If yours is not here, the diagnostic export at the bottom is the fastest way to get it fixed.",
+    tocLabel: "On this page",
+    back: "← Back to the home page",
+    problems: [
+      {
+        title: "Windows blocks the installer (SmartScreen)",
+        symptom: "A blue “Windows protected your PC” screen appears when you run Solon_x.y.z_x64-setup.exe.",
+        steps: [
+          "Click <b>More info</b>, then <b>Run anyway</b>. The screen means the installer is not code-signed yet, not that it is harmful.",
+          "If you want to be sure of what you run: compare the file's SHA-256 with the one published next to the release (<code>Get-FileHash .\\Solon_x.y.z_x64-setup.exe</code> in PowerShell). The home page shows it too.",
+          "Some antivirus products quarantine unsigned installers: restore the file and add an exception for it before running it again.",
+        ],
+        note: "Code signing through the SignPath Foundation has been requested; releases will be signed as soon as the project is accepted, and this screen will disappear.",
+      },
+      {
+        title: "The engine does not start after installation",
+        symptom: "Solon shows “Engine failed to start” with a code such as WINDOWS_FEATURE_MISSING, HYPERVISOR_NOT_RUNNING or VIRTUALIZATION_DISABLED_IN_FIRMWARE.",
+        steps: [
+          "<b>Reboot first.</b> The installer enables Hyper-V and the Virtual Machine Platform when they were off; they only work after a restart. Most first-start failures end here.",
+          "If the code is <code>VIRTUALIZATION_DISABLED_IN_FIRMWARE</code>: enable hardware virtualization in the BIOS/UEFI (called Intel VT-x, AMD-V or SVM, usually under Advanced, CPU or Security), save, reboot.",
+          "If the code is <code>UNSUPPORTED_WINDOWS_EDITION</code>: you are on Windows Home, which lacks a Hyper-V component Solon needs. Solon needs Windows 10 22H2 or 11 in Pro, Enterprise or Education.",
+          "If the code is <code>HYPERVISOR_NOT_RUNNING</code>: an old VirtualBox or VMware, or a <code>bcdedit</code> setting, turned the Windows hypervisor off. Remove or update them (VirtualBox ≥ 6.1, VMware ≥ 15.5), then in an administrator PowerShell: <code>bcdedit /set hypervisorlaunchtype auto</code> and reboot.",
+          "Still stuck: Settings → Diagnostic → Export a diagnostic, and open a bug report with the zip (see below).",
+        ],
+        note: null,
+      },
+      {
+        title: "A stack refuses to start: a port is already in use",
+        symptom: "Up fails and the output says “port is already allocated” or “address already in use”, or Solon says “Port 8080 is already in use on this PC”.",
+        steps: [
+          "Another program (another stack, IIS, a dev server, Docker Desktop) already listens on that port. Solon names the port and proposes the next free one: click <b>Use 8081 instead</b> in the gallery, or in the project's <b>Compose</b> tab change the host port (the left number in <code>\"8080:80\"</code>) and click <b>Save and Up</b>.",
+          "You may not need a published port at all: every container answers at <code>https://&lt;name&gt;.solon.local</code>, port or not. Comment the <code>ports:</code> lines and use that address.",
+          "Two copies of the same stack (two WordPress, two Odoo) always collide on the same port: give the second one another host port, or drop the ports and use the two solon.local addresses.",
+        ],
+        note: null,
+      },
+      {
+        title: "A container “does nothing” or stops at once",
+        symptom: "You click Run or Start, the container appears for a second and goes to Exited; hello-world is the classic case.",
+        steps: [
+          "That is normal for a program that does its job and quits: hello-world prints its message and exits in a tenth of a second. Solon opens its logs and shows “exited immediately with code 0”; the message is in the Logs tab.",
+          "A server that exits with a non-zero code is a real failure: read the last lines of its logs (Logs tab, or <code>docker logs &lt;name&gt;</code>). The usual causes are a missing environment variable, a wrong volume path or a port the container itself cannot bind.",
+          "A container that Solon put to sleep (moon icon) is not stopped: the next request wakes it. Use <b>Keep awake</b> on its page if it runs scheduled tasks.",
+        ],
+        note: null,
+      },
+      {
+        title: "No network in the containers, or a solon.local address does not open",
+        symptom: "apt or pip time out inside a container, or the browser cannot reach https://name.solon.local.",
+        steps: [
+          "<b>Corporate VPN.</b> Some VPN clients (AnyConnect, GlobalProtect, Zscaler) block traffic to virtual adapters. Disconnect the VPN and try again; if it works, add it to your bug report so a workaround can be found.",
+          "<b>The address.</b> A container has an address only while it runs; the name is the container's (<code>web.solon.local</code>) or <code>service.project.solon.local</code> for Compose. Open <code>http://anything.solon.local</code>: the page lists every address currently available.",
+          "<b>The certificate.</b> Browsers and .NET trust the local certificates. <code>curl.exe</code> on Windows needs <code>--ssl-no-revoke</code>, like with mkcert.",
+          "<b>Links that point to http://.</b> WordPress, Nextcloud and friends generate links from the request: Solon passes <code>X-Forwarded-Proto: https</code>, which the official images honour. For an existing WordPress installed over http, update the site URL in Settings → General.",
+          "<b>The hosts file.</b> Solon writes the names into <code>C:\\Windows\\System32\\drivers\\etc\\hosts</code> between <code># solon-begin</code> and <code># solon-end</code>. A security product that protects that file blocks the addresses: allow Solon or add the names by hand.",
+        ],
+        note: null,
+      },
+      {
+        title: "The disk fills up",
+        symptom: "Windows warns that drive C: is almost full, or Solon shows “Engine disk almost full”.",
+        steps: [
+          "Solon keeps everything in one file, <code>%ProgramData%\\Solon\\data.vhdx</code>, which grows with images, containers and volumes and only shrinks after a clean-up.",
+          "Settings → <b>Disk</b> → <b>Reclaim space</b>: removes the images no container uses and the build cache, then gives the freed space back to Windows. Containers and volumes are never touched.",
+          "Still large? Images → “Unused only” shows what remains; Volumes → “Unused only” shows volumes no container references (data you may want to keep: check before removing).",
+        ],
+        note: null,
+      },
+      {
+        title: "Docker Desktop or WSL is also installed",
+        symptom: "docker commands talk to the wrong engine, or Docker Hub refuses your login.",
+        steps: [
+          "Solon and Docker Desktop can coexist. Which engine the <code>docker</code> command talks to depends on which <code>docker.exe</code> comes first in your PATH; Solon's is in its installation folder. <code>docker context ls</code> shows the current one.",
+          "Docker Hub “unauthorized” errors: the Windows docker CLI reuses credentials stored by Docker Desktop, which may be stale. <code>docker logout</code> then <code>docker login</code> fixes it.",
+          "WSL is not used by Solon and does not need to be installed or removed.",
+        ],
+        note: null,
+      },
+    ],
+    report: {
+      title: "Report a problem",
+      lead: "One zip file tells more than a screenshot. It takes ten seconds.",
+      steps: [
+        "In Solon: <b>Settings → Diagnostic → Export a diagnostic…</b>, save the zip.",
+        "Open a bug report on GitHub and drop the zip into the form, with what you did and what you expected.",
+        "Mention your Windows version (<code>winver</code>), whether a VPN, another antivirus, Docker Desktop or WSL are present.",
+      ],
+      privacy: "The zip contains Solon's logs, its state and settings, the prerequisites report, docker info and the versions. It does not contain your containers' data, passwords or Docker Hub credentials; you can open it and check before sending.",
+      button: "Open a bug report",
+    },
+    codes: {
+      title: "Error codes",
+      lead: "Every error shown by Solon carries a stable code. Logs are in %ProgramData%\\Solon\\logs and can be copied from the error screen.",
+      cols: ["Code", "Cause", "What to do"],
+      power: "Power loss or hard shutdown: at the next start Solon checks and repairs the data disk (<code>fsck</code>), then restarts the engine. Unsynced writes of the last two seconds may be lost, as on any Linux machine.",
+      rows: [
+        ["VIRTUALIZATION_DISABLED_IN_FIRMWARE", "VT-x / AMD-V disabled", "Enable virtualization in the BIOS/UEFI (Advanced, CPU or Security tab), reboot."],
+        ["UNSUPPORTED_WINDOWS_EDITION", "Windows Home", "Move to Windows Pro, Enterprise or Education."],
+        ["WINDOWS_FEATURE_MISSING", "Hyper-V or Virtual Machine Platform disabled", "Reboot if you just installed. Otherwise reinstall Solon (the installer enables them) or, in an administrator PowerShell: <code>Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V,VirtualMachinePlatform -All</code>, then reboot."],
+        ["WINDOWS_FEATURE_BLOCKED_BY_POLICY", "Company policy (WSUS, GPO) refuses the feature", "Ask your administrator to enable Microsoft-Hyper-V and VirtualMachinePlatform."],
+        ["HYPERVISOR_NOT_RUNNING", "Windows hypervisor not started", "Uninstall old VirtualBox/VMware (< 6.1 / < 15.5), check <code>bcdedit /enum</code> (hypervisorlaunchtype Auto), do not run Solon in a VM without nested virtualization."],
+        ["HOST_COMPUTE_SERVICE_UNAVAILABLE", "vmcompute or hns service stopped or missing", "Reboot Windows; otherwise reinstall Solon."],
+        ["BLOCKED_BY_SECURITY_SOFTWARE", "Antivirus / EDR blocks the disks or the service", "Add %ProgramData%\\Solon and the installation folder to the exclusions."],
+        ["INSUFFICIENT_PRIVILEGES", "The service does not run with the expected rights", "Reinstall Solon (the service must run as LocalSystem)."],
+        ["IMAGE_CORRUPTED", "Engine files missing or SHA-256 mismatch", "Reinstall Solon."],
+        ["DATA_DISK_ERROR", "data.vhdx cannot be created or opened", "Check disk space and antivirus exclusions; as a last resort rename %ProgramData%\\Solon\\data.vhdx (loses Docker data)."],
+        ["VM_BOOT_TIMEOUT, AGENT_UNREACHABLE, ENGINE_UNREACHABLE", "The machine does not answer", "Restart the engine; read solon-service.log; report with the diagnostic zip."],
+        ["No network from containers", "Corporate VPN or IP range conflict", "Solon picks a free range and sets the MTU to 1400; some VPNs still block virtual adapters: disable the VPN to test, then report."],
+        ["“The Solon service is not running”", "Service stopped", "<code>sc start SolonService</code> as administrator, or reinstall."],
+      ],
+    },
+  },
+  footer: { made: "Made in Luxembourg. No telemetry; the only outgoing request is an optional check for new versions, which you can turn off.", licence: "Apache 2.0", source: "Source code", issues: "Report a problem", security: "Security" },
 };
 
 const fr: typeof en = {
-  nav: { features: "Fonctions", compare: "Comparatif", stacks: "Piles", releases: "Versions", github: "GitHub", download: "Télécharger" },
+  nav: { features: "Fonctions", compare: "Comparatif", stacks: "Piles", releases: "Versions", help: "Aide", github: "GitHub", download: "Télécharger" },
   hero: {
     kicker: "Open source · Windows 10 et 11 Pro · Apache 2.0",
     title: "Docker sur Windows, sans Docker Desktop ni WSL.",
@@ -92,7 +208,7 @@ const fr: typeof en = {
   numbers: [
     { value: "≈ 3 s", label: "moteur prêt après l'ordre de démarrage", note: "Docker Desktop : 6,1 s" },
     { value: "4×", label: "moins de mémoire, au repos comme avec une pile", note: "430–520 Mo contre 1 998 Mo" },
-    { value: "0", label: "télémétrie, requête sortante, licence", note: "Apache 2.0" },
+    { value: "0", label: "télémétrie, compte, licence", note: "Apache 2.0" },
   ],
   clips: {
     title: "En action",
@@ -145,13 +261,132 @@ const fr: typeof en = {
       "Windows Famille n'est pas pris en charge : il lui manque un composant Hyper-V nécessaire au partage de fichiers.",
       "Pas de Kubernetes, pas de machines Linux séparées, pas d'images ARM (x86-64 seulement).",
       "L'installateur n'est pas encore signé ; c'est la prochaine étape avant un lancement plus large.",
+      "Pas de mise à jour automatique : Solon signale qu'une nouvelle version existe (Réglages → Mises à jour, désactivable) ; on la télécharge et on l'installe par-dessus.",
       "Testé sur la machine de développement et une machine vierge. Les retours d'autres configurations sont bienvenus.",
     ],
   },
-  footer: { made: "Fait au Luxembourg. Aucune télémétrie, aucune requête sortante en dehors de ce que vos conteneurs demandent.", licence: "Apache 2.0", source: "Code source", issues: "Signaler un problème", security: "Sécurité" },
+  help: {
+    kicker: "Aide",
+    title: "Dépannage",
+    lead: "Les problèmes que l'on rencontre vraiment avec Solon, dans l'ordre où on les croise, et que faire. Chacun prend une minute. Si le vôtre n'y est pas, l'export de diagnostic en bas de page est le chemin le plus court vers une correction.",
+    tocLabel: "Sur cette page",
+    back: "← Retour à l'accueil",
+    problems: [
+      {
+        title: "Windows bloque l'installateur (SmartScreen)",
+        symptom: "Un écran bleu « Windows a protégé votre ordinateur » apparaît au lancement de Solon_x.y.z_x64-setup.exe.",
+        steps: [
+          "Cliquez sur <b>Informations complémentaires</b>, puis <b>Exécuter quand même</b>. L'écran signifie que l'installateur n'est pas encore signé, pas qu'il est dangereux.",
+          "Pour être sûr de ce que vous lancez : comparez le SHA-256 du fichier avec celui publié à côté de la version (<code>Get-FileHash .\\Solon_x.y.z_x64-setup.exe</code> dans PowerShell). La page d'accueil l'affiche aussi.",
+          "Certains antivirus mettent en quarantaine les installateurs non signés : restaurez le fichier et ajoutez une exception avant de le relancer.",
+        ],
+        note: "Une signature via la SignPath Foundation a été demandée ; les versions seront signées dès l'acceptation du projet, et cet écran disparaîtra.",
+      },
+      {
+        title: "Le moteur ne démarre pas après l'installation",
+        symptom: "Solon affiche « Le moteur n'a pas démarré » avec un code comme WINDOWS_FEATURE_MISSING, HYPERVISOR_NOT_RUNNING ou VIRTUALIZATION_DISABLED_IN_FIRMWARE.",
+        steps: [
+          "<b>Redémarrez d'abord.</b> L'installateur active Hyper-V et la Plateforme de machine virtuelle s'ils étaient éteints ; ils ne fonctionnent qu'après un redémarrage. La plupart des échecs du premier démarrage s'arrêtent là.",
+          "Code <code>VIRTUALIZATION_DISABLED_IN_FIRMWARE</code> : activez la virtualisation matérielle dans le BIOS/UEFI (Intel VT-x, AMD-V ou SVM, en général sous Advanced, CPU ou Security), enregistrez, redémarrez.",
+          "Code <code>UNSUPPORTED_WINDOWS_EDITION</code> : vous êtes sur Windows Famille, à qui manque un composant Hyper-V nécessaire à Solon. Il faut Windows 10 22H2 ou 11 en Pro, Entreprise ou Éducation.",
+          "Code <code>HYPERVISOR_NOT_RUNNING</code> : un vieux VirtualBox ou VMware, ou un réglage <code>bcdedit</code>, a éteint l'hyperviseur Windows. Retirez-les ou mettez-les à jour (VirtualBox ≥ 6.1, VMware ≥ 15.5), puis en PowerShell administrateur : <code>bcdedit /set hypervisorlaunchtype auto</code> et redémarrez.",
+          "Toujours bloqué : Réglages → Diagnostic → Exporter un diagnostic, et ouvrez un rapport avec le zip (voir plus bas).",
+        ],
+        note: null,
+      },
+      {
+        title: "Une pile refuse de démarrer : un port est déjà pris",
+        symptom: "Up échoue et la sortie dit « port is already allocated » ou « address already in use », ou Solon affiche « Le port 8080 est déjà utilisé sur ce PC ».",
+        steps: [
+          "Un autre programme (une autre pile, IIS, un serveur de développement, Docker Desktop) écoute déjà sur ce port. Solon nomme le port et propose le suivant libre : cliquez sur <b>Utiliser 8081 au lieu de 8080</b> dans la galerie, ou dans l'onglet <b>Compose</b> du projet changez le port hôte (le nombre de gauche dans <code>\"8080:80\"</code>) puis <b>Save and Up</b>.",
+          "Vous n'avez peut-être pas besoin de publier un port : chaque conteneur répond sur <code>https://&lt;nom&gt;.solon.local</code>, port ou pas. Commentez les lignes <code>ports:</code> et utilisez cette adresse.",
+          "Deux exemplaires de la même pile (deux WordPress, deux Odoo) se heurtent toujours sur le même port : donnez un autre port hôte au second, ou retirez les ports et utilisez les deux adresses solon.local.",
+        ],
+        note: null,
+      },
+      {
+        title: "Un conteneur « ne fait rien » ou s'arrête aussitôt",
+        symptom: "Vous cliquez sur Run ou Start, le conteneur apparaît une seconde puis passe en Exited ; hello-world est le cas classique.",
+        steps: [
+          "C'est normal pour un programme qui fait son travail et se termine : hello-world affiche son message et sort en un dixième de seconde. Solon ouvre ses journaux et indique « terminé aussitôt avec le code 0 » ; le message est dans l'onglet Logs.",
+          "Un serveur qui sort avec un code non nul est un vrai échec : lisez les dernières lignes de ses journaux (onglet Logs, ou <code>docker logs &lt;nom&gt;</code>). Les causes habituelles : une variable d'environnement manquante, un chemin de volume faux, un port que le conteneur lui-même ne peut pas ouvrir.",
+          "Un conteneur que Solon a endormi (icône lune) n'est pas arrêté : la requête suivante le réveille. Utilisez <b>Keep awake</b> sur sa page s'il exécute des tâches planifiées.",
+        ],
+        note: null,
+      },
+      {
+        title: "Pas de réseau dans les conteneurs, ou une adresse solon.local ne s'ouvre pas",
+        symptom: "apt ou pip expirent dans un conteneur, ou le navigateur n'atteint pas https://nom.solon.local.",
+        steps: [
+          "<b>VPN d'entreprise.</b> Certains clients VPN (AnyConnect, GlobalProtect, Zscaler) bloquent le trafic des cartes virtuelles. Déconnectez le VPN et réessayez ; si ça marche, indiquez-le dans votre rapport pour qu'un contournement soit trouvé.",
+          "<b>L'adresse.</b> Un conteneur n'a une adresse que pendant qu'il tourne ; le nom est celui du conteneur (<code>web.solon.local</code>) ou <code>service.projet.solon.local</code> pour Compose. Ouvrez <code>http://nimportequoi.solon.local</code> : la page liste toutes les adresses disponibles.",
+          "<b>Le certificat.</b> Les navigateurs et .NET reconnaissent les certificats locaux. <code>curl.exe</code> sur Windows a besoin de <code>--ssl-no-revoke</code>, comme avec mkcert.",
+          "<b>Des liens en http://.</b> WordPress, Nextcloud et compagnie construisent leurs liens à partir de la requête : Solon transmet <code>X-Forwarded-Proto: https</code>, que les images officielles respectent. Pour un WordPress déjà installé en http, changez l'adresse du site dans Réglages → Général.",
+          "<b>Le fichier hosts.</b> Solon écrit les noms dans <code>C:\\Windows\\System32\\drivers\\etc\\hosts</code> entre <code># solon-begin</code> et <code># solon-end</code>. Un produit de sécurité qui protège ce fichier bloque les adresses : autorisez Solon ou ajoutez les noms à la main.",
+        ],
+        note: null,
+      },
+      {
+        title: "Le disque se remplit",
+        symptom: "Windows prévient que le lecteur C: est presque plein, ou Solon affiche « Disque du moteur presque plein ».",
+        steps: [
+          "Solon garde tout dans un seul fichier, <code>%ProgramData%\\Solon\\data.vhdx</code>, qui grossit avec les images, conteneurs et volumes et ne se réduit qu'après un nettoyage.",
+          "Réglages → <b>Disque</b> → <b>Récupérer l'espace</b> : supprime les images qu'aucun conteneur n'utilise et le cache de construction, puis rend l'espace libéré à Windows. Les conteneurs et les volumes ne sont jamais touchés.",
+          "Toujours gros ? Images → « Inutilisées seulement » montre ce qui reste ; Volumes → « Inutilisés seulement » montre les volumes qu'aucun conteneur ne référence (des données que vous voulez peut-être garder : vérifiez avant de supprimer).",
+        ],
+        note: null,
+      },
+      {
+        title: "Docker Desktop ou WSL est aussi installé",
+        symptom: "Les commandes docker parlent au mauvais moteur, ou Docker Hub refuse votre connexion.",
+        steps: [
+          "Solon et Docker Desktop cohabitent. Le moteur auquel la commande <code>docker</code> s'adresse dépend du <code>docker.exe</code> trouvé en premier dans votre PATH ; celui de Solon est dans son dossier d'installation. <code>docker context ls</code> montre le contexte courant.",
+          "Erreurs « unauthorized » de Docker Hub : le CLI docker de Windows réutilise des identifiants stockés par Docker Desktop, parfois périmés. <code>docker logout</code> puis <code>docker login</code> règle le problème.",
+          "WSL n'est pas utilisé par Solon et n'a besoin ni d'être installé ni d'être retiré.",
+        ],
+        note: null,
+      },
+    ],
+    report: {
+      title: "Signaler un problème",
+      lead: "Un fichier zip en dit plus qu'une capture d'écran. Cela prend dix secondes.",
+      steps: [
+        "Dans Solon : <b>Réglages → Diagnostic → Exporter un diagnostic…</b>, enregistrez le zip.",
+        "Ouvrez un rapport de bug sur GitHub et déposez le zip dans le formulaire, avec ce que vous avez fait et ce que vous attendiez.",
+        "Indiquez votre version de Windows (<code>winver</code>), et si un VPN, un autre antivirus, Docker Desktop ou WSL sont présents.",
+      ],
+      privacy: "Le zip contient les journaux de Solon, son état et ses réglages, le rapport des prérequis, docker info et les versions. Il ne contient ni les données de vos conteneurs, ni mots de passe, ni identifiants Docker Hub ; vous pouvez l'ouvrir et vérifier avant d'envoyer.",
+      button: "Ouvrir un rapport de bug",
+    },
+    codes: {
+      title: "Codes d'erreur",
+      lead: "Chaque erreur affichée par Solon porte un code stable. Les journaux sont dans %ProgramData%\\Solon\\logs et se copient depuis l'écran d'erreur.",
+      cols: ["Code", "Cause", "Que faire"],
+      power: "Coupure de courant ou arrêt brutal : au démarrage suivant, Solon vérifie et répare le disque de données (<code>fsck</code>), puis redémarre le moteur. Les écritures non synchronisées des deux dernières secondes peuvent être perdues, comme sur toute machine Linux.",
+      rows: [
+        ["VIRTUALIZATION_DISABLED_IN_FIRMWARE", "VT-x / AMD-V désactivé", "Activer la virtualisation dans le BIOS/UEFI (onglet Advanced, CPU ou Security), redémarrer."],
+        ["UNSUPPORTED_WINDOWS_EDITION", "Windows Famille", "Passer à Windows Pro, Entreprise ou Éducation."],
+        ["WINDOWS_FEATURE_MISSING", "Hyper-V ou Plateforme de machine virtuelle désactivés", "Redémarrer si vous venez d'installer. Sinon réinstaller Solon (l'installeur les active) ou, en PowerShell administrateur : <code>Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V,VirtualMachinePlatform -All</code>, puis redémarrer."],
+        ["WINDOWS_FEATURE_BLOCKED_BY_POLICY", "Stratégie d'entreprise (WSUS, GPO) refuse l'activation", "Demander à l'administrateur d'activer Microsoft-Hyper-V et VirtualMachinePlatform."],
+        ["HYPERVISOR_NOT_RUNNING", "Hyperviseur Windows non démarré", "Désinstaller les anciens VirtualBox/VMware (< 6.1 / < 15.5), vérifier <code>bcdedit /enum</code> (hypervisorlaunchtype Auto), ne pas exécuter Solon dans une VM sans virtualisation imbriquée."],
+        ["HOST_COMPUTE_SERVICE_UNAVAILABLE", "Service vmcompute ou hns arrêté ou absent", "Redémarrer Windows ; sinon réinstaller Solon."],
+        ["BLOCKED_BY_SECURITY_SOFTWARE", "Antivirus / EDR bloque les disques ou le service", "Ajouter %ProgramData%\\Solon et le dossier d'installation aux exclusions."],
+        ["INSUFFICIENT_PRIVILEGES", "Le service ne tourne pas avec les droits attendus", "Réinstaller Solon (le service doit tourner en LocalSystem)."],
+        ["IMAGE_CORRUPTED", "Fichiers du moteur absents ou empreinte SHA-256 invalide", "Réinstaller Solon."],
+        ["DATA_DISK_ERROR", "data.vhdx impossible à créer ou ouvrir", "Vérifier l'espace disque et les exclusions antivirus ; en dernier recours renommer %ProgramData%\\Solon\\data.vhdx (perte des données Docker)."],
+        ["VM_BOOT_TIMEOUT, AGENT_UNREACHABLE, ENGINE_UNREACHABLE", "La machine ne répond pas", "Redémarrer le moteur ; consulter solon-service.log ; signaler avec le zip de diagnostic."],
+        ["Pas d'accès réseau depuis les conteneurs", "VPN d'entreprise ou conflit de plage IP", "Solon choisit une plage libre et fixe le MTU à 1400 ; certains VPN bloquent tout de même les cartes virtuelles : désactiver le VPN pour tester, puis signaler."],
+        ["« Le service Solon n'est pas en cours d'exécution »", "Service arrêté", "<code>sc start SolonService</code> en administrateur, ou réinstaller."],
+      ],
+    },
+  },
+  footer: { made: "Fait au Luxembourg. Aucune télémétrie ; la seule requête sortante est une vérification facultative des nouvelles versions, désactivable.", licence: "Apache 2.0", source: "Code source", issues: "Signaler un problème", security: "Sécurité" },
 };
 
 export const dict: Record<Lang, typeof en> = { en, fr };
+
+/** Page « Dépannage » : `troubleshooting/` en anglais, `depannage/` en français. */
+export const HELP_PATH: Record<Lang, string> = { en: "troubleshooting/", fr: "depannage/" };
 
 /** Préfixe des liens internes pour une langue (l'anglais est à la racine). */
 export function langPath(lang: Lang, path = ""): string {

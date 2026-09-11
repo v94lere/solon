@@ -237,8 +237,15 @@ export interface RunSpec {
   env: string[];
   ports: { host: number; container: number; proto: string }[];
 }
+export interface ReclaimReport {
+  images_removed: number;
+  build_cache_removed: number;
+  space_reclaimed: number;
+}
 export const images = {
   list: () => invoke<ImageSummary[]>("images_list"),
+  /** Supprime les images inutilisées et le cache de construction ; conteneurs et volumes intacts. */
+  reclaim: () => invoke<ReclaimReport>("docker_reclaim"),
   inspect: (id: string) => invoke<unknown>("image_inspect", { id }),
   remove: (id: string, force: boolean) => invoke<void>("image_remove", { id, force }),
   run: (spec: RunSpec) => invoke<string>("image_run", { spec }),
@@ -338,6 +345,24 @@ export const machineShell = {
 
 export const system = {
   openInVsCode: (dir: string) => invoke<void>("open_in_vscode", { dir }),
+};
+
+// ---- Le PC Windows : ports déjà pris, place disque ----
+export interface PortProbe {
+  port: number;
+  in_use: boolean;
+  suggestion: number | null;
+}
+export interface HostDiskInfo {
+  data_disk_path: string;
+  data_disk_bytes: number;
+  drive: string;
+  drive_total_bytes: number;
+  drive_free_bytes: number;
+}
+export const host = {
+  portsProbe: (ports: number[]) => invoke<PortProbe[]>("ports_probe", { ports }),
+  diskInfo: () => invoke<HostDiskInfo>("host_disk_info"),
 };
 
 // ---- Compose ----
