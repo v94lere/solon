@@ -1,6 +1,7 @@
 ---
 // Page d'accueil complète (une par langue) : promesse, chiffres, fonctions, captures, comparatif, piles, versions, limites.
 import { dict, REPO, RELEASES, LATEST, type Lang } from "../i18n";
+import { fetchReleases, latestInstaller } from "../releases";
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
@@ -8,14 +9,9 @@ const t = dict[lang];
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 // Versions publiées, lues au moment de la construction (le site est statique, aucune requête chez le visiteur).
-interface Release { name: string; tag_name: string; published_at: string; html_url: string; body: string; assets: { name: string; browser_download_url: string; size: number }[] }
-let releases: Release[] = [];
-try {
-  const r = await fetch("https://api.github.com/repos/v94lere/solon/releases?per_page=5", { headers: { Accept: "application/vnd.github+json", "User-Agent": "solon-site-build" } });
-  if (r.ok) releases = (await r.json()) as Release[];
-} catch {
-  releases = [];
-}
+const releases = await fetchReleases();
+const installer = await latestInstaller();
+const downloadUrl = installer?.url ?? LATEST;
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { year: "numeric", month: "long", day: "numeric" });
 const fmtSize = (n: number) => `${(n / 1048576).toFixed(0)} MB`;
 
@@ -33,13 +29,18 @@ const TOOLS = ["Mailpit", lang === "fr" ? "Blank compose.yaml" : "Blank compose.
     <h1 class="sr-only">{t.hero.title}</h1>
     <p class="lead">{t.hero.lead}</p>
     <div class="cta">
-      <a class="btn btn-primary" href={LATEST} rel="noopener">
+      <a class="btn btn-primary" href={downloadUrl} rel="noopener">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>
-        {t.hero.download}
+        {t.hero.download}{installer ? ` · ${installer.version}` : ""}
       </a>
       <a class="btn" href={REPO} rel="noopener">GitHub</a>
       <code class="small">{t.hero.winget}</code>
     </div>
+    {installer && (
+      <p class="small mono">
+        {installer.url.split("/").pop()} · {fmtSize(installer.size)}{installer.sha256 ? ` · SHA-256 ${installer.sha256}` : ""} · <a href={RELEASES} rel="noopener">{t.releases.title}</a>
+      </p>
+    )}
     <p class="small">{t.hero.requirements}</p>
     <p class="small">{t.hero.unsigned}</p>
   </div>

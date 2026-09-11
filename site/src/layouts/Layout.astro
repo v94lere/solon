@@ -2,6 +2,7 @@
 // Gabarit commun : en-tête avec navigation et bascule de langue, pied de page.
 import "../styles/global.css";
 import { dict, langPath, REPO, LATEST, type Lang } from "../i18n";
+import { latestInstaller } from "../releases";
 
 interface Props {
   lang: Lang;
@@ -13,6 +14,7 @@ const t = dict[lang];
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const here = (l: Lang) => `${base}${langPath(l)}`;
 const anchor = (id: string) => `${base}${langPath(lang)}#${id}`;
+const downloadUrl = (await latestInstaller())?.url ?? LATEST;
 ---
 <!doctype html>
 <html lang={lang}>
@@ -45,7 +47,7 @@ const anchor = (id: string) => `${base}${langPath(lang)}#${id}`;
           <a href={anchor("stacks")}>{t.nav.stacks}</a>
           <a href={anchor("releases")}>{t.nav.releases}</a>
           <a href={REPO} rel="noopener">{t.nav.github}</a>
-          <a class="btn btn-primary" href={LATEST} rel="noopener" style="padding: 7px 14px">{t.nav.download}</a>
+          <a class="btn btn-primary" href={downloadUrl} rel="noopener" style="padding: 7px 14px">{t.nav.download}</a>
           <span class="lang" aria-label="Language">
             <a href={here("en")} aria-current={lang === "en" ? "true" : undefined}>EN</a>
             <a href={here("fr")} aria-current={lang === "fr" ? "true" : undefined}>FR</a>

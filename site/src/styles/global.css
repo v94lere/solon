@@ -114,6 +114,7 @@ img { max-width: 100%; display: block; }
 .hero .lead { font-size: 1.15rem; max-width: 56ch; }
 .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .small { color: var(--ink-3); font-size: 0.85rem; max-width: 60ch; }
+.small.mono { font-size: 0.78rem; max-width: none; overflow-wrap: anywhere; }
 .shot { border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); background: var(--surface); }
 .shot img { width: 100%; height: auto; }
 
