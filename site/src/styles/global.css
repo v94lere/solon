@@ -185,3 +185,11 @@ td:nth-child(3) { font-weight: 650; color: var(--accent-ink); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .theme-btn .sun { display: none; } :root:not([data-theme="light"]) .theme-btn .moon { display: block; } }
 :root[data-theme="dark"] .theme-btn .sun { display: none; }
 :root[data-theme="dark"] .theme-btn .moon { display: block; }
+
+/* Clips vidéo */
+.clips { display: grid; gap: 28px; }
+@media (min-width: 900px) { .clips { grid-template-columns: 1fr; } .clip { display: grid; grid-template-columns: 3fr 2fr; gap: 24px; align-items: center; } .clip:nth-child(even) { direction: rtl; } .clip:nth-child(even) > * { direction: ltr; } }
+.clip { margin: 0; }
+.clip video { display: block; width: 100%; height: auto; }
+.clip figcaption { display: flex; flex-direction: column; gap: 8px; color: var(--ink-2); }
+.clip figcaption b { color: var(--ink); font-size: 1.15rem; font-weight: 650; }

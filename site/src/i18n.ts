@@ -21,6 +21,14 @@ const en = {
     { value: "4×", label: "less memory at rest and with a stack running", note: "430–520 MB vs 1,998 MB" },
     { value: "0", label: "telemetry, outgoing requests, licence fees", note: "Apache 2.0" },
   ],
+  clips: {
+    title: "See it in action",
+    items: [
+      { title: "A stack in one click", body: "New stack… → n8n → Create and start. Twenty seconds later the browser opens on https://n8n.n8n.solon.local with a trusted certificate. No port to publish, nothing to install on Windows." },
+      { title: "Look inside", body: "A container's page: logs, the Files tab to browse and exchange files with Windows, and the debug shell with ps, curl and friends, even in images that ship no shell." },
+      { title: "Activity", body: "CPU, memory and network per container, hover for exact values, click a name to isolate it, 1 min / 10 min / 1 h windows." },
+    ],
+  },
   features: {
     title: "What Solon does",
     items: [
@@ -86,6 +94,14 @@ const fr: typeof en = {
     { value: "4×", label: "moins de mémoire, au repos comme avec une pile", note: "430–520 Mo contre 1 998 Mo" },
     { value: "0", label: "télémétrie, requête sortante, licence", note: "Apache 2.0" },
   ],
+  clips: {
+    title: "En action",
+    items: [
+      { title: "Une pile en un clic", body: "New stack… → n8n → Create and start. Vingt secondes plus tard, le navigateur s'ouvre sur https://n8n.n8n.solon.local avec un certificat reconnu. Aucun port à publier, rien à installer sur Windows." },
+      { title: "Voir dedans", body: "La fiche d'un conteneur : journaux, onglet Fichiers pour parcourir et échanger des fichiers avec Windows, et le shell de débogage avec ps, curl et compagnie, même dans les images sans shell." },
+      { title: "Activity", body: "CPU, mémoire et réseau par conteneur, survol pour les valeurs exactes, clic sur un nom pour l'isoler, fenêtres 1 min / 10 min / 1 h." },
+    ],
+  },
   features: {
     title: "Ce que Solon fait",
     items: [

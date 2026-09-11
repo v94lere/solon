@@ -898,3 +898,33 @@ identifiant `ValereNeveux.Solon`, type `nullsoft`, portée machine, `/S` silenci
 par l'installateur Tauri, éditeur « Solon »). À soumettre par pull request sur microsoft/winget-pkgs sous
 `manifests/v/ValereNeveux/Solon/0.1.1/` une fois validés par `winget validate`. Les versions suivantes se soumettent
 avec `wingetcreate update` depuis le workflow de release (jeton GitHub nécessaire).
+
+**Défaut constaté (11 septembre 2026, soir)** : l'application n'a pas de garde « instance unique ». Quatre processus
+`solon.exe` tournaient en même temps (deux fenêtres « Solon » superposées, deux fenêtres fantômes de 16 px issues de
+lancements précédents dont la fenêtre principale avait été fermée dans la barre des tâches). Chaque instance ouvre
+ses propres flux vers le service. À corriger : `tauri-plugin-single-instance` (relancer l'exécutable doit ramener la
+fenêtre existante au premier plan), et la fermeture vers la barre des tâches ne doit laisser qu'un processus.
+
+## Clips animés pour le site et le README (11 septembre 2026, soir)
+
+Trois clips produits sans logiciel tiers : un script pilote l'application (clics à des coordonnées relatives à la
+fenêtre, frappe par SendKeys), `record.ps1` capture la zone de la fenêtre 6 fois par seconde en PNG, et
+`assemble-clip.py` remonte les images en MP4 (H.264 via imageio-ffmpeg, 1180 × 791) et en GIF (800 px, palette
+de 128 couleurs) avec un remappage du temps par segments (attentes accélérées 1,3 à 1,6×). Données de démonstration
+neutres : pile n8n créée dans `C:\Projects\demo` (nom d'utilisateur Windows absent des chemins), navigateur Edge
+avec un profil vierge et sa barre d'adresse (`https://n8n.n8n.solon.local/setup`, cadenas), conteneur `demo-load`
+pour animer les courbes d'Activity. Tout est supprimé après (pile, volumes, dossier, profils).
+
+| Clip | Contenu | Durée | MP4 | GIF |
+|---|---|---|---|---|
+| new-stack | liste → New stack… → recherche n8n → formulaire → Create and start → Up → navigateur | 25,7 s | 752 Ko | 649 Ko |
+| inside | fiche n8n-n8n-1 : Overview, Logs, Files (/etc), Debug shell (`ps aux`, `curl -sI localhost:5678`) | 26,2 s | 682 Ko | 268 Ko |
+| activity | courbes CPU avec survol, isolation de `demo-load`, onglets Memory et Network, fenêtre 10 min | 23,8 s | 516 Ko | 369 Ko |
+
+Pièges rencontrés : (1) la fenêtre « Solon » à viser n'est pas forcément la première du processus (fenêtres fantômes
+de 16 px des instances multiples) : les scripts choisissent la fenêtre titrée « Solon » ; (2) SendKeys depuis un
+PowerShell enfant (`powershell -File`) n'atteint pas le webview alors que les clics passent : les frappes sont
+envoyées depuis la session principale ; (3) une fois, la fenêtre Solon n'étant pas au premier plan, les frappes sont
+parties dans VS Code : un garde-fou vérifie désormais le titre de la fenêtre au premier plan avant chaque action ;
+(4) réutiliser un profil Edge tué de force affiche « Restore pages » : profil neuf à chaque enregistrement et
+`--disable-session-crashed-bubble`.

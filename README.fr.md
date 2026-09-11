@@ -4,6 +4,10 @@
 
 [![CI](https://github.com/v94lere/solon/actions/workflows/ci.yml/badge.svg)](https://github.com/v94lere/solon/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/v94lere/solon?label=release&color=f860c0)](https://github.com/v94lere/solon/releases/latest) [![Downloads](https://img.shields.io/github/downloads/v94lere/solon/total?color=e01818)](https://github.com/v94lere/solon/releases) [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE) [![Website](https://img.shields.io/badge/website-v94lere.github.io%2Fsolon-1a0d14)](https://v94lere.github.io/solon/)
 
+![Nouvelle pile : n8n créé et démarré, puis ouvert sur https://n8n.n8n.solon.local](docs/media/new-stack.gif)
+
+*Une pile en un clic : New stack… → n8n → Create and start → le navigateur s'ouvre sur son adresse https://…solon.local.*
+
 
 **Solon est un gestionnaire de conteneurs autonome pour Windows**, dans l'esprit d'OrbStack : une
 installation, aucun prérequis logiciel à installer soi-même, et un moteur Docker complet qui démarre

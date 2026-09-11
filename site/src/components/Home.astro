@@ -55,6 +55,22 @@ const TOOLS = ["Mailpit", lang === "fr" ? "Blank compose.yaml" : "Blank compose.
   ))}
 </section>
 
+<section class="section" id="clips">
+  <div class="wrap">
+    <div class="section-head"><h2>{t.clips.title}</h2></div>
+    <div class="clips">
+      {["new-stack", "inside", "activity"].map((name, i) => (
+        <figure class="clip">
+          <div class="shot">
+            <video src={`${base}/clips/${name}.mp4`} autoplay muted loop playsinline preload="metadata" width="1180" height="791" aria-label={t.clips.items[i].title}></video>
+          </div>
+          <figcaption><b>{t.clips.items[i].title}</b><span>{t.clips.items[i].body}</span></figcaption>
+        </figure>
+      ))}
+    </div>
+  </div>
+</section>
+
 <section class="section" id="features">
   <div class="wrap">
     <div class="section-head"><h2>{t.features.title}</h2></div>

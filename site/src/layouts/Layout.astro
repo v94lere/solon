@@ -42,6 +42,7 @@ const downloadUrl = (await latestInstaller())?.url ?? LATEST;
       <div class="wrap">
         <a class="logo" href={here(lang)}><img src={`${base}/logo.png`} alt="" width="30" height="30" /> Solon</a>
         <nav class="nav" aria-label="Main">
+          <a href={anchor("clips")}>{t.clips.title}</a>
           <a href={anchor("features")}>{t.nav.features}</a>
           <a href={anchor("compare")}>{t.nav.compare}</a>
           <a href={anchor("stacks")}>{t.nav.stacks}</a>
