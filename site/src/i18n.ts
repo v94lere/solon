@@ -14,7 +14,7 @@ const en = {
     download: "Download for Windows",
     winget: "winget coming soon",
     requirements: "Windows 11 or 10 22H2, Pro / Enterprise / Education, hardware virtualization enabled. Check the SHA-256 published with each release.",
-    unsigned: "The installer is not signed yet: SmartScreen shows a warning, choose “More info” then “Run anyway”.",
+    unsigned: "The installer is not signed yet: SmartScreen shows a warning, choose “More info” then “Run anyway”. Code signing through the SignPath Foundation (free signing for open-source projects) has been requested; releases will be signed as soon as the project is accepted.",
   },
   numbers: [
     { value: "≈ 3 s", label: "engine ready after you ask for it", note: "Docker Desktop: 6.1 s" },
@@ -79,7 +79,7 @@ const fr: typeof en = {
     download: "Télécharger pour Windows",
     winget: "winget bientôt",
     requirements: "Windows 11 ou 10 22H2, éditions Pro, Entreprise ou Éducation, virtualisation matérielle activée. Vérifiez le SHA-256 publié avec chaque version.",
-    unsigned: "L'installateur n'est pas encore signé : SmartScreen affiche un avertissement, choisissez « Informations complémentaires » puis « Exécuter quand même ».",
+    unsigned: "L'installateur n'est pas encore signé : SmartScreen affiche un avertissement, choisissez « Informations complémentaires » puis « Exécuter quand même ». Une signature via la SignPath Foundation (signature gratuite pour les projets open source) a été demandée ; les versions seront signées dès l'acceptation du projet.",
   },
   numbers: [
     { value: "≈ 3 s", label: "moteur prêt après l'ordre de démarrage", note: "Docker Desktop : 6,1 s" },
