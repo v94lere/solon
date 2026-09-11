@@ -188,7 +188,7 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
           {error}
         </div>
       )}
-      <div className="card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
+      <div className="card list-card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
         {query.isLoading ? (
           <SkeletonRows rows={5} cols={6} />
         ) : noContainersAtAll ? (
@@ -232,11 +232,11 @@ export function ContainersView({ onOpen, onOpenProject }: { onOpen: (id: string)
             <thead>
               <tr>
                 <th>{t("containers.columns.name")}</th>
-                <th>{t("containers.columns.image")}</th>
+                <th className="col-image">{t("containers.columns.image")}</th>
                 <th>{t("containers.columns.status")}</th>
-                <th>{t("containers.columns.ports")}</th>
-                <th className="text-right">{t("containers.columns.cpu")}</th>
-                <th className="text-right">{t("containers.columns.memory")}</th>
+                <th className="col-ports">{t("containers.columns.ports")}</th>
+                <th className="col-cpu text-right">{t("containers.columns.cpu")}</th>
+                <th className="col-mem text-right">{t("containers.columns.memory")}</th>
                 <th />
               </tr>
             </thead>
@@ -357,12 +357,15 @@ function GroupRows({
             <td>
               <span className="flex items-center gap-2.5">
                 <Avatar label={imageBase(c.Image)} seed={imageBase(c.Image)} title={c.Image} />
-                <button type="button" className="font-medium hover:underline" onClick={() => onOpen(c.Id)} style={{ color: running ? "var(--ink)" : "var(--ink-2)" }}>
-                  {name}
-                </button>
+                <span className="col-name-inner flex min-w-0 flex-col">
+                  <button type="button" className="truncate text-left font-medium hover:underline" onClick={() => onOpen(c.Id)} style={{ color: running ? "var(--ink)" : "var(--ink-2)" }}>
+                    {name}
+                  </button>
+                  <span className="name-image mono truncate" title={c.Image}>{shortImage(c.Image)}</span>
+                </span>
               </span>
             </td>
-            <td className="mono max-w-[220px] truncate" title={c.Image} style={{ color: "var(--ink-2)" }}>
+            <td className="col-image mono max-w-[220px] truncate" title={c.Image} style={{ color: "var(--ink-2)" }}>
               {shortImage(c.Image)}
             </td>
             <td>
@@ -380,20 +383,20 @@ function GroupRows({
                 />
               )}
             </td>
-            <td className="mono">
+            <td className="col-ports mono">
               <PortLinks c={c} running={reachable} />
             </td>
-            <td className="text-right whitespace-nowrap">
+            <td className="col-cpu text-right whitespace-nowrap">
               {running && s ? (
                 <span className="inline-flex items-center justify-end gap-2">
-                  <Spark values={cpuHist} max={Math.max(100, ...cpuHist)} className="spark-row spark-cell" warn={70} bad={90} history={30} />
+                  <Spark values={cpuHist} max={Math.max(100, ...cpuHist)} className="spark-row spark-cell col-trend" warn={70} bad={90} history={30} />
                   <span className="mono">{s.cpu_percent.toFixed(1)} %</span>
                 </span>
               ) : (
                 <span className="mono">—</span>
               )}
             </td>
-            <td className="mono text-right whitespace-nowrap">{running && s ? formatBytes(s.mem_usage) : "—"}</td>
+            <td className="col-mem mono text-right whitespace-nowrap">{running && s ? formatBytes(s.mem_usage) : "—"}</td>
             <td>
               <div className="flex justify-end gap-0.5">
                 {running || asleep ? (
@@ -401,7 +404,7 @@ function GroupRows({
                     <button type="button" className="icon-btn" title={t("containers.actions.stop")} aria-label={t("containers.actions.stop")} disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.stop(c.Id))}>
                       <IconStop />
                     </button>
-                    <button type="button" className="icon-btn" title={t("containers.actions.restart")} aria-label={t("containers.actions.restart")} disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.restart(c.Id))}>
+                    <button type="button" className="icon-btn col-secondary" title={t("containers.actions.restart")} aria-label={t("containers.actions.restart")} disabled={busy === c.Id} onClick={() => void onAct(c.Id, () => containers.restart(c.Id))}>
                       <IconRestart />
                     </button>
                   </>
@@ -410,7 +413,7 @@ function GroupRows({
                     <IconPlay />
                   </button>
                 )}
-                <button type="button" className="icon-btn" title={t("containers.actions.logs")} aria-label={t("containers.actions.logs")} onClick={() => onOpen(c.Id)}>
+                <button type="button" className="icon-btn col-secondary" title={t("containers.actions.logs")} aria-label={t("containers.actions.logs")} onClick={() => onOpen(c.Id)}>
                   <IconLogs />
                 </button>
                 <button type="button" className="icon-btn icon-btn-danger" title={t("containers.actions.remove")} aria-label={t("containers.actions.remove")} disabled={busy === c.Id} onClick={() => onRemove(c)}>

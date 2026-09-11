@@ -822,3 +822,17 @@ Défaut vu au passage : un projet Compose lancé depuis le CLI Windows (`docker 
 porte un chemin Windows dans son étiquette `working_dir`, et non `/mnt/host/c/…` comme ceux lancés par
 l'application ; la liste n'affichait alors pas la flèche vers la vue projet. Corrigé : le chemin Windows est accepté
 tel quel.
+
+## Colonnes de la liste des conteneurs selon la largeur (11 septembre 2026)
+
+Toutes les cellules du tableau étant en `white-space: nowrap`, la liste mesurait au minimum ~950 px et défilait
+horizontalement dès que la fenêtre était plus étroite. La carte de la liste devient un conteneur CSS
+(`container-type: inline-size`) et des éléments se cachent selon **sa** largeur (fenêtre moins le menu, soit environ
+250 px de moins) : sous 920 px la courbe CPU, la colonne Image (le nom de l'image passe en petit sous le nom du
+conteneur), les boutons Redémarrer et Journaux de la ligne, et les adresses longues sont tronquées avec « … » ; sous
+780 px la colonne Mémoire et des marges réduites ; sous 680 px la colonne CPU. L'en-tête de la page passe sur deux
+lignes et le champ de recherche rétrécit au lieu de déborder. Tout ce qui disparaît reste dans la fiche du
+conteneur. Vérifié par captures à 1 100, 900 et 800 px de fenêtre : plus de défilement horizontal ; il ne
+réapparaît qu'en dessous d'environ 550 px de carte. Choix de Valère : option « masquer des colonnes » seule, sans
+repli automatique du menu ni passage en cartes. Trois itérations ont été nécessaires : les premiers paliers (1 000
+/ 850 / 700) laissaient les noms et les adresses non coupés déborder.

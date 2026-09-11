@@ -393,7 +393,8 @@ select {
 .mini-meter > i.is-bad { background: var(--bad); }
 
 /* En-tête de page unifié */
-.page-head { display: flex; align-items: center; gap: 12px; padding: 16px 16px 10px; }
+.page-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 16px 16px 10px; }
+.page-head > input[type="search"] { flex: 1 1 160px; min-width: 120px; max-width: 320px; }
 .page-title { font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
 .count-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: var(--surface-3); color: var(--ink-2); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
 .page-actions { display: flex; align-items: center; gap: 8px; margin-left: 8px; }
@@ -510,3 +511,26 @@ select {
 .title-edit { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 0 4px; margin: 0 -4px; border-radius: 6px; color: inherit; cursor: text; }
 .title-edit svg { width: 13px; height: 13px; color: var(--ink-3); opacity: 0; transition: opacity 120ms; }
 .title-edit:hover svg, .title-edit:focus-visible svg { opacity: 1; }
+
+/* Listes : colonnes masquées selon la largeur de la carte (largeur de la fenêtre moins le menu), pas de
+   défilement horizontal avant ~550 px de carte. Ce qui disparaît reste dans la fiche du conteneur. */
+.list-card { container-type: inline-size; }
+.name-image { display: none; font-size: 11px; color: var(--ink-3); }
+@container (max-width: 920px) {
+  .list-card .col-trend, .list-card .col-image, .list-card .col-secondary { display: none; }
+  .list-card .name-image { display: block; }
+  .list-card .col-name-inner { max-width: 180px; }
+  /* Adresses longues : tronquées avec « … » (l'infobulle donne l'adresse entière), une par ligne. */
+  .list-card td.col-ports { max-width: 200px; }
+  .list-card td.col-ports .port-link, .list-card td.col-ports > span > span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+}
+@container (max-width: 780px) {
+  .list-card .col-mem { display: none; }
+  .list-card td, .list-card th { padding-left: 6px; padding-right: 6px; }
+  .list-card td.col-ports { max-width: 180px; }
+}
+@container (max-width: 680px) {
+  .list-card .col-cpu { display: none; }
+  .list-card .col-name-inner { max-width: 150px; }
+  .list-card td.col-ports { max-width: 160px; }
+}
