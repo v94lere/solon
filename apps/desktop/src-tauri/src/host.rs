@@ -1,23 +1,86 @@
 //! Renseignements sur le PC Windows, côté application : ports TCP déjà pris (avant de créer une pile
 //! qui les publie) et place sur le disque qui héberge le disque de données du moteur.
 
-use std::net::{Ipv4Addr, SocketAddrV4, TcpListener};
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use serde::Serialize;
 
-/// Un port est « pris » si aucune socket ne peut s'y attacher sur toutes les adresses : serveur
-/// Windows local (IIS, un autre Docker, un serveur de développement) ou port déjà publié par Solon.
-fn port_in_use(port: u16) -> bool {
-    TcpListener::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port)).is_err()
-        || TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port)).is_err()
+/// Ports TCP sur lesquels un programme écoute déjà sur ce PC (IPv4 et IPv6, toutes adresses), lus
+/// dans la table TCP de Windows (`GetExtendedTcpTable`). Lecture seule : ouvrir une socket d'écoute
+/// pour tester aurait fait surgir la demande d'autorisation du pare-feu Windows pour `solon.exe`
+/// (constaté sur la 0.1.2). Couvre les serveurs Windows (IIS, serveurs de développement, un autre
+/// Docker) et les ports publiés par Solon, que le service réserve sur `0.0.0.0`.
+fn listening_ports() -> HashSet<u16> {
+    use windows::Win32::NetworkManagement::IpHelper::{
+        GetExtendedTcpTable, MIB_TCP6ROW_OWNER_PID, MIB_TCPROW_OWNER_PID,
+        TCP_TABLE_OWNER_PID_LISTENER,
+    };
+    use windows::Win32::Networking::WinSock::{AF_INET, AF_INET6};
+    let mut out = HashSet::new();
+    for family in [AF_INET.0 as u32, AF_INET6.0 as u32] {
+        let mut size = 0u32;
+        // Premier appel : taille nécessaire (ERROR_INSUFFICIENT_BUFFER attendu).
+        unsafe {
+            GetExtendedTcpTable(
+                None,
+                &mut size,
+                false,
+                family,
+                TCP_TABLE_OWNER_PID_LISTENER,
+                0,
+            );
+        }
+        if size == 0 {
+            continue;
+        }
+        let mut buf = vec![0u8; size as usize + 1024];
+        let rc = unsafe {
+            GetExtendedTcpTable(
+                Some(buf.as_mut_ptr().cast()),
+                &mut size,
+                false,
+                family,
+                TCP_TABLE_OWNER_PID_LISTENER,
+                0,
+            )
+        };
+        if rc != 0 || (buf.len() as u32) < size {
+            continue;
+        }
+        // Les deux tables commencent par `dwNumEntries: u32`, suivi des lignes ; `dwLocalPort` est
+        // dans l'ordre réseau, sur les 16 bits de poids faible.
+        let count = u32::from_ne_bytes([buf[0], buf[1], buf[2], buf[3]]) as usize;
+        let row_size = if family == AF_INET.0 as u32 {
+            std::mem::size_of::<MIB_TCPROW_OWNER_PID>()
+        } else {
+            std::mem::size_of::<MIB_TCP6ROW_OWNER_PID>()
+        };
+        for i in 0..count {
+            let base = 4 + i * row_size;
+            if base + row_size > buf.len() {
+                break;
+            }
+            let port_be = if family == AF_INET.0 as u32 {
+                let row: MIB_TCPROW_OWNER_PID =
+                    unsafe { std::ptr::read_unaligned(buf[base..].as_ptr().cast()) };
+                row.dwLocalPort
+            } else {
+                let row: MIB_TCP6ROW_OWNER_PID =
+                    unsafe { std::ptr::read_unaligned(buf[base..].as_ptr().cast()) };
+                row.dwLocalPort
+            };
+            out.insert(u16::from_be((port_be & 0xffff) as u16));
+        }
+    }
+    out
 }
 
 /// Premier port libre à partir de `from` (exclu), dans l'ordre croissant, pour proposer un remplaçant.
-fn next_free_port(from: u16, taken: &[u16]) -> Option<u16> {
+fn next_free_port(from: u16, taken: &[u16], listening: &HashSet<u16>) -> Option<u16> {
     let mut p = from.checked_add(1)?;
     for _ in 0..200 {
-        if !taken.contains(&p) && !port_in_use(p) {
+        if !taken.contains(&p) && !listening.contains(&p) {
             return Some(p);
         }
         p = p.checked_add(1)?;
@@ -38,12 +101,13 @@ pub struct PortProbe {
 #[tauri::command]
 pub async fn ports_probe(ports: Vec<u16>) -> Vec<PortProbe> {
     tokio::task::spawn_blocking(move || {
+        let listening = listening_ports();
         let mut reserved: Vec<u16> = ports.clone();
         let mut out = Vec::with_capacity(ports.len());
         for port in ports {
-            let in_use = port != 0 && port_in_use(port);
+            let in_use = port != 0 && listening.contains(&port);
             let suggestion = if in_use {
-                let s = next_free_port(port, &reserved);
+                let s = next_free_port(port, &reserved, &listening);
                 if let Some(s) = s {
                     reserved.push(s);
                 }
@@ -156,13 +220,16 @@ mod tests {
 
     #[test]
     fn port_pris_et_suivant_libre() {
-        let l = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0)).unwrap();
+        // Une socket d'écoute ouverte par le test lui-même doit apparaître dans la table TCP.
+        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let port = l.local_addr().unwrap().port();
-        assert!(port_in_use(port));
-        let next = next_free_port(port, &[port]).unwrap();
+        let listening = listening_ports();
+        assert!(listening.contains(&port), "port {port} absent de la table");
+        let next = next_free_port(port, &[port], &listening).unwrap();
         assert!(next > port);
-        assert!(!port_in_use(next));
+        assert!(!listening.contains(&next));
         drop(l);
+        assert!(!listening_ports().contains(&port));
     }
 
     #[test]

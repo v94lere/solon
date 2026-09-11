@@ -1004,3 +1004,35 @@ relance après un arrêt propre du démon que les conteneurs `always` / `unless-
 redémarrage de Windows et après un arrêt du moteur depuis l'application. Piste : mémoriser à l'arrêt les
 conteneurs en marche et les redémarrer une fois le moteur prêt (option « Relancer les conteneurs qui tournaient »).
 Pile relancée à la main (`docker start`).
+
+## Clips en thème sombre et version 0.1.3 (12 septembre 2026)
+
+Demande : GIF du README en sombre ; sur le site, vidéos claires en thème clair et sombres en thème sombre.
+Les trois clips ont été réenregistrés avec la même méthode (fenêtre à 100,60 en 1196 × 799, scripts pilotés
+depuis la session, garde-fou sur la fenêtre au premier plan), après passage de l'application en « Dark » dans les
+Réglages (remis en « Light » ensuite, réglage d'origine de Valère). Mêmes coordonnées de clic qu'en clair : la
+disposition ne change pas avec le thème.
+
+| Clip sombre | Images | Durée | MP4 | GIF (128 couleurs, sans tramage) |
+|---|---|---|---|---|
+| new-stack | 311 (55 s) | 33 s | 785 Ko | **579 Ko** (1 702 Ko avec tramage Floyd-Steinberg) |
+| inside | 158 (28 s) | 25 s | 681 Ko | 3 594 Ko avec tramage (non utilisé) |
+| activity | 145 (26 s) | 23 s | 441 Ko | 2 584 Ko avec tramage (non utilisé) |
+
+Le tramage, utile sur fond clair, triple à sextuple le poids des GIF sur fond sombre (bruit différent à chaque
+image, donc mal compressé) ; option `"gif_dither": false` ajoutée à `assemble-clip.py`. Site : une seule balise
+`<video>` par emplacement avec `data-light` / `data-dark`, un script choisit la source selon `data-theme` ou
+`prefers-color-scheme` et réagit à la bascule (`MutationObserver`) : pas de double téléchargement.
+
+Accrocs : (1) dans la session PowerShell, une fonction nommée `Type` est masquée par l'alias intégré `type`
+(`Get-Content`) : les frappes du premier essai n'ont jamais été envoyées ; renommée `TypeText`. (2) **Le pare-feu
+Windows a demandé d'autoriser `solon.exe`** au moment où le formulaire de la galerie vérifiait les ports : la
+détection de la 0.1.2 ouvrait une socket d'écoute sur `0.0.0.0` (`TcpListener::bind`), ce que Windows traite
+comme un serveur. Valère a cliqué « Autoriser » (deux règles entrantes `Allow` pour `solon.exe`, profil public,
+inutiles). Corrigé en 0.1.3 : lecture de la table TCP (`GetExtendedTcpTable`, IPv4 et IPv6, écouteurs seulement),
+sans ouvrir de socket ; test unitaire : une socket ouverte par le test apparaît dans la table et en disparaît
+après fermeture. (3) Premier enregistrement du clip 2 : le shell de débogage affichait la construction de l'image
+outil (« Building the debug toolbox image… ») avec l'avertissement `DEPRECATED: The legacy builder is
+deprecated` de Docker ; réenregistré après construction. À traiter : construire l'image outil avec BuildKit ou
+masquer cet avertissement. (4) Étiquettes de l'axe des ordonnées coupées à gauche sur l'onglet Network
+(« 9.8 KiB/s ») : marge gauche des courbes portée de 52 à 66 px (0.1.3).

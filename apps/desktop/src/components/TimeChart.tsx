@@ -21,7 +21,7 @@ export interface ChartLimit {
   label: string;
 }
 
-const ML = 52;
+const ML = 66; // « 9.8 KiB/s » tient sans être coupé (52 tronquait les étiquettes réseau)
 const MR = 12;
 const MT = 10;
 const MB = 22;
