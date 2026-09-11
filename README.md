@@ -2,6 +2,9 @@
 
 *Version française : [README.fr.md](README.fr.md).*
 
+[![CI](https://github.com/v94lere/solon/actions/workflows/ci.yml/badge.svg)](https://github.com/v94lere/solon/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/v94lere/solon?label=release&color=f860c0)](https://github.com/v94lere/solon/releases/latest) [![Downloads](https://img.shields.io/github/downloads/v94lere/solon/total?color=e01818)](https://github.com/v94lere/solon/releases) [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE) [![Website](https://img.shields.io/badge/website-v94lere.github.io%2Fsolon-1a0d14)](https://v94lere.github.io/solon/)
+
+
 **Solon is a standalone container manager for Windows**, in the spirit of OrbStack: one installer, no
 software prerequisite to install yourself, and a complete Docker engine that boots in a few seconds inside a
 tiny, invisible Linux machine managed entirely by Solon.
