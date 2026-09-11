@@ -62,7 +62,7 @@ const TOOLS = ["Mailpit", lang === "fr" ? "Blank compose.yaml" : "Blank compose.
       {["new-stack", "inside", "activity"].map((name, i) => (
         <figure class="clip">
           <div class="shot">
-            <video src={`${base}/clips/${name}.mp4`} autoplay muted loop playsinline preload="metadata" width="1180" height="791" aria-label={t.clips.items[i].title}></video>
+            <video class="clip-video" data-light={`${base}/clips/${name}.mp4`} data-dark={`${base}/clips/${name}-dark.mp4`} autoplay muted loop playsinline preload="metadata" width="1180" height="791" aria-label={t.clips.items[i].title}></video>
           </div>
           <figcaption><b>{t.clips.items[i].title}</b><span>{t.clips.items[i].body}</span></figcaption>
         </figure>
@@ -70,6 +70,29 @@ const TOOLS = ["Mailpit", lang === "fr" ? "Blank compose.yaml" : "Blank compose.
     </div>
   </div>
 </section>
+<script is:inline>
+  // Les clips existent en version claire et sombre : une seule vidéo par emplacement, dont la source suit
+  // le thème affiché (choix du visiteur via data-theme, sinon celui du système), sans double téléchargement.
+  (() => {
+    const root = document.documentElement;
+    const media = matchMedia("(prefers-color-scheme: dark)");
+    const isDark = () => root.dataset.theme === "dark" || (!root.dataset.theme && media.matches);
+    const apply = () => {
+      const key = isDark() ? "dark" : "light";
+      for (const v of document.querySelectorAll("video.clip-video")) {
+        const src = v.dataset[key];
+        if (src && v.getAttribute("src") !== src) {
+          v.setAttribute("src", src);
+          v.load();
+          v.play().catch(() => {});
+        }
+      }
+    };
+    apply();
+    new MutationObserver(apply).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    media.addEventListener("change", apply);
+  })();
+</script>
 
 <section class="section" id="features">
   <div class="wrap">
