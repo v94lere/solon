@@ -1075,3 +1075,11 @@ PostgreSQL) et un conteneur isolé, supprimés ensuite.
 
 Piège de construction : `cargo build --release -p solon` produit un binaire qui charge `http://localhost:1420`
 (page d'erreur Edge) ; il faut `npx tauri build --no-bundle` pour intégrer le frontend construit.
+
+**Version 0.1.4** (12 septembre 2026, même jour) : installateur 106 499 521 octets, release GitHub `v0.1.4`
+(site redéployé sur l'événement `release`, règle de tag en place), installation silencieuse par-dessus la 0.1.3 en
+50 s (code 0). **Test de la relance en réel** : moteur prêt → projet `blog` (web `depends_on` db) + conteneur
+isolé `lonely` → `solon-service stop` : `state.json` contient `resume_projects: ["blog"]` et l'identifiant du
+conteneur isolé (journal « en marche à l'arrêt : 1 projet(s), 1 conteneur(s) isolé(s) ») → `start` : moteur prêt,
+puis « relance au démarrage : project 'blog' started », « containers started » ; les trois conteneurs sont `Up`
+12 s après l'ordre de démarrage, `db` relancé avant `web`. Données de test supprimées ensuite.
