@@ -3,6 +3,7 @@
 //! - [`service`] : canal de contrôle du service Windows (état du moteur, démarrage/arrêt, réglages) ;
 //! - [`docker`] : API Docker via `bollard` sur le pipe exposé par le service ; flux par `Channel`.
 
+mod backup;
 mod compose;
 mod diagnostic;
 mod docker;
@@ -148,6 +149,19 @@ pub fn run() {
             tray::show_main(app);
         }))
         .plugin(tauri_plugin_opener::init())
+        // Ctrl+Alt+S depuis n'importe où : la fenêtre revient et la recherche (Ctrl+K) s'ouvre.
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_shortcuts(["ctrl+alt+s"])
+                .expect("raccourci global")
+                .with_handler(|app, _shortcut, event| {
+                    if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        tray::show_main(app);
+                        let _ = tauri::Emitter::emit(app, "solon://palette", ());
+                    }
+                })
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(
@@ -200,6 +214,9 @@ pub fn run() {
             shell::machine_shell_close,
             diagnostic::diagnostic_export,
             host::ports_probe,
+            backup::project_backup,
+            backup::project_backup_info,
+            backup::project_restore,
             host::host_disk_info,
             docker::docker_reclaim,
             set_language,

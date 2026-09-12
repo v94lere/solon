@@ -49,6 +49,8 @@ pub struct TrayContainer {
     pub id: String,
     pub name: String,
     pub running: bool,
+    /// Projet Compose (étiquette), `None` pour un conteneur isolé.
+    pub project: Option<String>,
 }
 
 impl DockerState {
@@ -84,6 +86,10 @@ impl DockerState {
                     .map(|n| n.trim_start_matches('/').to_owned())
                     .unwrap_or_default(),
                 running: matches!(c.state, Some(S::RUNNING | S::RESTARTING | S::PAUSED)),
+                project: c
+                    .labels
+                    .as_ref()
+                    .and_then(|l| l.get("com.docker.compose.project").cloned()),
             })
             .collect();
         v.sort_by(|a, b| b.running.cmp(&a.running).then_with(|| a.name.cmp(&b.name)));

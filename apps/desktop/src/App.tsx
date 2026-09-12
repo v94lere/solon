@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 import logo from "./assets/logo.png";
 import { useTranslation } from "react-i18next";
+import { listen } from "@tauri-apps/api/event";
 import { EngineProvider, useEngine } from "./engine";
 import "./accent";
 import { EngineFooter } from "./components/EngineFooter";
@@ -204,6 +205,13 @@ function Shell() {
     });
   }, []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
+  // Ctrl+Alt+S depuis n'importe quelle application (raccourci global côté Rust) : fenêtre + recherche.
+  useEffect(() => {
+    const un = listen("solon://palette", () => setPaletteOpen(true));
+    return () => {
+      void un.then((f) => f());
+    };
+  }, []);
   const paletteActions = useMemo(() => ({ go, openContainer, openProject, openTerminal: toggleTerminal }), [go, openContainer, openProject, toggleTerminal]);
 
   // Raccourcis globaux : Ctrl+K recherche, Ctrl+` terminal, Ctrl+B barre latérale, Ctrl+1…8 sections.

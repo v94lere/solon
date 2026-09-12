@@ -1083,3 +1083,39 @@ isolé `lonely` → `solon-service stop` : `state.json` contient `resume_project
 conteneur isolé (journal « en marche à l'arrêt : 1 projet(s), 1 conteneur(s) isolé(s) ») → `start` : moteur prêt,
 puis « relance au démarrage : project 'blog' started », « containers started » ; les trois conteneurs sont `Up`
 12 s après l'ordre de démarrage, `db` relancé avant `web`. Données de test supprimées ensuite.
+
+## Chantier 2 : le quotidien sans friction (12 septembre 2026, version 0.1.5)
+
+1. **Sauvegarde / restauration d'un projet** (`backup.rs`) : un zip = `solon-backup.json` (projet, fichier
+   Compose, volumes avec leur suffixe), `project/compose.yaml` + `.env` (+ `compose.override.*`), une archive
+   `tar.gz` par volume nommé, faite **dans la machine** depuis `/var/lib/docker/volumes/<nom>/_data` (root,
+   sans image, conteneurs en marche ou non) et déposée dans un dossier temporaire Windows partagé par
+   `EnsureShare`, puis stockée sans recompression. Restauration : dossier vide obligatoire, nouveau nom de
+   projet = clé `name:` sinon nom du dossier ; volumes recréés `<projet>_<suffixe>` **avec les étiquettes
+   Compose** (`com.docker.compose.project/volume/version`, sinon Compose refuse un volume qu'il n'a pas créé),
+   extraction dans `_data`, refus si le volume existe déjà. Test réel : projet `blog` (nginx + PostgreSQL,
+   volumes `site` 501 o et `db` 4,67 Mo) → zip 4,5 Mo en quelques secondes → restauré dans `blog2` : volumes
+   `blog2_site`/`blog2_db` étiquetés, `index.html` retrouvé, base PostgreSQL 38,7 Mo, `Up` → la page répond
+   sur le nouveau port. Piège Rust : un `ZipFile` emprunté ne traverse pas un `.await` (extraction d'abord,
+   commandes ensuite).
+2. **Ports vérifiés avant Up** (vue projet) : ports hôte du fichier, moins ceux déjà publiés par ce projet,
+   sondés par `ports_probe` ; bandeau « Port 8090 déjà pris… Rien n'a été démarré » avec « Utiliser 8091 »
+   (réécriture de la ligne + Up) et « Up quand même ». Testé : `blog2` restauré sur le 8090 de `blog`.
+3. **Journaux** : `levelOf` (erreur = flux d'erreur du canal ou mot-clé ; avertissement = stderr ou mot-clé),
+   pastilles Tout / Avertissements / Erreurs avec compteurs, recherche et pastilles par service dans la vue
+   projet. Nginx écrit ses `[notice]` sur stderr : 38 « avertissements » pour un démarrage sain (limite connue).
+4. **Notifications** : « conteneur arrêté » ignoré quand le moteur n'est pas prêt (arrêt du moteur) et pour
+   les services d'un projet sur lequel l'utilisateur a agi ; nouvel événement `Resumed` du service → une
+   notification « c'est reparti : blog ».
+5. **Ctrl+Alt+S** (`tauri-plugin-global-shortcut`, côté Rust) : fenêtre au premier plan + événement
+   `solon://palette` → recherche ouverte. Testé depuis Arc au premier plan.
+6. **Barre des tâches** : un sous-menu par projet (● nom (x/y)) avec Démarrer / Redémarrer / Arrêter via
+   `docker compose -p <nom> …` dans la machine, puis les conteneurs isolés.
+7. **Bandeau disque presque plein** : « Récupérer l'espace » sur place, avec confirmation, résultat affiché.
+
+**Bug trouvé au passage** : après le `Up` de `blog2`, seules les adresses de `db` étaient dans le fichier
+`hosts` ; journal du service : « fichier hosts non mis à jour : … utilisé par un autre processus (os error
+32) ». Deux conteneurs démarrés à une seconde d'écart = deux écritures rapprochées, la seconde refusée pendant
+que l'antivirus relit le fichier. Correction : jusqu'à 20 essais espacés (50 ms croissants) dans
+`write_hosts_block`. Autre correction : l'adresse principale d'un projet ne vise plus un service web
+**arrêté** (carte odoo18 avec `odoo` arrêté et `db` en marche).

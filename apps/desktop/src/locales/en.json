@@ -164,7 +164,12 @@
       "search": "Search in logs",
       "matches_one": "{{count}} line",
       "matches_other": "{{count}} lines",
-      "no_match": "No line matches."
+      "no_match": "No line matches.",
+      "level": "Level",
+      "level_all": "All",
+      "level_warn": "Warnings",
+      "level_error": "Errors",
+      "services": "Services shown"
     },
     "terminal": {
       "shell": "Shell",
@@ -407,7 +412,10 @@
     "container_start": "Start",
     "container_restart": "Restart",
     "container_stop": "Stop",
-    "containers_more": "… and {{count}} more (open Solon)"
+    "containers_more": "… and {{count}} more (open Solon)",
+    "project_start": "Start project",
+    "project_restart": "Restart project",
+    "project_stop": "Stop project"
   },
   "projects": {
     "running_count": "{{running}}/{{total}} running",
@@ -438,7 +446,11 @@
     "no_dir": "Started outside Solon: its folder is unknown.",
     "misc": "Other containers",
     "misc_hint": "started with docker run or from an image, outside a project",
-    "command_failed": "{{name}}: the command failed (exit code {{code}}). Open the project for details."
+    "command_failed": "{{name}}: the command failed (exit code {{code}}). Open the project for details.",
+    "restore": "Restore a backup…",
+    "restore_pick_zip": "Choose a Solon backup (.zip)",
+    "restore_pick_dir": "Folder for the restored project “{{project}}” ({{volumes}} volume(s)): choose an empty folder",
+    "restoring": "Restoring {{project}}…"
   },
   "project": {
     "back": "Projects",
@@ -482,7 +494,14 @@
       "empty": "No .env file yet.",
       "no_vars": "No environment variable for this service.",
       "no_services": "No services: block found in the Compose file."
-    }
+    },
+    "port_check": "Nothing was started.",
+    "up_anyway": "Up anyway",
+    "backup": "Back up…",
+    "backup_hint": "One zip file: the Compose files, the .env and the data of every volume. Restore it from the Projects home.",
+    "backup_running": "Backing up: archiving the volumes…",
+    "backup_done": "Backup written: {{volumes}} volume(s), {{size}}.",
+    "backup_failed": "Backup failed: {{detail}}"
   },
   "machine": {
     "terminal": "Terminal",
@@ -493,7 +512,7 @@
     "title": "Search",
     "placeholder": "Search containers, images, projects, actions…",
     "no_results": "No results",
-    "foot": "↑↓ navigate · Enter open · Esc close · Ctrl+1…7 sections · Ctrl+` terminal · Ctrl+B sidebar",
+    "foot": "↑↓ navigate · Enter open · Esc close · Ctrl+1…8 sections · Ctrl+` terminal · Ctrl+B sidebar",
     "groups": {
       "actions": "Actions",
       "containers": "Containers",
@@ -511,7 +530,10 @@
     "disk_title": "Solon: engine disk almost full",
     "disk_body": "{{pct}} % used, {{free}} GB left. Remove unused images or volumes.",
     "container_died_title": "Solon: container stopped",
-    "container_died_body": "{{name}} exited with code {{code}}."
+    "container_died_body": "{{name}} exited with code {{code}}.",
+    "resumed_title": "Solon: back up and running",
+    "resumed_body": "Restarted after the engine start: {{names}}.",
+    "resumed_containers": "{{count}} container(s)"
   },
   "activity": {
     "title": "Activity",

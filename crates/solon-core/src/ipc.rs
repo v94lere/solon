@@ -249,6 +249,11 @@ pub enum ServiceEvent {
         used_pct: u8,
         free_mb: u64,
     },
+    /// Projets et conteneurs relancés après le démarrage du moteur (voir `Settings::resume_running`).
+    Resumed {
+        projects: Vec<String>,
+        containers: usize,
+    },
 }
 
 /// Rapport des prérequis (produit par `solon-prereq`).

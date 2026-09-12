@@ -187,7 +187,23 @@ pub fn write_hosts_block(domains: &DomainMap) -> io::Result<()> {
     if next == current {
         return Ok(());
     }
-    std::fs::write(&path, next)
+    // Le fichier `hosts` est surveillé par l'antivirus : juste après une écriture, la suivante peut
+    // tomber sur « fichier utilisé par un autre processus » (erreur 32). Constaté quand deux conteneurs
+    // d'un même projet démarrent à une seconde d'écart : les adresses du second manquaient. On réessaie.
+    let mut last = None;
+    for attempt in 0..20 {
+        match std::fs::write(&path, &next) {
+            Ok(()) => return Ok(()),
+            Err(e)
+                if e.raw_os_error() == Some(32) || e.kind() == io::ErrorKind::PermissionDenied =>
+            {
+                last = Some(e);
+                std::thread::sleep(std::time::Duration::from_millis(50 + 50 * attempt));
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    Err(last.unwrap_or_else(|| io::Error::other("hosts : écriture impossible")))
 }
 
 // ---------------------------------------------------------------------------------------------

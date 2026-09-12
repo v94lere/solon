@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { containers, engine, formatBytes, host, images, type HostDiskInfo, type MachineMetrics, type ReclaimReport } from "../api";
+import { reclaimSpace } from "../reclaim";
 import { useEngine } from "../engine";
 import { imageUsage } from "../usage";
 import { checkForUpdate, lastCheck, RELEASES_URL, setUpdateCheckEnabled, updateCheckEnabled, type UpdateInfo } from "../updates";
@@ -91,9 +92,7 @@ export function DiskCard() {
     setError(null);
     setReport(null);
     try {
-      const r = await images.reclaim();
-      // Rendre l'espace libéré au fichier VHDX sur le disque Windows (TRIM depuis la machine).
-      await engine.exec("fstrim /var/lib/solon 2>/dev/null; fstrim /var/lib/docker 2>/dev/null; true", 180).catch(() => {});
+      const r = await reclaimSpace();
       setReport(r);
       await queryClient.invalidateQueries({ queryKey: ["images"] });
       await queryClient.invalidateQueries({ queryKey: ["metrics-disk"] });

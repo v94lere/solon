@@ -975,6 +975,23 @@ impl Engine {
                 for line in r.stdout.lines() {
                     tracing::info!("relance au démarrage : {line}");
                 }
+                let started: Vec<String> = projects
+                    .iter()
+                    .filter(|p| r.stdout.contains(&format!("project '{p}' started")))
+                    .cloned()
+                    .collect();
+                if !started.is_empty()
+                    || (!containers.is_empty() && r.stdout.contains("containers started"))
+                {
+                    self.emit(ServiceEvent::Resumed {
+                        projects: started,
+                        containers: if r.stdout.contains("containers started") {
+                            containers.len()
+                        } else {
+                            0
+                        },
+                    });
+                }
                 if !r.stderr.trim().is_empty() {
                     tracing::warn!("relance au démarrage : {}", r.stderr.trim());
                 }

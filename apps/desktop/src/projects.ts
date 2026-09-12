@@ -108,9 +108,10 @@ function webScore(c: ContainerSummary): number {
 export function primaryContainer(list: ContainerSummary[]): ContainerSummary | null {
   let best: ContainerSummary | null = null;
   let bestScore = -1;
-  for (const c of list) {
-    const s = webScore(c) + (c.State === "running" ? 1000 : 0);
-    if (s > bestScore && webScore(c) >= 0) {
+  // Seuls les conteneurs en marche portent une adresse qui répond : un service web arrêté n'en a pas.
+  for (const c of list.filter((c) => c.State === "running")) {
+    const s = webScore(c);
+    if (s > bestScore && s >= 0) {
       best = c;
       bestScore = s;
     }

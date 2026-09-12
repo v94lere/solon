@@ -631,3 +631,13 @@ select {
 .env-port-input { width: 74px; text-align: right; }
 .env-port-input.is-conflict { border-color: var(--bad); color: var(--bad); }
 .projects-misc-title { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; font-size: 13px; font-weight: 650; color: var(--ink); }
+
+/* Journaux : niveaux et services */
+.log-levels button b { margin-left: 4px; font-weight: 650; }
+.log-levels button.has-warn b { color: var(--warn); }
+.log-levels button.has-error b { color: var(--bad); }
+.log-levels button[aria-selected="true"].has-error { color: var(--bad); }
+.log-levels button[aria-selected="true"].has-warn { color: var(--warn); }
+.log-sources { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.log-source { font: inherit; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
+.log-source.is-off { color: var(--ink-3); border-color: var(--line) !important; text-decoration: line-through; }

@@ -164,7 +164,12 @@
       "search": "Rechercher dans les journaux",
       "matches_one": "{{count}} ligne",
       "matches_other": "{{count}} lignes",
-      "no_match": "Aucune ligne ne correspond."
+      "no_match": "Aucune ligne ne correspond.",
+      "level": "Niveau",
+      "level_all": "Tout",
+      "level_warn": "Avertissements",
+      "level_error": "Erreurs",
+      "services": "Services affichés"
     },
     "terminal": {
       "shell": "Shell",
@@ -407,7 +412,10 @@
     "container_start": "Démarrer",
     "container_restart": "Redémarrer",
     "container_stop": "Arrêter",
-    "containers_more": "… et {{count}} autres (ouvrir Solon)"
+    "containers_more": "… et {{count}} autres (ouvrir Solon)",
+    "project_start": "Démarrer le projet",
+    "project_restart": "Redémarrer le projet",
+    "project_stop": "Arrêter le projet"
   },
   "projects": {
     "running_count": "{{running}}/{{total}} en marche",
@@ -438,7 +446,11 @@
     "no_dir": "Démarré hors de Solon : son dossier est inconnu.",
     "misc": "Autres conteneurs",
     "misc_hint": "lancés avec docker run ou depuis une image, hors projet",
-    "command_failed": "{{name}} : la commande a échoué (code {{code}}). Ouvrez le projet pour les détails."
+    "command_failed": "{{name}} : la commande a échoué (code {{code}}). Ouvrez le projet pour les détails.",
+    "restore": "Restaurer une sauvegarde…",
+    "restore_pick_zip": "Choisir une sauvegarde Solon (.zip)",
+    "restore_pick_dir": "Dossier du projet restauré « {{project}} » ({{volumes}} volume(s)) : choisissez un dossier vide",
+    "restoring": "Restauration de {{project}}…"
   },
   "project": {
     "back": "Projets",
@@ -482,7 +494,14 @@
       "empty": "Pas encore de fichier .env.",
       "no_vars": "Aucune variable d'environnement pour ce service.",
       "no_services": "Aucun bloc services: dans le fichier Compose."
-    }
+    },
+    "port_check": "Rien n'a été démarré.",
+    "up_anyway": "Up quand même",
+    "backup": "Sauvegarder…",
+    "backup_hint": "Un seul fichier zip : les fichiers Compose, le .env et les données de chaque volume. À restaurer depuis l'accueil Projets.",
+    "backup_running": "Sauvegarde : archivage des volumes…",
+    "backup_done": "Sauvegarde écrite : {{volumes}} volume(s), {{size}}.",
+    "backup_failed": "Sauvegarde impossible : {{detail}}"
   },
   "machine": {
     "terminal": "Terminal",
@@ -493,7 +512,7 @@
     "title": "Recherche",
     "placeholder": "Rechercher conteneurs, images, projets, actions…",
     "no_results": "Aucun résultat",
-    "foot": "↑↓ naviguer · Entrée ouvrir · Échap fermer · Ctrl+1…7 sections · Ctrl+` terminal · Ctrl+B menu",
+    "foot": "↑↓ naviguer · Entrée ouvrir · Échap fermer · Ctrl+1…8 sections · Ctrl+` terminal · Ctrl+B menu",
     "groups": {
       "actions": "Actions",
       "containers": "Conteneurs",
@@ -511,7 +530,10 @@
     "disk_title": "Solon : disque du moteur presque plein",
     "disk_body": "{{pct}} % utilisés, {{free}} Go restants. Supprimez des images ou volumes inutilisés.",
     "container_died_title": "Solon : conteneur arrêté",
-    "container_died_body": "{{name}} s'est terminé avec le code {{code}}."
+    "container_died_body": "{{name}} s'est terminé avec le code {{code}}.",
+    "resumed_title": "Solon : c'est reparti",
+    "resumed_body": "Relancé après le démarrage du moteur : {{names}}.",
+    "resumed_containers": "{{count}} conteneur(s)"
   },
   "activity": {
     "title": "Activité",

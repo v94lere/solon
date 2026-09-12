@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { compose, containers, engine, stacks, type ContainerSummary, type Probe, type Settings } from "../api";
+import { backup, compose, containers, engine, stacks, type ContainerSummary, type Probe, type Settings } from "../api";
 import { StackDialog } from "../components/StackDialog";
 import { Avatar, EmptyState, IconBox, IconFolderOpen, IconGlobe, PageHeader, imageBase } from "../components/ui";
 import { IconPlay, IconStop } from "../components/Icons";
@@ -81,6 +81,28 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
   const [error, setError] = useState<string | null>(null);
   const [hello, setHello] = useState<"idle" | "running">("idle");
   const [stackDialog, setStackDialog] = useState<{ open: boolean; probe: Probe | null }>({ open: false, probe: null });
+  const [restoring, setRestoring] = useState<string | null>(null);
+
+  /** Restaurer une sauvegarde : le zip, un aperçu, le dossier de destination, puis la page du projet. */
+  async function restoreBackup() {
+    setError(null);
+    const zip = (await openDialog({ multiple: false, title: t("projects.restore_pick_zip"), filters: [{ name: "Solon backup", extensions: ["zip"] }] })) as string | null;
+    if (!zip) return;
+    try {
+      const info = await backup.info(zip);
+      const target = (await openDialog({ directory: true, multiple: false, title: t("projects.restore_pick_dir", { project: info.project, volumes: info.volumes.length }) })) as string | null;
+      if (!target) return;
+      setRestoring(t("projects.restoring", { project: info.project }));
+      const r = await backup.restore(zip, target);
+      setRestoring(null);
+      rememberProject(r.dir);
+      setRecent(loadRecentProjects());
+      onOpenProject(r.dir);
+    } catch (e) {
+      setRestoring(null);
+      setError(String(e));
+    }
+  }
 
   useEffect(() => {
     // Un projet ouvert depuis une autre vue peut avoir été ajouté aux récents.
@@ -217,6 +239,7 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
           <>
             <button type="button" className="btn btn-sm" onClick={() => void pickProject()}><IconFolderOpen />{t("compose.open")}</button>
             <button type="button" className="btn btn-sm" onClick={() => setStackDialog({ open: true, probe: null })}><IconGlobe />{t("stacks.new")}</button>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={restoring !== null} onClick={() => void restoreBackup()}>{restoring ?? t("projects.restore")}</button>
           </>
         }
       />

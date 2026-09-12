@@ -6,11 +6,36 @@ const MAX_LINES = 5000;
 const ERROR_RE = /\b(error|erreur|exception|fatal|panic|traceback|critical)\b/i;
 const WARN_RE = /\b(warn|warning|avertissement|deprecated)\b/i;
 
+export type Level = "all" | "warn" | "error";
+
+/** Niveau d'une ligne : erreur (mot-clé ou flux d'erreur du canal), avertissement (sortie d'erreur ou mot-clé), info. */
+export function levelOf(l: LogChunk): "error" | "warn" | "info" {
+  if (l.stream === "error" || ERROR_RE.test(l.text)) return "error";
+  if (l.stream === "stderr" || WARN_RE.test(l.text)) return "warn";
+  return "info";
+}
+
 function toneOf(l: LogChunk): string | undefined {
-  if (l.stream === "error") return "var(--bad)";
-  if (ERROR_RE.test(l.text)) return "var(--bad)";
-  if (l.stream === "stderr" || WARN_RE.test(l.text)) return "var(--warn)";
-  return undefined;
+  const lv = levelOf(l);
+  return lv === "error" ? "var(--bad)" : lv === "warn" ? "var(--warn)" : undefined;
+}
+
+/** Trois pastilles Tout / Avertissements / Erreurs, avec le compte des lignes concernées. */
+export function LevelChips({ level, onChange, counts }: { level: Level; onChange: (l: Level) => void; counts: { warn: number; error: number } }) {
+  const { t } = useTranslation();
+  return (
+    <span className="segmented log-levels" role="tablist" aria-label={t("detail.logs.level")}>
+      <button type="button" role="tab" aria-selected={level === "all"} onClick={() => onChange("all")}>{t("detail.logs.level_all")}</button>
+      <button type="button" role="tab" aria-selected={level === "warn"} onClick={() => onChange("warn")} className={counts.warn > 0 ? "has-warn" : ""}>{t("detail.logs.level_warn")} {counts.warn > 0 && <b>{counts.warn}</b>}</button>
+      <button type="button" role="tab" aria-selected={level === "error"} onClick={() => onChange("error")} className={counts.error > 0 ? "has-error" : ""}>{t("detail.logs.level_error")} {counts.error > 0 && <b>{counts.error}</b>}</button>
+    </span>
+  );
+}
+
+export function matchesLevel(l: LogChunk, level: Level): boolean {
+  if (level === "all") return true;
+  const lv = levelOf(l);
+  return level === "error" ? lv === "error" : lv !== "info";
 }
 
 /** Journaux en flux (Channel Tauri) : suivi, horodatage, recherche, retour à la ligne, couleurs
@@ -22,6 +47,7 @@ export function LogsPanel({ id }: { id: string }) {
   const [timestamps, setTimestamps] = useState(false);
   const [wrap, setWrap] = useState(true);
   const [search, setSearch] = useState("");
+  const [level, setLevel] = useState<Level>("all");
   const [ended, setEnded] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -63,13 +89,23 @@ export function LogsPanel({ id }: { id: string }) {
   }, [id, timestamps]);
 
   useEffect(() => {
-    if (follow && !search) bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [lines, follow, search]);
+    if (follow && !search && level === "all") bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [lines, follow, search, level]);
 
+  const counts = useMemo(() => {
+    let warn = 0;
+    let error = 0;
+    for (const l of lines) {
+      const lv = levelOf(l);
+      if (lv === "error") error++;
+      else if (lv === "warn") warn++;
+    }
+    return { warn, error };
+  }, [lines]);
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return q ? lines.filter((l) => l.text.toLowerCase().includes(q)) : lines;
-  }, [lines, search]);
+    return lines.filter((l) => matchesLevel(l, level) && (!q || l.text.toLowerCase().includes(q)));
+  }, [lines, search, level]);
 
   return (
     <div className="card flex h-full flex-col overflow-hidden">
@@ -83,6 +119,7 @@ export function LogsPanel({ id }: { id: string }) {
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={wrap} onChange={(e) => setWrap(e.target.checked)} /> {t("detail.logs.wrap")}
         </label>
+        <LevelChips level={level} onChange={setLevel} counts={counts} />
         <div className="flex-1" />
         <input type="search" className="input w-60" placeholder={t("detail.logs.search")} value={search} onChange={(e) => setSearch(e.target.value)} aria-label={t("detail.logs.search")} />
         {search && <span className="kbd-hint">{t("detail.logs.matches", { count: shown.length })}</span>}
@@ -100,7 +137,7 @@ export function LogsPanel({ id }: { id: string }) {
         aria-live="polite"
       >
         {shown.length === 0 ? (
-          <span style={{ color: "var(--ink-3)" }}>{search ? t("detail.logs.no_match") : t("detail.logs.empty")}</span>
+          <span style={{ color: "var(--ink-3)" }}>{search || level !== "all" ? t("detail.logs.no_match") : t("detail.logs.empty")}</span>
         ) : (
           shown.map((l, i) => (
             <span key={i} style={{ color: toneOf(l) }}>

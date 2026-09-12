@@ -133,6 +133,12 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
   départs : ouvrir un dossier, choisir une pile, essayer hello-world. La page d'un projet gagne un onglet
   **Environnement** : le `.env` et les blocs `environment:` du `compose.yaml`, plus les ports publiés,
   modifiables sans toucher au YAML.
+- **Sauvegarder et restaurer un projet** : « Sauvegarder… » sur la page d'un projet écrit un seul zip avec les
+  fichiers Compose, le `.env` et les données de chaque volume (prises directement dans le moteur, projet en
+  marche ou non) ; « Restaurer une sauvegarde… » sur l'accueil Projets recrée volumes et fichiers dans le
+  dossier de votre choix, puis Up.
+- **Ports vérifiés avant Up** : un port hôte déjà pris sur ce PC arrête Up avant tout démarrage, avec
+  « Utiliser 8081 au lieu de 8080 » (le fichier est modifié pour vous) ou « Up quand même ».
 - **Relance de ce qui tournait** : quand le moteur s'arrête (redémarrage de Windows, installation, Stop depuis
   Solon), Solon retient les projets et conteneurs en marche et les redémarre une fois le moteur revenu ; Docker
   seul ne le fait que pour les conteneurs `restart: always`. Réglages → moteur, activé par défaut.

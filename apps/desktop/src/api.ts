@@ -57,6 +57,7 @@ export type ServiceEvent =
   | { event: "ports"; bindings: PortBinding[] }
   | { event: "log"; level: string; message: string }
   | { event: "disk_pressure"; used_pct: number; free_mb: number }
+  | { event: "resumed"; projects: string[]; containers: number }
   | { event: "service_unavailable"; detail: string };
 
 export interface PrereqItem {
@@ -349,6 +350,30 @@ export const machineShell = {
 
 export const system = {
   openInVsCode: (dir: string) => invoke<void>("open_in_vscode", { dir }),
+};
+
+// ---- Sauvegarde et restauration d'un projet (zip : fichiers Compose + volumes) ----
+export interface BackupReport {
+  path: string;
+  volumes: number;
+  bytes: number;
+}
+export interface BackupInfo {
+  project: string;
+  compose_file: string;
+  created_unix_ms: number;
+  solon_version: string;
+  volumes: string[];
+}
+export interface RestoreReport {
+  dir: string;
+  project: string;
+  volumes: number;
+}
+export const backup = {
+  create: (dir: string, project: string, dest: string) => invoke<BackupReport>("project_backup", { dir, project, dest }),
+  info: (zipPath: string) => invoke<BackupInfo>("project_backup_info", { zipPath }),
+  restore: (zipPath: string, targetDir: string) => invoke<RestoreReport>("project_restore", { zipPath, targetDir }),
 };
 
 // ---- Le PC Windows : ports déjà pris, place disque ----

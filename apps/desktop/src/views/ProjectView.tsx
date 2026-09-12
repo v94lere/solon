@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
+import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { compose, containers, host, system, type ComposeProject, type ContainerSummary } from "../api";
+import { backup, compose, containers, host, system, type ComposeProject, type ContainerSummary, type PortProbe } from "../api";
+import { parseComposeServices, setComposeHostPort } from "../env";
 import { portConflictIn } from "../ports";
 import { markUserAction, useEngine } from "../engine";
 import { EnvPanel } from "../components/EnvPanel";
 import { AddressLine } from "./ProjectsView";
-import { primaryAddress, projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, serviceNameOf } from "../projects";
+import { LABEL_PROJECT, primaryAddress, projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, serviceNameOf } from "../projects";
 import { MultiLogsPanel } from "../components/MultiLogsPanel";
 import { PortLinks } from "../components/PortLinks";
 import { IconFile, IconLogs, IconPencil, IconPlay, IconRestart, IconStop } from "../components/Icons";
@@ -34,6 +36,8 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
   const [showOutput, setShowOutput] = useState(false);
   const query = useQuery({ queryKey: ["containers", true], queryFn: () => containers.list(true), refetchInterval: 5000 });
   const [tab, setTab] = useState<"logs" | "compose" | "env">("logs");
+  const [portFix, setPortFix] = useState<{ conflicts: (PortProbe & { line: number })[]; args: string[] } | null>(null);
+  const [backupState, setBackupState] = useState<{ busy: boolean; text: string | null; dir: string | null }>({ busy: false, text: null, dir: null });
   const { snapshot } = useEngine();
   const [yaml, setYaml] = useState("");
   const [savedYaml, setSavedYaml] = useState("");
@@ -96,7 +100,58 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
   const ownPorts = useMemo(() => [...new Set(services.flatMap((c) => (c.Ports ?? []).map((p) => p.PublicPort ?? 0).filter((p) => p > 0)))], [services]);
   const logSources = useMemo(() => services.map((c) => ({ id: c.Id, name: serviceNameOf(c) })), [services]);
 
-  async function run(label: string, args: string[]) {
+  /** Avant un Up : les ports hôte du fichier déjà pris sur ce PC (hors ceux publiés par ce projet). */
+  async function portConflicts(): Promise<(PortProbe & { line: number })[]> {
+    try {
+      const text = await compose.read(dir);
+      const rows = parseComposeServices(text).flatMap((s) => s.ports.map((p) => ({ port: Number(p.host), line: p.line })));
+      const wanted = [...new Set(rows.map((r) => r.port).filter((p) => p > 0 && !ownPorts.includes(p)))];
+      if (wanted.length === 0) return [];
+      const probe = await host.portsProbe(wanted);
+      return probe.filter((x) => x.in_use).map((x) => ({ ...x, line: rows.find((r) => r.port === x.port)?.line ?? -1 }));
+    } catch {
+      return [];
+    }
+  }
+
+  async function fixPortAndUp(c: PortProbe & { line: number }) {
+    if (!c.suggestion || c.line < 0) return;
+    const text = await compose.read(dir);
+    await compose.write(dir, setComposeHostPort(text, c.line, String(c.suggestion)));
+    void loadYaml();
+    const remaining = (portFix?.conflicts ?? []).filter((x) => x.port !== c.port);
+    if (remaining.length > 0) setPortFix({ conflicts: remaining, args: portFix?.args ?? ["up", "-d"] });
+    else {
+      const args = portFix?.args ?? ["up", "-d"];
+      setPortFix(null);
+      await run("up", args, true);
+    }
+  }
+
+  async function backUp() {
+    const projectName = services.map((c) => c.Labels?.[LABEL_PROJECT]).find((p) => p) ?? project?.name ?? projectBaseName(dir);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const dest = (await saveDialog({ defaultPath: `${projectName}-${stamp}.solon-backup.zip`, filters: [{ name: "Solon backup", extensions: ["zip"] }] })) as string | null;
+    if (!dest) return;
+    setBackupState({ busy: true, text: t("project.backup_running"), dir: null });
+    try {
+      const r = await backup.create(dir, projectName, dest);
+      setBackupState({ busy: false, text: t("project.backup_done", { volumes: r.volumes, size: `${(r.bytes / 1048576).toFixed(1)} MB` }), dir: dest.replace(/[\\/][^\\/]*$/, "") });
+    } catch (e) {
+      setBackupState({ busy: false, text: t("project.backup_failed", { detail: String(e) }), dir: null });
+    }
+  }
+
+  async function run(label: string, args: string[], skipPortCheck = false) {
+    if (args[0] === "up" && !skipPortCheck) {
+      const conflicts = await portConflicts();
+      if (conflicts.length > 0) {
+        setPortFix({ conflicts, args });
+        return;
+      }
+    }
+    setPortFix(null);
+    for (const c of services) markUserAction(c.Id);
     setBusy(label);
     setError(null);
     setShowOutput(true);
@@ -162,6 +217,7 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
         <span className="mx-1" />
         <button type="button" className="btn btn-sm" onClick={() => void openPath(dir)}>{t("project.explorer")}</button>
         <button type="button" className="btn btn-sm" onClick={() => void system.openInVsCode(dir).catch((e: unknown) => setError(String(e)))}>{t("project.vscode")}</button>
+        <button type="button" className="btn btn-sm" disabled={backupState.busy || project === null} title={t("project.backup_hint")} onClick={() => void backUp()}>{backupState.busy ? t("compose.running") : t("project.backup")}</button>
       </div>
       <div className="px-4 pb-2">
         <span className="mono kbd-hint" title={dir}>{dir}{project ? `\\${project.file}` : ""}</span>
@@ -173,6 +229,23 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
         </div>
       )}
       {error && <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>}
+      {portFix && (
+        <div className="notice mx-4 mb-2" role="status">
+          <span>{portFix.conflicts.length === 1 ? t("stacks.port_conflict", { port: portFix.conflicts[0].port }) : t("stacks.ports_conflict", { ports: portFix.conflicts.map((c) => c.port).join(", ") })} {t("project.port_check")}</span>
+          {portFix.conflicts.map((c) => c.suggestion && c.line >= 0 && (
+            <button key={c.port} type="button" className="btn btn-primary btn-sm" onClick={() => void fixPortAndUp(c)}>{t("stacks.use_port", { from: c.port, to: c.suggestion })}</button>
+          ))}
+          <button type="button" className="btn btn-sm" onClick={() => { const a = portFix.args; setPortFix(null); void run("up", a, true); }}>{t("project.up_anyway")}</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPortFix(null)}>{t("common.cancel")}</button>
+        </div>
+      )}
+      {backupState.text && (
+        <div className="notice mx-4 mb-2" role="status">
+          <span>{backupState.text}</span>
+          {backupState.dir && <button type="button" className="btn btn-sm" onClick={() => void openPath(backupState.dir as string)}>{t("settings.diagnostic_open")}</button>}
+          {!backupState.busy && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setBackupState({ busy: false, text: null, dir: null })}>{t("common.close")}</button>}
+        </div>
+      )}
 
       <div className="card list-card mx-4 mb-3 overflow-auto" style={{ maxHeight: "40%" }}>
         {services.length === 0 ? (

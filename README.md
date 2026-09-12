@@ -142,6 +142,11 @@ dot depending on the engine state.
   outside a project sit in "Other containers". With nothing yet, the page offers three ways to start: open a
   folder, choose a stack, try hello-world. The project page adds an **Environment** tab: the `.env` and the
   `environment:` blocks of `compose.yaml`, plus the published ports, editable without touching the YAML.
+- **Back up and restore a project**: "Back up…" on a project page writes one zip with the Compose files,
+  the `.env` and the data of every volume (taken directly from the engine, running or not); "Restore a
+  backup…" on the Projects home recreates the volumes and files in the folder you choose, then Up.
+- **Ports checked before Up**: a host port already taken on this PC stops Up before anything starts, with
+  "Use 8081 instead" (the file is edited for you) or "Up anyway".
 - **Restart what was running**: when the engine stops (Windows restart, install, Stop from Solon), Solon
   remembers the projects and containers that were running and starts them again once the engine is back;
   Docker alone only does that for `restart: always` containers. Settings → engine, on by default.
@@ -158,7 +163,8 @@ dot depending on the engine state.
   Cargo.toml, pom.xml, .csproj, Gemfile…) and propose an environment for it, editable before
   creation. Nothing is ever overwritten.
 - **Container page**: Overview (image, command, dates, restart policy, networks, ports, mounts, environment,
-  labels, file copy), Logs (search, wrap, colours), Files, Terminal, Debug shell, Inspect. Start, stop, restart,
+  labels, file copy), Logs (All / Warnings / Errors filters with counts, search, wrap, colours; on a project,
+  one chip per service), Files, Terminal, Debug shell, Inspect. Start, stop, restart,
   remove and "Keep awake" in the header.
 - **Images, Volumes, Networks**: list, create, inspect, remove (always with confirmation). Volumes have a
   Files browser.
@@ -166,7 +172,8 @@ dot depending on the engine state.
   container with CPU, memory, network rates and a CPU curve.
 - **Terminal** (`Ctrl+\``): a root shell inside the Linux engine itself, for `docker`, `ps`, `df`, `dmesg`…
 - **Search `Ctrl+K`**: containers, images, volumes, networks, projects, engine actions, sections.
-  `Ctrl+1` to `Ctrl+8` switch sections.
+  `Ctrl+1` to `Ctrl+8` switch sections. **`Ctrl+Alt+S` from any application** brings Solon to the front
+  with the search open.
 - **Settings**: language (English by default, French), appearance (light, dark, follow Windows), accent
   colour (Solon blue or the Windows accent), engine memory and processors (all cores minus two by default),
   storage limit, start at sign-in, sleep of idle containers, legacy file sharing fallback, diagnostic export.
@@ -174,8 +181,8 @@ dot depending on the engine state.
   failed or restarting, engine disk 90 % full.
 - **Diagnostic** (Settings → Export a diagnostic…): a zip with logs, state, settings, prerequisites and
   `docker info` to attach to a bug report. No credentials are included.
-- **Tray**: one click opens the menu: engine state, running containers, **each container with Start /
-  Restart / Stop**, open Solon, start or stop the engine, quit. Closing the window keeps Solon in the tray.
+- **Tray**: one click opens the menu: engine state, **each project with Start / Restart / Stop**, then the
+  loose containers, open Solon, start or stop the engine, quit. Closing the window keeps Solon in the tray.
 
 ### Bundled `docker` and `docker compose`
 

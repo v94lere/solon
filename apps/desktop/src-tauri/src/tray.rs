@@ -140,7 +140,52 @@ fn build_menu<R: Runtime>(
                     true,
                     png!("cube"),
                 )?)?;
-                for c in list.iter().take(MAX_LISTED) {
+                // Projets Compose d'abord : un sous-menu par projet avec ses actions ; les conteneurs
+                // isolés suivent, un sous-menu chacun.
+                let mut projects: Vec<(String, usize, usize)> = Vec::new();
+                for c in list
+                    .iter()
+                    .filter_map(|c| c.project.as_ref().map(|p| (p, c.running)))
+                {
+                    match projects.iter_mut().find(|(p, _, _)| p == c.0) {
+                        Some(e) => {
+                            e.1 += 1;
+                            e.2 += usize::from(c.1);
+                        }
+                        None => projects.push((c.0.clone(), 1, usize::from(c.1))),
+                    }
+                }
+                for (name, total, running) in &projects {
+                    let title = format!(
+                        "{} {}  ({running}/{total})",
+                        if *running > 0 { "●" } else { "○" },
+                        name
+                    );
+                    let sub = Submenu::with_id(app, format!("p|{name}"), title, true)?;
+                    sub.append(&item(
+                        app,
+                        format!("p|start|{name}"),
+                        label(l, "project_start"),
+                        *running < *total,
+                        png!("play"),
+                    )?)?;
+                    sub.append(&item(
+                        app,
+                        format!("p|restart|{name}"),
+                        label(l, "project_restart"),
+                        *running > 0,
+                        png!("restart"),
+                    )?)?;
+                    sub.append(&item(
+                        app,
+                        format!("p|stop|{name}"),
+                        label(l, "project_stop"),
+                        *running > 0,
+                        png!("stop"),
+                    )?)?;
+                    menu.append(&sub)?;
+                }
+                for c in list.iter().filter(|c| c.project.is_none()).take(MAX_LISTED) {
                     // Un sous-menu ne porte pas d'icône : le point d'état est dans le texte.
                     let title = format!("{} {}", if c.running { "●" } else { "○" }, c.name);
                     let sub = Submenu::with_id(app, format!("c|{}", c.id), title, true)?;
@@ -167,9 +212,10 @@ fn build_menu<R: Runtime>(
                     )?)?;
                     menu.append(&sub)?;
                 }
-                if list.len() > MAX_LISTED {
+                let loose = list.iter().filter(|c| c.project.is_none()).count();
+                if loose > MAX_LISTED {
                     let more = label(l, "containers_more")
-                        .replace("{{count}}", &(list.len() - MAX_LISTED).to_string());
+                        .replace("{{count}}", &(loose - MAX_LISTED).to_string());
                     menu.append(&item(app, "open", more, true, png!("open"))?)?;
                 }
             }
@@ -232,6 +278,30 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                 }
                 "quit" => app.exit(0),
                 _ => {
+                    // `p|<action>|<projet>` : action Compose sur un projet, exécutée dans la machine
+                    // (Compose retrouve le projet par ses étiquettes, sans le dossier Windows).
+                    let mut pp = id.splitn(3, '|');
+                    if let (Some("p"), Some(action), Some(project)) =
+                        (pp.next(), pp.next(), pp.next())
+                    {
+                        if matches!(action, "start" | "stop" | "restart") {
+                            let command = format!(
+                                "docker compose -p '{}' {action}",
+                                project.replace('\'', "'\\''")
+                            );
+                            tauri::async_runtime::spawn(async move {
+                                if let Err(e) = service::call(ServiceCommand::Exec {
+                                    command,
+                                    timeout_s: Some(300),
+                                })
+                                .await
+                                {
+                                    tracing::warn!("barre des tâches : projet : {e}");
+                                }
+                            });
+                        }
+                        return;
+                    }
                     // `c|<action>|<id>` : action sur un conteneur.
                     let mut parts = id.splitn(3, '|');
                     if let (Some("c"), Some(action), Some(cid)) =
