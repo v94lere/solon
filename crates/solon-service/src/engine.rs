@@ -55,6 +55,9 @@ struct Inner {
     domains: crate::domains::SharedDomains,
     /// Réveil à la demande (pause des conteneurs inactifs, réveil à la connexion).
     sleeper: Arc<crate::sleep::Sleeper>,
+    /// Derniers conteneurs en marche annoncés par l'agent : ce qu'il faudra relancer si `docker ps`
+    /// ne répond plus au moment de l'arrêt.
+    endpoints: Mutex<Vec<solon_core::protocol::ContainerEndpoint>>,
 }
 
 #[derive(Clone)]
@@ -80,6 +83,7 @@ impl Engine {
                 stopping: Default::default(),
                 domains: Default::default(),
                 sleeper,
+                endpoints: Mutex::new(Vec::new()),
             }),
         }
     }
@@ -136,6 +140,7 @@ impl Engine {
 
     /// Recalcule la table `*.solon.local` et le bloc du fichier `hosts` d'après les conteneurs en marche.
     async fn update_domains(&self, endpoints: &[solon_core::protocol::ContainerEndpoint]) {
+        *self.inner.endpoints.lock().await = endpoints.to_vec();
         let map = crate::domains::domains_for(endpoints);
         *self.inner.domains.write().await = map.clone();
         if let Err(e) = tokio::task::spawn_blocking(move || crate::domains::write_hosts_block(&map))
@@ -712,7 +717,28 @@ impl Engine {
         let (resume_projects, resume_containers) = if force {
             (Vec::new(), Vec::new())
         } else {
-            running_now(&running.agent).await
+            let (mut projects, mut containers) = running_now(&running.agent).await;
+            if projects.is_empty() && containers.is_empty() {
+                // `docker ps` n'a rien répondu (agent déjà occupé, délai) : on se rabat sur la dernière
+                // liste de conteneurs en marche annoncée par l'agent. Constaté à l'installation de la
+                // 0.1.7 : treize conteneurs arrêtés, aucun relancé.
+                let last = self.inner.endpoints.lock().await.clone();
+                for e in &last {
+                    match &e.compose_project {
+                        Some(p) if !projects.contains(p) => projects.push(p.clone()),
+                        Some(_) => {}
+                        None => containers.push(e.id.clone()),
+                    }
+                }
+                if !projects.is_empty() || !containers.is_empty() {
+                    tracing::info!(
+                        "en marche à l'arrêt (d'après l'agent) : {} projet(s), {} conteneur(s) isolé(s)",
+                        projects.len(),
+                        containers.len()
+                    );
+                }
+            }
+            (projects, containers)
         };
         if !force {
             match running

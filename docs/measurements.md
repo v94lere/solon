@@ -1187,3 +1187,14 @@ présence d'un dépôt Git ; `devcontainer.json` remonte au dossier au-dessus de
 Interface : bouton « Chercher les projets sur ce PC… » sur l'accueil et carte dans l'écran de bienvenue ; boîte
 de dialogue avec filtre, cases pré-cochées pour les projets Compose inconnus de l'accueil, « Configurer… »
 (galerie avec sonde du dossier) pour les dossiers sans Compose. Commande CLI `solon-service scan` pour tester.
+
+**Version 0.1.7** : release GitHub `v0.1.7`, installation silencieuse par-dessus la 0.1.6 en 19 s. Dans
+l'application installée, « Chercher les projets sur ce PC… » a listé 40 dossiers en 11,2 s (le moteur relançait
+des conteneurs au même moment ; 6,9 s à vide), dont 17 pré-cochés et 4 déjà connus de l'accueil.
+
+**Accroc : rien relancé après cette installation.** Valère avait treize conteneurs en marche (huit projets) ; le
+journal montre « arrêt demandé » à 12 h 38 sans la ligne « en marche à l'arrêt » : `docker ps` via l'agent n'a
+rien renvoyé au moment de l'arrêt (cause non identifiée, délai ou agent occupé) et `resume_projects` est resté
+vide. Les huit projets ont été relancés à la main (`docker compose -p <nom> start`). Correction (commit suivant,
+effective à la prochaine version) : le service garde en mémoire la dernière liste de conteneurs en marche
+annoncée par l'agent (`EndpointsChanged`) et s'en sert quand `docker ps` ne répond pas.
