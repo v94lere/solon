@@ -139,6 +139,10 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
   dossier de votre choix, puis Up.
 - **Ports vérifiés avant Up** : un port hôte déjà pris sur ce PC arrête Up avant tout démarrage, avec
   « Utiliser 8081 au lieu de 8080 » (le fichier est modifié pour vous) ou « Up quand même ».
+- **Un environnement par branche Git** : sur un projet dont le dossier est un dépôt Git, cochez « Un
+  environnement par branche » à côté du nom de la branche. Chaque branche a alors ses conteneurs, ses volumes
+  et ses adresses (`web.blog-feature-login.solon.local`). Changez de branche dans votre terminal : Solon propose
+  d'arrêter l'ancien environnement et de démarrer le nouveau, avec ou sans copie des données de l'ancienne branche.
 - **Relance de ce qui tournait** : quand le moteur s'arrête (redémarrage de Windows, installation, Stop depuis
   Solon), Solon retient les projets et conteneurs en marche et les redémarre une fois le moteur revenu ; Docker
   seul ne le fait que pour les conteneurs `restart: always`. Réglages → moteur, activé par défaut.

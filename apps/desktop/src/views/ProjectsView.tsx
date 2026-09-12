@@ -13,6 +13,7 @@ import { Avatar, EmptyState, IconBox, IconFolderOpen, IconGlobe, PageHeader, ima
 import { IconPlay, IconStop } from "../components/Icons";
 import { useEngine, markUserAction } from "../engine";
 import { domainOf, forgetProject, lastActivity, loadRecentProjects, primaryAddress, projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath } from "../projects";
+import { branchEnvEnabled, branchOfProjectName } from "../branches";
 
 const HELLO_IMAGE = "public.ecr.aws/docker/library/hello-world";
 
@@ -285,7 +286,12 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
                     <header className="project-head">
                       <Avatar label={g.name} seed={g.name} size={34} />
                       <div className="min-w-0 flex-1">
-                        <button type="button" className="project-name" disabled={!g.dir} title={g.dir ?? t("projects.no_dir")} onClick={() => g.dir && onOpenProject(g.dir)}>{g.name}</button>
+                        <button type="button" className="project-name" disabled={!g.dir} title={g.dir ?? t("projects.no_dir")} onClick={() => g.dir && onOpenProject(g.dir)}>
+                          {g.name}
+                          {g.dir && branchEnvEnabled(g.dir) && branchOfProjectName(projectBaseName(g.dir).toLowerCase().replace(/[^a-z0-9_-]/g, ""), g.name) && (
+                            <span className="branch-badge mono">⎇ {branchOfProjectName(projectBaseName(g.dir).toLowerCase().replace(/[^a-z0-9_-]/g, ""), g.name)}</span>
+                          )}
+                        </button>
                         <div className="project-meta">
                           <span className={`pill pill-dot ${running > 0 ? "pill-ok" : "pill-muted"}`} aria-hidden="true" />
                           <span>{t("projects.running_count", { running, total: g.list.length })}</span>

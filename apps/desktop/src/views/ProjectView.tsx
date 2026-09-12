@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { backup, compose, containers, host, system, type ComposeProject, type ContainerSummary, type PortProbe } from "../api";
+import { backup, compose, containers, git, host, system, type ComposeProject, type ContainerSummary, type GitInfo, type PortProbe } from "../api";
+import { branchEnvEnabled, branchOfProjectName, branchProjectName, setBranchEnvEnabled } from "../branches";
 import { parseComposeServices, setComposeHostPort } from "../env";
 import { portConflictIn } from "../ports";
 import { markUserAction, useEngine } from "../engine";
@@ -13,6 +14,13 @@ import { LABEL_PROJECT, primaryAddress, projectBaseName, projectDirOf, projectNa
 import { MultiLogsPanel } from "../components/MultiLogsPanel";
 import { PortLinks } from "../components/PortLinks";
 import { IconFile, IconLogs, IconPencil, IconPlay, IconRestart, IconStop } from "../components/Icons";
+
+const IconBranch = () => (
+  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="6" cy="5" r="2.5" /><circle cx="6" cy="19" r="2.5" /><circle cx="18" cy="8" r="2.5" />
+    <path d="M6 7.5v9M18 10.5c0 3-3 4-6 4.5-2.5.4-4.5 1.5-5.5 3" />
+  </svg>
+);
 
 function stateClass(state: string) {
   switch (state) {
@@ -39,6 +47,12 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
   const [portFix, setPortFix] = useState<{ conflicts: (PortProbe & { line: number })[]; args: string[] } | null>(null);
   const [backupState, setBackupState] = useState<{ busy: boolean; text: string | null; dir: string | null }>({ busy: false, text: null, dir: null });
   const { snapshot } = useEngine();
+  // Environnements par branche : branche Git du dossier, réglage par dossier, nom de projet actif.
+  const [gitInfo, setGitInfo] = useState<GitInfo | null>(null);
+  const [branchEnv, setBranchEnv] = useState<boolean>(() => branchEnvEnabled(dir));
+  const [branchSwitch, setBranchSwitch] = useState<{ from: string; to: string; fromName: string; toName: string } | null>(null);
+  const lastBranch = useRef<string | null>(null);
+  const [cloning, setCloning] = useState(false);
   const [yaml, setYaml] = useState("");
   const [savedYaml, setSavedYaml] = useState("");
   const [saving, setSaving] = useState(false);
@@ -91,10 +105,98 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dir, autoUp]);
 
+  // Branche courante, relue toutes les 3 s (un `git checkout` dans un terminal doit se voir ici).
+  useEffect(() => {
+    let alive = true;
+    const poll = () => {
+      git.info(dir).then((g) => { if (alive) setGitInfo(g); }).catch(() => {});
+    };
+    poll();
+    const id = window.setInterval(poll, 3000);
+    return () => { alive = false; window.clearInterval(id); };
+  }, [dir]);
+  useEffect(() => {
+    setBranchEnv(branchEnvEnabled(dir));
+    lastBranch.current = null;
+    setBranchSwitch(null);
+  }, [dir]);
+
+  const baseName = project?.name || projectBaseName(dir);
+  const currentBranch = gitInfo?.branch ?? gitInfo?.detached ?? null;
+  const useBranches = branchEnv && !!currentBranch;
+  /** Nom de projet Compose actif : `<projet>-<branche>` en mode branches, sinon le nom habituel. */
+  const activeName = useBranches ? branchProjectName(baseName, currentBranch as string) : baseName;
+
   const services = useMemo<ContainerSummary[]>(() => {
-    const list = (query.data ?? []).filter((c) => samePath(projectDirOf(c), dir) || (project?.name && projectNameOf(c) === project.name && !projectDirOf(c)));
+    const all = query.data ?? [];
+    const list = useBranches
+      ? all.filter((c) => projectNameOf(c) === activeName)
+      : all.filter((c) => samePath(projectDirOf(c), dir) || (project?.name && projectNameOf(c) === project.name && !projectDirOf(c)));
     return list.sort((a, b) => serviceNameOf(a).localeCompare(serviceNameOf(b)));
-  }, [query.data, dir, project]);
+  }, [query.data, dir, project, useBranches, activeName]);
+
+  // Autres environnements de branche du même dossier (en marche ou arrêtés), pour les voir et les arrêter.
+  const otherBranchEnvs = useMemo(() => {
+    if (!branchEnv) return [] as { name: string; branch: string; running: number; total: number }[];
+    const map = new Map<string, { running: number; total: number }>();
+    for (const c of query.data ?? []) {
+      const n = projectNameOf(c);
+      if (!n || n === activeName || !samePath(projectDirOf(c), dir)) continue;
+      const e = map.get(n) ?? { running: 0, total: 0 };
+      e.total++;
+      if (c.State === "running") e.running++;
+      map.set(n, e);
+    }
+    return [...map.entries()].map(([name, e]) => ({ name, branch: branchOfProjectName(baseName, name) ?? name, ...e })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [query.data, branchEnv, activeName, baseName, dir]);
+
+  // Changement de branche pendant que l'environnement de l'ancienne tourne : proposer la bascule.
+  useEffect(() => {
+    if (!useBranches || !currentBranch) return;
+    const prev = lastBranch.current;
+    lastBranch.current = currentBranch;
+    if (prev && prev !== currentBranch) {
+      const fromName = branchProjectName(baseName, prev);
+      const fromRunning = (query.data ?? []).some((c) => projectNameOf(c) === fromName && c.State === "running");
+      if (fromRunning) setBranchSwitch({ from: prev, to: currentBranch, fromName, toName: activeName });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBranch, useBranches]);
+
+  async function switchBranchEnv(cloneData: boolean) {
+    if (!branchSwitch) return;
+    const sw = branchSwitch;
+    setBranchSwitch(null);
+    setError(null);
+    try {
+      if (cloneData) {
+        setCloning(true);
+        await git.volumesClone(sw.fromName, sw.toName);
+        setCloning(false);
+      }
+      setBusy("switch");
+      await compose.stream(dir, ["-p", sw.fromName, "stop"], () => {});
+      setBusy(null);
+      await run("up", ["up", "-d", "--remove-orphans"]);
+    } catch (e) {
+      setCloning(false);
+      setBusy(null);
+      setError(String(e));
+    }
+  }
+
+  async function stopOtherEnv(name: string) {
+    setBusy(name);
+    setError(null);
+    try {
+      await compose.stream(dir, ["-p", name, "stop"], () => {});
+      await queryClient.invalidateQueries({ queryKey: ["containers"] });
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(null);
+    }
+  }
   const running = services.filter((c) => c.State === "running").length;
   const addr = snapshot?.local_domains ? primaryAddress(services, !!snapshot?.local_domains_tls) : null;
   const ownPorts = useMemo(() => [...new Set(services.flatMap((c) => (c.Ports ?? []).map((p) => p.PublicPort ?? 0).filter((p) => p > 0)))], [services]);
@@ -129,7 +231,7 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
   }
 
   async function backUp() {
-    const projectName = services.map((c) => c.Labels?.[LABEL_PROJECT]).find((p) => p) ?? project?.name ?? projectBaseName(dir);
+    const projectName = useBranches ? activeName : (services.map((c) => c.Labels?.[LABEL_PROJECT]).find((p) => p) ?? project?.name ?? projectBaseName(dir));
     const stamp = new Date().toISOString().slice(0, 10);
     const dest = (await saveDialog({ defaultPath: `${projectName}-${stamp}.solon-backup.zip`, filters: [{ name: "Solon backup", extensions: ["zip"] }] })) as string | null;
     if (!dest) return;
@@ -159,7 +261,9 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
     setExitCode(null);
     const collected: string[] = [];
     try {
-      const code = await compose.stream(dir, args, (c) => {
+      // En mode branches, chaque commande Compose vise le projet de la branche courante.
+      const fullArgs = useBranches ? ["-p", activeName, ...args] : args;
+      const code = await compose.stream(dir, fullArgs, (c) => {
         if (c.kind === "exit") return;
         if (collected.length < 2000) collected.push(c.text);
         setOutput((prev) => (prev.length > 4000 ? prev.slice(prev.length - 4000) : prev).concat({ kind: c.kind, text: c.text }));
@@ -202,7 +306,7 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
     }
   }
 
-  const name = project?.name || projectBaseName(dir);
+  const name = activeName;
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center gap-2 px-4 pt-4 pb-2">
@@ -210,6 +314,14 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
         <h1 className="text-lg font-semibold">{name}</h1>
         <span className={`pill pill-dot ${running > 0 ? "pill-ok" : "pill-muted"}`} aria-hidden="true" />
         <span className="kbd-hint">{t("projects.running_count", { running, total: services.length })}</span>
+        {gitInfo && (
+          <label className={`branch-chip${useBranches ? " is-on" : ""}`} title={t("project.branch_env_hint")}>
+            <IconBranch />
+            <span className="mono">{currentBranch ?? "?"}</span>
+            <input type="checkbox" checked={branchEnv} onChange={(e) => { setBranchEnv(e.target.checked); setBranchEnvEnabled(dir, e.target.checked); lastBranch.current = null; }} />
+            <span>{t("project.branch_env")}</span>
+          </label>
+        )}
         <div className="flex-1" />
         <button type="button" className="btn btn-primary btn-sm" disabled={busy !== null || project === null} onClick={() => void run("up", ["up", "-d", "--remove-orphans"])}>{busy === "up" ? t("compose.running") : t("compose.up")}</button>
         <button type="button" className="btn btn-sm" disabled={busy !== null || project === null} onClick={() => void run("rebuild", ["up", "-d", "--build", "--remove-orphans"])}>{busy === "rebuild" ? t("compose.running") : t("project.rebuild")}</button>
@@ -229,6 +341,27 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
         </div>
       )}
       {error && <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>}
+      {branchSwitch && (
+        <div className="notice mx-4 mb-2" role="status">
+          <span>{t("project.branch_changed", { from: branchSwitch.from, to: branchSwitch.to })}</span>
+          <button type="button" className="btn btn-primary btn-sm" disabled={busy !== null || cloning} onClick={() => void switchBranchEnv(false)}>{t("project.branch_switch", { from: branchSwitch.from, to: branchSwitch.to })}</button>
+          <button type="button" className="btn btn-sm" disabled={busy !== null || cloning} onClick={() => void switchBranchEnv(true)}>{cloning ? t("project.branch_cloning") : t("project.branch_switch_clone", { from: branchSwitch.from })}</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setBranchSwitch(null)}>{t("project.branch_ignore")}</button>
+        </div>
+      )}
+      {otherBranchEnvs.length > 0 && (
+        <div className="branch-others mx-4 mb-2">
+          <span className="kbd-hint">{t("project.branch_others")}</span>
+          {otherBranchEnvs.map((o) => (
+            <span key={o.name} className="branch-other">
+              <span className={`pill pill-dot ${o.running > 0 ? "pill-ok" : "pill-muted"}`} aria-hidden="true" />
+              <span className="mono">{o.branch}</span>
+              <span className="kbd-hint">{t("projects.running_count", { running: o.running, total: o.total })}</span>
+              {o.running > 0 && <button type="button" className="btn btn-ghost btn-sm" disabled={busy !== null} onClick={() => void stopOtherEnv(o.name)}>{t("projects.stop")}</button>}
+            </span>
+          ))}
+        </div>
+      )}
       {portFix && (
         <div className="notice mx-4 mb-2" role="status">
           <span>{portFix.conflicts.length === 1 ? t("stacks.port_conflict", { port: portFix.conflicts[0].port }) : t("stacks.ports_conflict", { ports: portFix.conflicts.map((c) => c.port).join(", ") })} {t("project.port_check")}</span>

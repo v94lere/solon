@@ -8,6 +8,7 @@ mod compose;
 mod diagnostic;
 mod docker;
 mod files;
+mod git;
 mod host;
 mod service;
 mod shell;
@@ -217,6 +218,8 @@ pub fn run() {
             backup::project_backup,
             backup::project_backup_info,
             backup::project_restore,
+            git::git_info,
+            git::volumes_clone,
             host::host_disk_info,
             docker::docker_reclaim,
             set_language,

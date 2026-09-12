@@ -147,6 +147,10 @@ dot depending on the engine state.
   backup…" on the Projects home recreates the volumes and files in the folder you choose, then Up.
 - **Ports checked before Up**: a host port already taken on this PC stops Up before anything starts, with
   "Use 8081 instead" (the file is edited for you) or "Up anyway".
+- **One environment per Git branch**: on a project whose folder is a Git repository, tick "One environment
+  per branch" next to the branch name. Each branch then gets its own containers, volumes and addresses
+  (`web.blog-feature-login.solon.local`). Switch branch in your terminal and Solon offers to stop the old
+  environment and start the new one, with or without a copy of the old branch's data.
 - **Restart what was running**: when the engine stops (Windows restart, install, Stop from Solon), Solon
   remembers the projects and containers that were running and starts them again once the engine is back;
   Docker alone only does that for `restart: always` containers. Settings → engine, on by default.

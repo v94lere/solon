@@ -501,7 +501,15 @@
     "backup_hint": "Un seul fichier zip : les fichiers Compose, le .env et les données de chaque volume. À restaurer depuis l'accueil Projets.",
     "backup_running": "Sauvegarde : archivage des volumes…",
     "backup_done": "Sauvegarde écrite : {{volumes}} volume(s), {{size}}.",
-    "backup_failed": "Sauvegarde impossible : {{detail}}"
+    "backup_failed": "Sauvegarde impossible : {{detail}}",
+    "branch_env": "Un environnement par branche",
+    "branch_env_hint": "Ce dossier est un dépôt Git. Activé, chaque branche a ses conteneurs, ses volumes et ses adresses (nom de projet <projet>-<branche>) ; changer de branche propose de changer d'environnement.",
+    "branch_changed": "Branche changée : {{from}} → {{to}}. L'environnement de {{from}} tourne encore.",
+    "branch_switch": "Basculer : arrêter {{from}}, démarrer {{to}}",
+    "branch_switch_clone": "Basculer, avec une copie des données de {{from}}",
+    "branch_cloning": "Copie des données…",
+    "branch_ignore": "Ignorer",
+    "branch_others": "Autres branches de ce dossier :"
   },
   "machine": {
     "terminal": "Terminal",

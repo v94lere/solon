@@ -501,7 +501,15 @@
     "backup_hint": "One zip file: the Compose files, the .env and the data of every volume. Restore it from the Projects home.",
     "backup_running": "Backing up: archiving the volumes…",
     "backup_done": "Backup written: {{volumes}} volume(s), {{size}}.",
-    "backup_failed": "Backup failed: {{detail}}"
+    "backup_failed": "Backup failed: {{detail}}",
+    "branch_env": "One environment per branch",
+    "branch_env_hint": "This folder is a Git repository. When on, each branch gets its own containers, volumes and addresses (project name <project>-<branch>); switching branch offers to switch environment.",
+    "branch_changed": "Branch changed: {{from}} → {{to}}. The environment of {{from}} is still running.",
+    "branch_switch": "Switch: stop {{from}}, start {{to}}",
+    "branch_switch_clone": "Switch, with a copy of {{from}}'s data",
+    "branch_cloning": "Copying the data…",
+    "branch_ignore": "Ignore",
+    "branch_others": "Other branches of this folder:"
   },
   "machine": {
     "terminal": "Terminal",

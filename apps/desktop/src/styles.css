@@ -641,3 +641,11 @@ select {
 .log-sources { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .log-source { font: inherit; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
 .log-source.is-off { color: var(--ink-3); border-color: var(--line) !important; text-decoration: line-through; }
+
+/* Environnements par branche */
+.branch-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+.branch-chip.is-on { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--accent-ink); background: var(--accent-soft); }
+.branch-chip input { margin: 0 0 0 4px; }
+.branch-others { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 13px; }
+.branch-other { display: inline-flex; align-items: center; gap: 6px; }
+.branch-badge { margin-left: 8px; font-size: 12px; font-weight: 500; color: var(--accent-ink); }

@@ -1127,3 +1127,33 @@ que l'antivirus relit le fichier. Correction : jusqu'à 20 essais espacés (50 m
 `hosts` contenait les **huit** adresses malgré quatre démarrages en quelques secondes : la réécriture avec
 réessais tient (une seule occurrence de « hosts non mis à jour » dans le journal du jour, celle d'avant la
 correction).
+
+## Chantier 3 : un environnement par branche Git (12 septembre 2026, version 0.1.6)
+
+Différenciateur retenu parmi les trois proposés (partage par lien, environnements par branche, extension VS
+Code) : le seul qui n'ajoute aucune dépendance extérieure et qui prolonge « tes projets tournent ».
+
+- **Branche courante** lue par le service de l'application sans exécuter `git` (`.git/HEAD`, y compris un
+  fichier `.git` `gitdir:` d'arbre de travail lié ; remontée jusqu'au premier parent qui est un dépôt),
+  relue toutes les 3 s dans la vue projet. Deux tests unitaires.
+- **Réglage par dossier** (stockage local de l'application, `solon.branch-env`) : case « Un environnement par
+  branche » dans la pastille de branche. Activé, le nom de projet Compose devient `<projet>-<branche>`
+  (branche en minuscules, `[a-z0-9_-]`, 40 caractères), passé en `-p` à chaque commande Compose ; les
+  conteneurs sont filtrés par cette étiquette de projet (et non plus par dossier) ; volumes, réseau et
+  adresses suivent d'eux-mêmes (`web.blog-main.solon.local`).
+- **Changement de branche** pendant que l'ancien environnement tourne : bandeau « Branche changée : main →
+  feature/login. L'environnement de main tourne encore » avec « Basculer » (stop de l'ancien projet, Up du
+  nouveau), « Basculer avec une copie des données » (`volumes_clone` : pour chaque volume de l'ancien projet,
+  `docker volume create` avec les étiquettes Compose puis `cp -a` de `_data` dans la machine ; jamais
+  d'écrasement), « Ignorer ». Ligne « Autres branches de ce dossier » avec état et bouton Arrêter.
+- Cartes de l'accueil : badge `⎇ branche` quand le dossier est en mode branches.
+
+Test réel : dépôt `C:\Projects\demo\blog` (nginx + volume `site`) sur `main` → case cochée → Up →
+`blog-main-web-1`, volume `blog-main_site`, adresse `web.blog-main.solon.local` → marqueur écrit dans le
+volume → `git checkout -b feature/login` dans un terminal → bandeau en moins de 5 s, projet affiché
+`blog-feature-login` → « Basculer avec une copie » → 17 s plus tard : `blog-main-web-1` `Exited (0)`,
+`blog-feature-login-web-1` `Up`, volume `blog-feature-login_site` étiqueté et contenant le marqueur de
+`main`. Nettoyé ensuite (`compose -p … down -v`).
+
+Limites connues : le nom de branche est tronqué à 40 caractères ; deux branches qui publient le même port hôte
+se heurtent (le contrôle des ports avant Up le signale) ; HEAD détaché utilise l'abrégé du commit comme nom.

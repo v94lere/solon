@@ -376,6 +376,17 @@ export const backup = {
   restore: (zipPath: string, targetDir: string) => invoke<RestoreReport>("project_restore", { zipPath, targetDir }),
 };
 
+// ---- Git : branche courante, copie des volumes d'un projet vers un autre ----
+export interface GitInfo {
+  root: string;
+  branch: string | null;
+  detached: string | null;
+}
+export const git = {
+  info: (dir: string) => invoke<GitInfo | null>("git_info", { dir }),
+  volumesClone: (from: string, to: string) => invoke<{ volumes: number }>("volumes_clone", { from, to }),
+};
+
 // ---- Le PC Windows : ports déjà pris, place disque ----
 export interface PortProbe {
   port: number;
