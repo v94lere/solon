@@ -9,6 +9,11 @@ import { JsonDialog } from "../components/JsonDialog";
 import { RunImageDialog } from "../components/RunImageDialog";
 import { EmptyState, IconLayers, PageHeader, SkeletonRows, UsagePill } from "../components/ui";
 
+/** `public.ecr.aws/docker/library/odoo:18.0` → `odoo:18.0` ; les autres dépôts gardent leur nom. */
+function shortTag(tag: string): string {
+  return tag.replace(/^(public\.ecr\.aws\/docker\/library|docker\.io\/library|registry-1\.docker\.io\/library)\//, "");
+}
+
 export function ImagesView({ onOpenContainer }: { onOpenContainer?: (id: string, tab?: "logs") => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -84,7 +89,7 @@ export function ImagesView({ onOpenContainer }: { onOpenContainer?: (id: string,
             <tbody>
               {rows.map(({ img, tag, usage }) => (
                 <tr key={`${img.Id}-${tag}`} tabIndex={0}>
-                  <td className="font-medium">{tag}</td>
+                  <td className="font-medium" title={tag}>{shortTag(tag)}</td>
                   <td className="col-usage"><UsagePill usage={usage} /></td>
                   <td className="col-id mono">{img.Id.replace(/^sha256:/, "").slice(0, 12)}</td>
                   <td className="col-size mono text-right">{formatBytes(img.Size)}</td>

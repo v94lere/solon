@@ -520,7 +520,7 @@ select {
 .list-card { container-type: inline-size; overflow-x: hidden; }
 .list-card .table { table-layout: fixed; width: 100%; }
 .list-card th, .list-card td { overflow: hidden; text-overflow: ellipsis; }
-.list-card th.col-status { width: 70px; }
+.list-card th.col-status { width: 88px; }
 .list-card th.col-cpu { width: 104px; }
 .list-card .spark-cell { width: 44px; }
 .list-card th.col-mem { width: 84px; }

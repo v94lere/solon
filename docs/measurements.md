@@ -1204,3 +1204,30 @@ annoncée par l'agent (`EndpointsChanged`) et s'en sert quand `docker ps` ne ré
 0.1.8 a relancé les huit projets de Valère : douze conteneurs `Up` moins de 30 s après l'ordre de démarrage,
 vingt-quatre adresses dans le fichier `hosts`. Le repli sur la liste de l'agent n'a pas eu à servir ; il reste
 en place pour le cas du 12 h 38.
+
+## Tour de l'application (12 septembre 2026, soirée)
+
+Passage en revue de chaque écran de la 0.1.8 installée (captures dans `.local/build/tour/`), thème sombre, sur
+les projets réels de Valère. Défauts trouvés et corrigés :
+
+1. **Accueil Projets** : un conteneur endormi par Solon (pause, réveil à la demande) comptait comme arrêté :
+   « 1/2 en marche », adresse cachée, « aucun port web détecté » pour odoo18 dont le service web dormait.
+   `withSleeping` : les conteneurs en pause présents dans `snapshot.sleeping` comptent comme en marche pour les
+   cartes, les adresses, les compteurs et la vue projet.
+2. **Conteneurs** : la pastille « Asleep » débordait de la colonne État (70 px) ; colonne portée à 88 px.
+3. **Fiche conteneur** : le nom `odoo18-db-1` passait sur deux lignes et décalait la barre d'onglets ; nom sur
+   une ligne, image tronquée.
+4. **Inspecter** : barre de défilement horizontale (JSON non replié) ; `pre-wrap` + `break-all`.
+5. **Images** : le préfixe du miroir (`public.ecr.aws/docker/library/`) cachait le nom utile, tronqué ; nom court
+   affiché, complet en infobulle.
+6. **Shell de débogage** : première utilisation sur un moteur neuf, construction de l'image outil échouée sur
+   `toomanyrequests: Rate exceeded` (limite des téléchargements anonymes de `public.ecr.aws`), session terminée
+   sans explication. L'application tire désormais la base elle-même avant `solon-debug`, avec repli sur Docker
+   Hub et un message clair en cas d'échec (l'avertissement « legacy builder » de Docker reste : il vient du
+   script de la machine, dont l'image ne se reconstruit pas sur ce PC).
+7. **Galerie et recherche de projets** : Échap ne fermait pas la boîte ; la recherche Ctrl+K s'ouvrait par-dessus.
+   Échap ferme désormais les deux boîtes.
+8. Terminaux : Ctrl+8 (Réglages) était intercepté par le terminal (`[1-7]`) ; corrigé.
+
+Écrans sans défaut relevé : Journaux, Fichiers, Terminal, Volumes, Réseaux, Activité, Réglages, galerie, recherche.
+Livrable : `docs/guide-fonctionnel.md`, le guide fonctionnel de l'application, écran par écran.

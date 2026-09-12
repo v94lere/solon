@@ -29,7 +29,7 @@ export function DebugPanel({ id, running }: { id: string; running: boolean }) {
     term.attachCustomKeyEventHandler((e) => {
       if (!e.ctrlKey || e.altKey) return true;
       const k = e.key.toLowerCase();
-      return !(k === "k" || k === "b" || e.key === "`" || e.code === "Backquote" || /^[1-7]$/.test(e.key));
+      return !(k === "k" || k === "b" || e.key === "`" || e.code === "Backquote" || /^[1-8]$/.test(e.key));
     });
     term.open(hostRef.current);
     fit.fit();
@@ -48,7 +48,10 @@ export function DebugPanel({ id, running }: { id: string; running: boolean }) {
             term.write("\r\n");
           } else if (out.kind === "error") setStatus(out.message ?? "error");
         },
-        `exec solon-debug ${id}`,
+        // Avant le shell : la base de l'image outil doit être là. Un registre qui limite les téléchargements
+        // anonymes (« toomanyrequests », vu sur public.ecr.aws) faisait échouer la construction sans un mot
+        // clair ; on tire l'image nous-mêmes, avec repli sur Docker Hub, et on explique en cas d'échec.
+        `sh -c 'if ! docker image inspect solon-debug >/dev/null 2>&1 && ! docker image inspect public.ecr.aws/docker/library/alpine:3.24 >/dev/null 2>&1; then echo "Preparing the debug toolbox (first use only)..."; docker pull -q public.ecr.aws/docker/library/alpine:3.24 >/dev/null 2>&1 || { docker pull -q docker.io/library/alpine:3.24 >/dev/null 2>&1 && docker tag docker.io/library/alpine:3.24 public.ecr.aws/docker/library/alpine:3.24; } || { echo; echo "Could not download the toolbox base image: the registry is limiting anonymous downloads or the PC is offline. Try again in a minute."; exit 1; }; fi; exec solon-debug ${id}'`,
       )
       .then((sid) => {
         if (closed) void machineShell.close(sid);

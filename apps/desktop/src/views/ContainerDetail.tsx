@@ -138,11 +138,11 @@ export function ContainerDetail({ id, onBack, onOpenProject, initialTab }: { id:
           </form>
         ) : (
           <button type="button" className="title-edit" title={t("detail.rename")} onClick={() => setRenaming(name)}>
-            <h1 className="text-base font-semibold">{name}</h1>
+            <h1 className="text-base font-semibold whitespace-nowrap">{name}</h1>
             <IconPencil />
           </button>
         )}
-        {image && <span className="mono kbd-hint max-w-[320px] truncate" title={image}>{image}</span>}
+        {image && <span className="mono kbd-hint min-w-0 max-w-[260px] shrink truncate" title={image}>{image}</span>}
         {asleep ? (
           <span className="pill pill-sleep" title={t("containers.sleeping_hint")}>{t("containers.sleeping")}</span>
         ) : (
@@ -464,7 +464,7 @@ function InspectPanel({ data }: { data: unknown }) {
       <div className="flex justify-end border-b p-2" style={{ borderColor: "var(--line)" }}>
         <CopyButton text={text} label={t("detail.inspect.copy")} />
       </div>
-      <pre className="mono min-h-0 flex-1 overflow-auto p-3 text-xs leading-5 select-text">{text}</pre>
+      <pre className="mono min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-all p-3 text-xs leading-5 select-text">{text}</pre>
     </div>
   );
 }

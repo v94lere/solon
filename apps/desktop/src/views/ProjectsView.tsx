@@ -13,7 +13,7 @@ import { ScanDialog } from "../components/ScanDialog";
 import { Avatar, EmptyState, IconBox, IconFolderOpen, IconGlobe, PageHeader, imageBase } from "../components/ui";
 import { IconPlay, IconStop } from "../components/Icons";
 import { useEngine, markUserAction } from "../engine";
-import { domainOf, forgetProject, lastActivity, loadRecentProjects, primaryAddress, projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath } from "../projects";
+import { domainOf, forgetProject, lastActivity, loadRecentProjects, primaryAddress, projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, withSleeping } from "../projects";
 import { branchEnvEnabled, branchOfProjectName } from "../branches";
 
 const HELLO_IMAGE = "public.ecr.aws/docker/library/hello-world";
@@ -130,7 +130,7 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
   const { groups, misc } = useMemo(() => {
     const map = new Map<string, Group>();
     const misc: ContainerSummary[] = [];
-    for (const c of query.data ?? []) {
+    for (const c of withSleeping(query.data ?? [], snapshot?.sleeping ?? [])) {
       const name = projectNameOf(c);
       if (!name) {
         misc.push(c);
@@ -148,7 +148,7 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
     });
     misc.sort((a, b) => (a.State === "running" ? 0 : 1) - (b.State === "running" ? 0 : 1) || (a.Names?.[0] ?? "").localeCompare(b.Names?.[0] ?? ""));
     return { groups, misc };
-  }, [query.data]);
+  }, [query.data, snapshot?.sleeping]);
 
   // Dossiers ouverts récemment qui n'ont aucun conteneur : proposés à la reprise.
   const dormant = useMemo(() => recent.filter((dir) => !groups.some((g) => samePath(g.dir, dir))), [recent, groups]);

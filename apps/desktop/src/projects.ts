@@ -66,6 +66,13 @@ export function samePath(a: string | null | undefined, b: string | null | undefi
   return a.replace(/[\\/]+$/, "").toLowerCase() === b.replace(/[\\/]+$/, "").toLowerCase();
 }
 
+/** Les conteneurs mis en pause par Solon (réveil à la demande) répondent à la première requête : pour
+ *  les cartes, les adresses et les compteurs, ils comptent comme en marche. */
+export function withSleeping(list: ContainerSummary[], sleeping: string[]): ContainerSummary[] {
+  if (sleeping.length === 0) return list;
+  return list.map((c) => (c.State === "paused" && sleeping.includes(c.Id) ? { ...c, State: "running", Status: c.Status.replace(/\s*\(Paused\)/, "") } : c));
+}
+
 // ---- Adresse principale et dernière activité d'un projet ----
 
 /** Ports HTTP habituels, par ordre de préférence (même liste que le mandataire du service). */

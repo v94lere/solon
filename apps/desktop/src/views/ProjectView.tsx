@@ -10,7 +10,7 @@ import { portConflictIn } from "../ports";
 import { markUserAction, useEngine } from "../engine";
 import { EnvPanel } from "../components/EnvPanel";
 import { AddressLine } from "./ProjectsView";
-import { LABEL_PROJECT, primaryAddress, projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, serviceNameOf } from "../projects";
+import { LABEL_PROJECT, primaryAddress, projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, serviceNameOf, withSleeping } from "../projects";
 import { MultiLogsPanel } from "../components/MultiLogsPanel";
 import { PortLinks } from "../components/PortLinks";
 import { IconFile, IconLogs, IconPencil, IconPlay, IconRestart, IconStop } from "../components/Icons";
@@ -128,12 +128,12 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
   const activeName = useBranches ? branchProjectName(baseName, currentBranch as string) : baseName;
 
   const services = useMemo<ContainerSummary[]>(() => {
-    const all = query.data ?? [];
+    const all = withSleeping(query.data ?? [], snapshot?.sleeping ?? []);
     const list = useBranches
       ? all.filter((c) => projectNameOf(c) === activeName)
       : all.filter((c) => samePath(projectDirOf(c), dir) || (project?.name && projectNameOf(c) === project.name && !projectDirOf(c)));
     return list.sort((a, b) => serviceNameOf(a).localeCompare(serviceNameOf(b)));
-  }, [query.data, dir, project, useBranches, activeName]);
+  }, [query.data, dir, project, useBranches, activeName, snapshot?.sleeping]);
 
   // Autres environnements de branche du même dossier (en marche ou arrêtés), pour les voir et les arrêter.
   const otherBranchEnvs = useMemo(() => {

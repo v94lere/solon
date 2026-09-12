@@ -30,7 +30,7 @@ export function MachineTerminalPanel() {
     term.attachCustomKeyEventHandler((e) => {
       if (!e.ctrlKey || e.altKey) return true;
       const k = e.key.toLowerCase();
-      return !(k === "k" || k === "b" || e.key === "`" || e.code === "Backquote" || /^[1-7]$/.test(e.key));
+      return !(k === "k" || k === "b" || e.key === "`" || e.code === "Backquote" || /^[1-8]$/.test(e.key));
     });
     term.open(hostRef.current);
     fit.fit();

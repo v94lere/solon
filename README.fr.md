@@ -300,6 +300,7 @@ perdues, comme sur toute machine Linux.
 
 - `ARCHITECTURE.md` : choix techniques (virtualisation HCS, image Linux, HvSocket, 9P, réseau), résultats
   mesurés bloc par bloc, registre des risques.
+- `docs/guide-fonctionnel.md` : le guide fonctionnel de l'application, écran par écran.
 - `docs/measurements.md` : toutes les mesures et les faits établis.
 - `bench/` : le script de comparaison et sa pile Compose (voir le comparatif plus haut).
 - `site/` : le site de présentation (Astro, statique), publié sur GitHub Pages par le workflow « Site ».

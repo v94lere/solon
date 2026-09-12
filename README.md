@@ -276,6 +276,7 @@ the engine. Unsynced writes of the last two seconds may be lost, as on any Linux
 
 - `ARCHITECTURE.md`: technical choices (HCS virtualization, Linux image, HvSocket, solonfs, network),
   measured results block by block, risk register. In French.
+- `docs/guide-fonctionnel.md`: the functional guide, screen by screen. In French.
 - `docs/measurements.md`: every measurement and established fact. In French.
 - `bench/`: the comparison script and its Compose stack (see the benchmark above).
 - `site/`: the presentation website (Astro, static), published to GitHub Pages by the `Site` workflow.
