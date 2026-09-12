@@ -1198,3 +1198,9 @@ rien renvoyé au moment de l'arrêt (cause non identifiée, délai ou agent occu
 vide. Les huit projets ont été relancés à la main (`docker compose -p <nom> start`). Correction (commit suivant,
 effective à la prochaine version) : le service garde en mémoire la dernière liste de conteneurs en marche
 annoncée par l'agent (`EndpointsChanged`) et s'en sert quand `docker ps` ne répond pas.
+
+**Version 0.1.8** (correctif de la relance) : release GitHub `v0.1.8`, installation silencieuse par-dessus la
+0.1.7 en 19 s. Cette fois `docker ps` a répondu à l'arrêt (« en marche à l'arrêt : 8 projet(s) ») et le service
+0.1.8 a relancé les huit projets de Valère : douze conteneurs `Up` moins de 30 s après l'ordre de démarrage,
+vingt-quatre adresses dans le fichier `hosts`. Le repli sur la liste de l'agent n'a pas eu à servir ; il reste
+en place pour le cas du 12 h 38.
