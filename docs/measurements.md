@@ -1119,3 +1119,11 @@ puis « relance au démarrage : project 'blog' started », « containers started
 que l'antivirus relit le fichier. Correction : jusqu'à 20 essais espacés (50 ms croissants) dans
 `write_hosts_block`. Autre correction : l'adresse principale d'un projet ne vise plus un service web
 **arrêté** (carte odoo18 avec `odoo` arrêté et `db` en marche).
+
+**Version 0.1.5** : release GitHub `v0.1.5` (site redéployé), installation silencieuse par-dessus la 0.1.4 en
+32 s. À l'arrêt provoqué par l'installateur, le service 0.1.4 a noté `resume_projects: ["odoo18", "wordpress"]`
+(les projets de Valère, relancés par lui le matin) ; au démarrage suivant, le service 0.1.5 les a relancés
+(« project 'odoo18' started », « project 'wordpress' started »), quatre conteneurs `Up` en 13 s, et le fichier
+`hosts` contenait les **huit** adresses malgré quatre démarrages en quelques secondes : la réécriture avec
+réessais tient (une seule occurrence de « hosts non mis à jour » dans le journal du jour, celle d'avant la
+correction).
