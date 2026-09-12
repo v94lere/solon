@@ -1231,3 +1231,7 @@ les projets réels de Valère. Défauts trouvés et corrigés :
 
 Écrans sans défaut relevé : Journaux, Fichiers, Terminal, Volumes, Réseaux, Activité, Réglages, galerie, recherche.
 Livrable : `docs/guide-fonctionnel.md`, le guide fonctionnel de l'application, écran par écran.
+
+**Version 0.1.9** (finitions du tour) : release GitHub `v0.1.9`, installation silencieuse par-dessus la 0.1.8 en
+22 s ; les deux projets en marche (mailpit, odoo18) notés à l'arrêt et relancés au démarrage suivant, trois
+conteneurs `Up` en 18 s.
