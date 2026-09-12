@@ -224,6 +224,13 @@ Containers list (and in "Find projects on this PC"). Nothing to configure; if yo
 `dev.containers.dockerPath` for Docker Desktop, remove it. Tested with `@devcontainers/cli` 0.89 and the
 `mcr.microsoft.com/devcontainers/base:alpine` image.
 
+The **Containers** view (extension `ms-azuretools.vscode-containers`) refreshes live through `docker events`.
+The extension arms that listener once, at startup, and gives up after three immediate failures. Solon's
+Docker pipe exists as soon as the Solon service starts and `docker` waits while the engine boots, so a VS Code
+window restored at logon keeps live refresh. If Solon is updated while VS Code is open, the pipe vanishes for a
+few seconds and that window falls back to a refresh every minute and the Refresh button: run
+*Developer: Reload Window* to get live refresh back.
+
 ## Shared Windows folders: how it works
 
 Windows folders mounted into containers (`-v C:\...`, Compose projects) go through **solonfs**, Solon's file

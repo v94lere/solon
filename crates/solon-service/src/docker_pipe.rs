@@ -201,18 +201,26 @@ pub fn accept_loop(
         }
     };
     let mut first = true;
+    let mut failures = 0u32;
     loop {
         let h = match create_instance(name, first, sddl) {
             Ok(h) => h,
             Err(e) => {
-                tracing::error!("pipe Docker : {e}");
-                if first {
-                    return;
+                // Première instance refusée (un ancien processus du service qui finit de s'arrêter
+                // tient encore le nom) : on insiste, le pipe doit exister pour toute la vie du service.
+                failures += 1;
+                if failures == 1 || failures % 30 == 0 {
+                    tracing::warn!("pipe Docker : {e} (tentative {failures})");
                 }
-                std::thread::sleep(std::time::Duration::from_millis(200));
+                std::thread::sleep(std::time::Duration::from_millis(if first {
+                    1000
+                } else {
+                    200
+                }));
                 continue;
             }
         };
+        failures = 0;
         first = false;
         if let Err(e) = wait_client(h, &ev) {
             tracing::debug!("pipe Docker : connexion : {e}");

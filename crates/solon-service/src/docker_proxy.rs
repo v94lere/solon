@@ -18,7 +18,6 @@ use solon_core::ipc::DOCKER_PIPE;
 use solon_core::protocol::PORT_DOCKER;
 use solon_hvsock::relay::DOCKER_PIPE_SDDL;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use windows::core::GUID;
 
 use crate::engine::Engine;
 
@@ -26,7 +25,12 @@ use crate::engine::Engine;
 const MAX_REWRITE_BODY: usize = 8 * 1024 * 1024;
 const MAX_HEAD: usize = 1024 * 1024;
 
-pub async fn serve(engine: Engine, vm_id: GUID) -> io::Result<()> {
+/// Sert `\\.\pipe\solon` pour toute la vie du service : le pipe existe dès le démarrage du service,
+/// avant la machine. Une requête arrivée pendant que le moteur démarre **attend** qu'il soit prêt
+/// (voir [`wait_for_engine`]) au lieu d'échouer sur « fichier introuvable » ; c'est ce qui permet aux
+/// outils lancés à l'ouverture de session (l'extension Containers de VS Code écoute `docker events` et
+/// renonce définitivement après trois échecs immédiats) de fonctionner sans être relancés.
+pub async fn serve(engine: Engine) -> io::Result<()> {
     // Le pipe est servi en mode message par des fils Windows dédiés (voir `docker_pipe`) ; chaque client
     // arrive ici sous la forme d'un flux tokio ordinaire.
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
@@ -43,7 +47,7 @@ pub async fn serve(engine: Engine, vm_id: GUID) -> io::Result<()> {
     while let Some(stream) = rx.recv().await {
         let engine = engine.clone();
         tokio::spawn(async move {
-            if let Err(e) = handle(engine, stream, vm_id).await {
+            if let Err(e) = handle(engine, stream).await {
                 tracing::debug!("connexion API Docker terminée : {e}");
             }
         });
@@ -53,12 +57,79 @@ pub async fn serve(engine: Engine, vm_id: GUID) -> io::Result<()> {
     ))
 }
 
-async fn handle(engine: Engine, pipe: tokio::io::DuplexStream, vm_id: GUID) -> io::Result<()> {
-    let std_stream = tokio::task::spawn_blocking(move || {
-        solon_hvsock::connect_with_retry(&vm_id, PORT_DOCKER, Duration::from_secs(5))
-    })
-    .await
-    .map_err(io::Error::other)??;
+/// Temps maximal d'attente du moteur pour une requête arrivée pendant son démarrage (le premier
+/// provisionnement peut être long).
+const ENGINE_WAIT: Duration = Duration::from_secs(300);
+/// Délai de grâce avant de répondre « arrêté » : au lancement du service, l'état est `Stopped` un
+/// court instant avant que le démarrage automatique ne le passe à `Starting`.
+const STOPPED_GRACE: Duration = Duration::from_secs(3);
+
+/// Attend que la machine soit prête et que dockerd réponde ; renvoie la connexion vsock, ou le
+/// message d'erreur à rendre au client (HTTP 503) si le moteur est arrêté ou en échec.
+async fn wait_for_engine(engine: &Engine) -> Result<std::net::TcpStream, String> {
+    use solon_core::ipc::EngineState as S;
+    let t0 = std::time::Instant::now();
+    loop {
+        let state = engine.snapshot().state;
+        if let Some(guid) = engine.guest_guid().await {
+            let r = tokio::task::spawn_blocking(move || {
+                solon_hvsock::connect_with_retry(&guid, PORT_DOCKER, Duration::from_secs(5))
+            })
+            .await
+            .map_err(|e| e.to_string())
+            .and_then(|r| r.map_err(|e| e.to_string()));
+            match r {
+                Ok(s) => return Ok(s),
+                Err(e) => {
+                    let retry = matches!(state, Some(S::Ready | S::Degraded | S::Starting));
+                    if t0.elapsed() >= ENGINE_WAIT || !retry {
+                        return Err(format!(
+                            "Solon's engine is not reachable ({e}). Restart it from the Solon app."
+                        ));
+                    }
+                    // dockerd relancé par l'agent (Degraded) ou pas encore prêt : on réessaie.
+                    continue;
+                }
+            }
+        }
+        match state {
+            Some(S::Stopped) if t0.elapsed() >= STOPPED_GRACE => {
+                return Err("Solon is stopped. Open the Solon app to start it.".into());
+            }
+            Some(S::Failed) => {
+                return Err("Solon failed to start. Open the Solon app for details.".into());
+            }
+            _ => {}
+        }
+        if t0.elapsed() >= ENGINE_WAIT {
+            return Err("Solon is still starting. Try again in a moment.".into());
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+}
+
+/// Répond une erreur HTTP 503 au format de dockerd (`{"message": …}`), que le CLI affiche comme
+/// « Error response from daemon: … ».
+async fn reply_unavailable(mut pipe: tokio::io::DuplexStream, message: &str) {
+    let body = serde_json::json!({ "message": message }).to_string();
+    let head = format!(
+        "HTTP/1.1 503 Service Unavailable\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        body.len()
+    );
+    let _ = pipe.write_all(head.as_bytes()).await;
+    let _ = pipe.write_all(body.as_bytes()).await;
+    let _ = pipe.shutdown().await;
+}
+
+async fn handle(engine: Engine, pipe: tokio::io::DuplexStream) -> io::Result<()> {
+    let std_stream = match wait_for_engine(&engine).await {
+        Ok(s) => s,
+        Err(message) => {
+            tracing::debug!("requête Docker refusée : {message}");
+            reply_unavailable(pipe, &message).await;
+            return Ok(());
+        }
+    };
     std_stream.set_nonblocking(true)?;
     let hv = tokio::net::TcpStream::from_std(std_stream)?;
     let (mut pipe_read, mut pipe_write) = tokio::io::split(pipe);

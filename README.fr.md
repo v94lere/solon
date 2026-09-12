@@ -245,6 +245,14 @@ dans `/workspaces/<nom>`, installe son serveur dedans et s'y connecte. Les ports
 Docker Desktop, retirez-le. Testé avec `@devcontainers/cli` 0.89 et l'image
 `mcr.microsoft.com/devcontainers/base:alpine`.
 
+La vue **Conteneurs** (extension `ms-azuretools.vscode-containers`) se rafraîchit en direct grâce à
+`docker events`. L'extension arme cette écoute une fois, au démarrage, et renonce après trois échecs
+immédiats. Le pipe Docker de Solon existe dès le lancement du service Solon et `docker` attend pendant que le
+moteur démarre : une fenêtre VS Code restaurée à l'ouverture de session garde le rafraîchissement en direct.
+Si Solon est mis à jour pendant que VS Code est ouvert, le pipe disparaît quelques secondes et cette fenêtre
+retombe sur un rafraîchissement par minute et le bouton Actualiser : lancez *Developer: Reload Window* pour
+retrouver le direct.
+
 ## Dossiers Windows partagés : comment ça marche
 
 Les dossiers Windows montés dans les conteneurs (`-v C:\...`, projets Compose) passent par **solonfs**, le système de

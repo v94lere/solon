@@ -1278,3 +1278,38 @@ répondent 29.5.3. **VS Code** : `code --folder-uri vscode-remote://dev-containe
 terminal `vscode → /workspaces/devc`, un port transmis, fichiers du dossier Windows visibles. La première
 tentative avait échoué : fenêtre laissée ouverte par l'essai précédent, à fermer avant de relancer.
 Démonstration nettoyée (conteneur, image, dossier, fichiers de test).
+
+### Vue Conteneurs de VS Code : rafraîchissement manuel (13 sept. 2026)
+
+Constat de Valère : la vue Conteneurs de VS Code ne suit plus l'état des conteneurs sans cliquer sur
+Actualiser. Journal de l'extension (`Container Tools.log`, fenêtre ouverte depuis le 12 sept.) :
+
+```
+2026-09-12 14:38:46.781 [error] failed to connect to the docker API at npipe:////./pipe/solon; … open //./pipe/solon: The system cannot find the file specified.
+2026-09-12 14:38:46.851 [error] … (idem)
+2026-09-12 14:38:46.917 [error] … (idem)
+2026-09-12 14:38:46.920 [error] Failed to set up event listener: …
+```
+
+Trois tentatives en 140 ms puis abandon : dans le code de l'extension (`RefreshManager.setupRefreshOnRuntimeEvent`,
+`vscode-containers` 2.5.0), l'écoute est `docker events --since <t> --until <t+300>` en boucle, avec **trois
+échecs consécutifs autorisés en tout** avant de renoncer pour toute la session ; il ne reste alors qu'un
+rafraîchissement toutes les 60 s et le bouton Actualiser. 14:38 le 12 sept. est l'heure d'une réinstallation de
+Solon : le service s'arrête, le pipe `\.\pipe\solon` disparaît, l'extension échoue trois fois d'affilée.
+
+Vérifié que le régime établi est sain : la commande exacte de l'extension (`docker events --format '{{json .}}'
+--filter … --since S --until S+12`) à travers le pipe de Solon se termine à l'heure `until` avec le **code 0**
+(11,2 s), et les événements arrivent en direct (pause/unpause vus en moins de 2 s).
+
+Cause côté Solon : le pipe Docker n'était créé qu'une fois la machine démarrée (dans `Engine::attach`). Donc à
+chaque ouverture de session (VS Code restauré avant que la machine de Solon soit prête, 10 à 20 s), à chaque
+redémarrage du moteur et à chaque mise à jour, tout client `docker` échouait sur « fichier introuvable ».
+
+Correction (0.1.10) : le mandataire de l'API Docker vit avec le service (`main::run_core`), le pipe existe donc
+dès le lancement ; une connexion arrivée pendant que le moteur démarre attend qu'il soit prêt (jusqu'à 5 min,
+sondage toutes les 250 ms), puis se branche sur dockerd ; moteur arrêté ou en échec → réponse HTTP 503 au
+format dockerd (`Error response from daemon: Solon is stopped. Open the Solon app to start it.`), après 3 s de
+grâce pour l'état `Stopped` transitoire du lancement. La création de la première instance du pipe est
+réessayée chaque seconde si le nom est encore tenu par l'ancien processus. Reste hors de portée de Solon : la
+coupure de quelques secondes pendant une mise à jour du service (l'extension abandonne alors ; *Developer:
+Reload Window* la relance), et la même limite existe avec Docker Desktop.

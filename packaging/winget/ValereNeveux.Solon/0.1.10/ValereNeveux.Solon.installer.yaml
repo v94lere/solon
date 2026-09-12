@@ -26,6 +26,6 @@ AppsAndFeaturesEntries:
 Installers:
 - Architecture: x64
   InstallerUrl: https://github.com/v94lere/solon/releases/download/v0.1.10/Solon_0.1.10_x64-setup.exe
-  InstallerSha256: 09052138F3CE8B9E22D8B412424ACAD1198EF12501CE51CF59904B807B086227
+  InstallerSha256: C55C20FB8752B951D421947745F4B74BD41C4EAA30CB9A579D0D79E40C27FCA4
 ManifestType: installer
 ManifestVersion: 1.9.0

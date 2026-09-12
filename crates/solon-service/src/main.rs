@@ -88,6 +88,16 @@ async fn run_core(
         cfg.paths.settings_file(),
         if allow_quit { Some(quit_tx) } else { None },
     ));
+    // Le pipe Docker est servi dès maintenant, machine ou pas : les clients arrivés pendant le
+    // démarrage attendent le moteur au lieu d'échouer.
+    let docker_proxy = {
+        let engine = engine.clone();
+        tokio::spawn(async move {
+            if let Err(e) = solon_service::docker_proxy::serve(engine).await {
+                tracing::error!("mandataire API Docker arrêté : {e}");
+            }
+        })
+    };
     if autostart {
         let e = engine.clone();
         tokio::spawn(async move {
@@ -100,6 +110,7 @@ async fn run_core(
     }
     tracing::info!("arrêt demandé");
     ipc.abort();
+    docker_proxy.abort();
     let _ = tokio::time::timeout(Duration::from_secs(60), engine.stop(false)).await;
 }
 

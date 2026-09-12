@@ -238,6 +238,13 @@ l'extension se sert du `docker` de Solon sans rien régler. Le dossier est mont�
 sens, les ports déclarés sont transmis, le `postCreateCommand` s'exécute, et le conteneur apparaît dans Solon
 comme les autres, avec son adresse locale. « Chercher les projets sur ce PC » repère aussi ces dossiers.
 
+La vue **Conteneurs** de VS Code (extension Containers) suit l'état des conteneurs en direct. Le pipe Docker
+de Solon existe dès le lancement du service, et une commande `docker` lancée pendant que le moteur démarre
+l'attend au lieu d'échouer : une fenêtre VS Code ouverte à l'ouverture de session garde le direct. Si Solon
+est mis à jour pendant que VS Code est ouvert, cette fenêtre retombe sur un rafraîchissement par minute ;
+*Developer: Reload Window* lui rend le direct. Quand Solon est arrêté, `docker` répond « Solon is stopped.
+Open the Solon app to start it. »
+
 ## 15. Limites connues
 
 - Windows Famille non pris en charge ; ports UDP publiés non relayés vers `localhost` ; un seul moteur par PC.

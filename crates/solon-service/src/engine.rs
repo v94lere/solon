@@ -534,14 +534,8 @@ impl Engine {
         }
         tasks.push(self.spawn_event_loop(events, guid));
         tasks.push(self.spawn_exit_watcher(vm.clone()));
-        {
-            let engine = self.clone();
-            tasks.push(tokio::spawn(async move {
-                if let Err(e) = crate::docker_proxy::serve(engine, guid).await {
-                    tracing::error!("mandataire API Docker arrêté : {e}");
-                }
-            }));
-        }
+        // Le mandataire de l'API Docker (`\\.\pipe\solon`) n'est pas ici : il vit avec le service
+        // (voir `main::run_core`) pour que le pipe existe avant la machine et lui survive.
         {
             // Serveur de fichiers solonfs (FUSE côté invité) : ouvre ses connexions vers l'agent.
             let engine = self.clone();
