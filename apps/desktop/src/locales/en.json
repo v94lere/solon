@@ -679,5 +679,24 @@
     "confirm_title": "Reclaim space?",
     "confirm_body": "{{count}} unused image(s) (about {{size}}) and the build cache will be removed. Pulling them again later takes a download.",
     "confirm_keeps": "Containers, running or stopped, and volumes are kept."
+  },
+  "scan": {
+    "button": "Find projects on this PC…",
+    "title": "Projects found on this PC",
+    "welcome_title": "Find what is already here",
+    "welcome_body": "Solon reads the file table of your drives and lists every folder with a compose.yaml, a Dockerfile or a devcontainer.json. A few seconds, nothing leaves the PC.",
+    "running": "Reading the drives… a few seconds.",
+    "summary": "{{count}} folder(s) on {{drives}} in {{seconds}} s",
+    "filter": "Filter by path",
+    "none": "No Compose file, Dockerfile or devcontainer.json found outside system and dependency folders.",
+    "col_folder": "Folder",
+    "col_found": "Found",
+    "kind_compose": "Compose",
+    "kind_dockerfile": "Dockerfile",
+    "kind_devcontainer": "Dev Container",
+    "already": "already in Projects",
+    "setup": "Set up…",
+    "add": "Add {{count}} project(s)",
+    "privacy": "Local search only. Dependency, cache and system folders are skipped."
   }
 }

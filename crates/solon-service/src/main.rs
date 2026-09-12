@@ -330,7 +330,7 @@ async fn control(command: ServiceCommand, watch: bool) -> Result<(), String> {
 
 fn usage() -> ! {
     eprintln!(
-        "usage : solon-service <run|console [--start]|install|uninstall|status|start|stop [--force]|restart|prereq|watch [--follow]|version>"
+        "usage : solon-service <run|console [--start]|install|uninstall|status|start|stop [--force]|restart|prereq|watch [--follow]|scan|version>"
     );
     std::process::exit(2);
 }
@@ -349,6 +349,15 @@ fn main() {
         "uninstall" => uninstall(),
         "version" => {
             println!("solon-service {}", env!("CARGO_PKG_VERSION"));
+            Ok(())
+        }
+        // Recherche des projets sur le PC, en direct (droits administrateur pour la lecture de la MFT).
+        "scan" => {
+            let report = solon_service::scan::scan_projects(std::time::Duration::from_secs(20));
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&report).unwrap_or_default()
+            );
             Ok(())
         }
         "share" => {

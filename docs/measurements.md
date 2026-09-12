@@ -1161,3 +1161,29 @@ se heurtent (le contrôle des ports avant Up le signale) ; HEAD détaché utilis
 **Version 0.1.6** : release GitHub `v0.1.6` (site redéployé, CI verte), installation silencieuse par-dessus la
 0.1.5 en 33 s. Trois projets de Valère notés à l'arrêt (`mailpit`, `odoo18`, `wordpress`), les trois relancés
 au démarrage suivant : cinq conteneurs `Up` en 18 s, dix adresses dans le fichier `hosts`.
+
+## Recherche des projets sur le PC (12 septembre 2026, version 0.1.7)
+
+Demande de Valère : un bouton qui trouve tous les projets Docker du PC, avec la crainte que « ça dure trop
+longtemps ». Réponse : lecture de la table des fichiers NTFS (MFT) par `FSCTL_ENUM_USN_DATA`, comme les outils
+du type « Everything », faite par le service (droits administrateur) ; repli sur un parcours des dossiers
+probables (profondeur 6, 20 s au plus) pour les volumes non NTFS ou en cas d'échec.
+
+| Mesure (disque C: de 928 Go de Valère) | Résultat |
+|---|---|
+| Parcours de repli, sans élévation (Bureau, Documents, Téléchargements… de chaque profil) | **390 ms**, 23 dossiers |
+| Lecture de la MFT, première version | 9,7 s, **0 dossier** : la racine du volume (numéro 5) n'est pas renvoyée par l'énumération, les chemins ne se reconstruisaient pas |
+| MFT, racine traitée comme parent implicite | 8,1 s, **40 dossiers** (dont `C:\Project\self-hosted` et `C:\Users\neveu\cursor\test`, invisibles au repli) |
+| MFT, noms de fichiers décodés seulement si leur longueur est celle d'un repère, tampon 4 Mo | **6,9 s**, 40 dossiers |
+
+Le temps restant est la lecture du volume par le noyau (plusieurs millions d'enregistrements) et la table de
+tous les dossiers, nécessaire pour reconstruire les chemins. « Quelques secondes » dans l'interface est donc
+honnête ; sur un disque plus petit c'est une à trois secondes. Exclusions sur les segments de chemin :
+`node_modules`, `.git`, `AppData`, `Program Files`, `ProgramData`, `Windows`, `$Recycle.Bin`, `vendor`,
+`site-packages`, caches Cargo, npm, NuGet, `.cache`, `.vscode-server`. Lecteurs réseau et amovibles ignorés
+(`DRIVE_FIXED` seulement). Un résultat par dossier avec ses sortes (Compose, Dockerfile, Dev Container) et la
+présence d'un dépôt Git ; `devcontainer.json` remonte au dossier au-dessus de `.devcontainer`.
+
+Interface : bouton « Chercher les projets sur ce PC… » sur l'accueil et carte dans l'écran de bienvenue ; boîte
+de dialogue avec filtre, cases pré-cochées pour les projets Compose inconnus de l'accueil, « Configurer… »
+(galerie avec sonde du dossier) pour les dossiers sans Compose. Commande CLI `solon-service scan` pour tester.

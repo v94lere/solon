@@ -20,5 +20,6 @@ pub mod ipc;
 pub mod network;
 pub mod paths;
 pub mod ports;
+pub mod scan;
 pub mod settings;
 pub mod sleep;

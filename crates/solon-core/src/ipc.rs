@@ -65,6 +65,19 @@ pub enum ServiceCommand {
     ListShares,
     /// Compteurs de la machine (écran Activité).
     Metrics,
+    /// Cherche les projets Docker (Compose, Dockerfile, devcontainer) sur les disques internes du PC.
+    ScanProjects,
+}
+
+/// Un dossier de projet trouvé sur le PC.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FoundProject {
+    pub dir: String,
+    /// `compose`, `dockerfile`, `devcontainer`.
+    pub kinds: Vec<String>,
+    pub files: Vec<String>,
+    /// Le dossier est un dépôt Git.
+    pub git: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

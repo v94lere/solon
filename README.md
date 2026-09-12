@@ -147,6 +147,9 @@ dot depending on the engine state.
   backup…" on the Projects home recreates the volumes and files in the folder you choose, then Up.
 - **Ports checked before Up**: a host port already taken on this PC stops Up before anything starts, with
   "Use 8081 instead" (the file is edited for you) or "Up anyway".
+- **Find projects on this PC**: one click reads the file table of your internal drives (a few seconds,
+  administrator rights of the service, nothing leaves the PC) and lists every folder with a `compose.yaml`,
+  a `Dockerfile` or a `devcontainer.json`, minus dependency, cache and system folders. Tick the ones to keep.
 - **One environment per Git branch**: on a project whose folder is a Git repository, tick "One environment
   per branch" next to the branch name. Each branch then gets its own containers, volumes and addresses
   (`web.blog-feature-login.solon.local`). Switch branch in your terminal and Solon offers to stop the old

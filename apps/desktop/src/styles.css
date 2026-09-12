@@ -649,3 +649,7 @@ select {
 .branch-others { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 13px; }
 .branch-other { display: inline-flex; align-items: center; gap: 6px; }
 .branch-badge { margin-left: 8px; font-size: 12px; font-weight: 500; color: var(--accent-ink); }
+
+/* Recherche des projets sur le PC */
+.scan-table td { vertical-align: middle; }
+.scan-dir { font-size: 12.5px; max-width: 560px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -376,6 +376,23 @@ export const backup = {
   restore: (zipPath: string, targetDir: string) => invoke<RestoreReport>("project_restore", { zipPath, targetDir }),
 };
 
+// ---- Recherche des projets sur le PC ----
+export interface FoundProject {
+  dir: string;
+  kinds: string[];
+  files: string[];
+  git: boolean;
+}
+export interface ScanReport {
+  projects: FoundProject[];
+  drives: string[];
+  notes: string[];
+  ms: number;
+}
+export const scan = {
+  run: () => invoke<ScanReport>("projects_scan"),
+};
+
 // ---- Git : branche courante, copie des volumes d'un projet vers un autre ----
 export interface GitInfo {
   root: string;

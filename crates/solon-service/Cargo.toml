@@ -41,4 +41,5 @@ windows = { workspace = true, features = [
     "Win32_Networking_WinSock",
     "Win32_Security",
     "Win32_System_IO",
+    "Win32_System_Ioctl",
 ] }

@@ -9,6 +9,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { backup, compose, containers, engine, stacks, type ContainerSummary, type Probe, type Settings } from "../api";
 import { StackDialog } from "../components/StackDialog";
+import { ScanDialog } from "../components/ScanDialog";
 import { Avatar, EmptyState, IconBox, IconFolderOpen, IconGlobe, PageHeader, imageBase } from "../components/ui";
 import { IconPlay, IconStop } from "../components/Icons";
 import { useEngine, markUserAction } from "../engine";
@@ -83,6 +84,7 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
   const [hello, setHello] = useState<"idle" | "running">("idle");
   const [stackDialog, setStackDialog] = useState<{ open: boolean; probe: Probe | null }>({ open: false, probe: null });
   const [restoring, setRestoring] = useState<string | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
 
   /** Restaurer une sauvegarde : le zip, un aperçu, le dossier de destination, puis la page du projet. */
   async function restoreBackup() {
@@ -240,6 +242,7 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
           <>
             <button type="button" className="btn btn-sm" onClick={() => void pickProject()}><IconFolderOpen />{t("compose.open")}</button>
             <button type="button" className="btn btn-sm" onClick={() => setStackDialog({ open: true, probe: null })}><IconGlobe />{t("stacks.new")}</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setScanOpen(true)}>{t("scan.button")}</button>
             <button type="button" className="btn btn-ghost btn-sm" disabled={restoring !== null} onClick={() => void restoreBackup()}>{restoring ?? t("projects.restore")}</button>
           </>
         }
@@ -262,6 +265,12 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
                   <h4>{t("projects.welcome_stack_title")}</h4>
                   <p>{t("projects.welcome_stack_body")}</p>
                   <button type="button" className="btn btn-sm" onClick={() => setStackDialog({ open: true, probe: null })}>{t("stacks.new")}</button>
+                </div>
+                <div className="start-card">
+                  <div className="start-icon"><IconFolderOpen /></div>
+                  <h4>{t("scan.welcome_title")}</h4>
+                  <p>{t("scan.welcome_body")}</p>
+                  <button type="button" className="btn btn-sm" onClick={() => setScanOpen(true)}>{t("scan.button")}</button>
                 </div>
                 <div className="start-card">
                   <div className="start-icon"><IconBox /></div>
@@ -396,6 +405,12 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
         )}
       </div>
 
+      <ScanDialog
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onAdded={() => { setScanOpen(false); setRecent(loadRecentProjects()); }}
+        onSetup={(probe) => { setScanOpen(false); setStackDialog({ open: true, probe }); }}
+      />
       <StackDialog
         open={stackDialog.open}
         probe={stackDialog.probe}

@@ -86,6 +86,16 @@ async fn handle(
                 }
             }
             ServiceCommand::ListShares => Response::ok(id, engine.list_shares().await),
+            ServiceCommand::ScanProjects => {
+                match tokio::task::spawn_blocking(|| {
+                    crate::scan::scan_projects(std::time::Duration::from_secs(20))
+                })
+                .await
+                {
+                    Ok(report) => Response::ok(id, report),
+                    Err(e) => Response::err(id, e.to_string()),
+                }
+            }
             ServiceCommand::Metrics => match engine.metrics().await {
                 Ok(m) => Response::ok(id, m),
                 Err(e) => Response::err(id, e.to_string()),

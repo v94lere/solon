@@ -679,5 +679,24 @@
     "confirm_title": "Récupérer l'espace ?",
     "confirm_body": "{{count}} image(s) inutilisée(s) (environ {{size}}) et le cache de construction seront supprimés. Les retélécharger plus tard prendra un téléchargement.",
     "confirm_keeps": "Les conteneurs, en marche ou arrêtés, et les volumes sont conservés."
+  },
+  "scan": {
+    "button": "Chercher les projets sur ce PC…",
+    "title": "Projets trouvés sur ce PC",
+    "welcome_title": "Retrouver ce qui est déjà là",
+    "welcome_body": "Solon lit la table des fichiers de vos disques et liste chaque dossier avec un compose.yaml, un Dockerfile ou un devcontainer.json. Quelques secondes, rien ne quitte le PC.",
+    "running": "Lecture des disques… quelques secondes.",
+    "summary": "{{count}} dossier(s) sur {{drives}} en {{seconds}} s",
+    "filter": "Filtrer par chemin",
+    "none": "Aucun fichier Compose, Dockerfile ou devcontainer.json trouvé hors des dossiers système et de dépendances.",
+    "col_folder": "Dossier",
+    "col_found": "Trouvé",
+    "kind_compose": "Compose",
+    "kind_dockerfile": "Dockerfile",
+    "kind_devcontainer": "Dev Container",
+    "already": "déjà dans Projets",
+    "setup": "Configurer…",
+    "add": "Ajouter {{count}} projet(s)",
+    "privacy": "Recherche locale seulement. Les dossiers de dépendances, de cache et système sont ignorés."
   }
 }

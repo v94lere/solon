@@ -139,6 +139,10 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
   dossier de votre choix, puis Up.
 - **Ports vérifiés avant Up** : un port hôte déjà pris sur ce PC arrête Up avant tout démarrage, avec
   « Utiliser 8081 au lieu de 8080 » (le fichier est modifié pour vous) ou « Up quand même ».
+- **Chercher les projets sur ce PC** : un clic lit la table des fichiers des disques internes (quelques
+  secondes, droits administrateur du service, rien ne quitte le PC) et liste chaque dossier avec un
+  `compose.yaml`, un `Dockerfile` ou un `devcontainer.json`, hors dossiers de dépendances, de cache et
+  système. On coche ceux à garder.
 - **Un environnement par branche Git** : sur un projet dont le dossier est un dépôt Git, cochez « Un
   environnement par branche » à côté du nom de la branche. Chaque branche a alors ses conteneurs, ses volumes
   et ses adresses (`web.blog-feature-login.solon.local`). Changez de branche dans votre terminal : Solon propose

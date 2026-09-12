@@ -92,6 +92,12 @@ fn system_accent_color() -> Option<String> {
     Some(format!("#{r:02x}{g:02x}{b:02x}"))
 }
 
+/// Projets Docker présents sur le PC (recherche faite par le service, droits administrateur).
+#[tauri::command]
+async fn projects_scan() -> Result<Value, String> {
+    service::call(ServiceCommand::ScanProjects).await
+}
+
 /// Compteurs de la machine pour l'écran Activité.
 #[tauri::command]
 async fn engine_metrics() -> Result<Value, String> {
@@ -190,6 +196,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             engine_metrics,
+            projects_scan,
             system_accent_color,
             compose::compose_detect,
             compose::compose_read,
