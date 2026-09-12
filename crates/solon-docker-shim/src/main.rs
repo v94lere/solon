@@ -36,14 +36,20 @@ fn targets_engine_explicitly(args: &[OsString]) -> bool {
         if !a.starts_with('-') {
             return false; // sous-commande atteinte
         }
-        if a == "-H"
-            || a == "--host"
-            || a.starts_with("--host=")
-            || a == "-c"
-            || a == "--context"
-            || a.starts_with("--context=")
-        {
+        if a == "-H" || a == "--host" || a.starts_with("--host=") {
             return true;
+        }
+        // Un contexte explicite désigne un autre moteur… sauf « default », qui signifie justement
+        // « suivre DOCKER_HOST » (VS Code Dev Containers lance `docker` ainsi).
+        if a == "-c" || a == "--context" {
+            let value = args
+                .get(i + 1)
+                .map(|v| v.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            return value != "default";
+        }
+        if let Some(value) = a.strip_prefix("--context=") {
+            return value != "default";
         }
         if WITH_VALUE.contains(&a.as_str()) {
             i += 2;
@@ -121,10 +127,12 @@ fn main() {
 
     let mut cmd = Command::new(&real);
     cmd.args(&args);
-    if !explicit_target
-        && std::env::var_os("DOCKER_HOST").is_none()
-        && std::env::var_os("DOCKER_CONTEXT").is_none()
-    {
+    // `DOCKER_CONTEXT=default` (posé par VS Code Dev Containers, entre autres) suit `DOCKER_HOST` : on
+    // vise donc Solon ; tout autre contexte nommé est respecté.
+    let context_is_default = std::env::var_os("DOCKER_CONTEXT")
+        .map(|c| c.to_string_lossy() == "default")
+        .unwrap_or(true);
+    if !explicit_target && std::env::var_os("DOCKER_HOST").is_none() && context_is_default {
         cmd.env("DOCKER_HOST", SOLON_HOST);
     }
     ensure_plugin_dir(&dir.join("cli-plugins"));
@@ -147,6 +155,23 @@ mod tests {
 
     fn v(items: &[&str]) -> Vec<OsString> {
         items.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn contexte_default_suit_docker_host() {
+        assert!(!targets_engine_explicitly(&v(&[
+            "--context",
+            "default",
+            "version"
+        ])));
+        assert!(!targets_engine_explicitly(&v(&["-c", "default", "ps"])));
+        assert!(!targets_engine_explicitly(&v(&["--context=default", "ps"])));
+        assert!(targets_engine_explicitly(&v(&[
+            "--context",
+            "desktop-linux",
+            "ps"
+        ])));
+        assert!(targets_engine_explicitly(&v(&["-c", "autre", "ps"])));
     }
 
     #[test]

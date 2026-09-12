@@ -3605,7 +3605,7 @@ dependencies = [
 
 [[package]]
 name = "solon"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "base64 0.22.1",
  "bollard",
@@ -3630,7 +3630,7 @@ dependencies = [
 
 [[package]]
 name = "solon-agent"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "fuser",
  "libc",
@@ -3641,7 +3641,7 @@ dependencies = [
 
 [[package]]
 name = "solon-core"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "serde",
  "serde_json",
@@ -3650,14 +3650,14 @@ dependencies = [
 
 [[package]]
 name = "solon-docker-shim"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "solon-hvsock"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "tokio",
  "tracing",
@@ -3666,7 +3666,7 @@ dependencies = [
 
 [[package]]
 name = "solon-prereq"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "solon-core",
  "solon-vm-hcs",
@@ -3677,7 +3677,7 @@ dependencies = [
 
 [[package]]
 name = "solon-service"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "rcgen",
  "rustls",
@@ -3700,7 +3700,7 @@ dependencies = [
 
 [[package]]
 name = "solon-vm-hcs"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "serde",
  "serde_json",

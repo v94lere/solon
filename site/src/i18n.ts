@@ -37,7 +37,7 @@ const en = {
       { title: "Wake on demand", body: "A container that receives no traffic for ten minutes is paused; the next request wakes it in a fraction of a second. Databases that only talk internally are never touched." },
       { title: "Ready-made stacks", body: "WordPress, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Jupyter Lab, Mailpit… and starter kits for Django, Flask, FastAPI and Next.js that generate a project on first start." },
       { title: "Compose, all of it", body: "Open a folder, Solon detects the stack or proposes one. Services, merged logs, Up / Down / Rebuild, and the compose file editable in place with Save and Up." },
-      { title: "See inside", body: "Files tab with drag-and-drop, terminal, debug shell that works even in images without a shell, live CPU, memory and network charts per container." },
+      { title: "See inside", body: "Files tab with drag-and-drop, terminal, debug shell that works even in images without a shell, live CPU, memory and network charts per container. VS Code Dev Containers work as is." },
     ],
   },
   compare: {
@@ -226,7 +226,7 @@ const fr: typeof en = {
       { title: "Réveil à la demande", body: "Un conteneur sans trafic pendant dix minutes est mis en pause ; la requête suivante le réveille en une fraction de seconde. Les bases qui ne parlent qu'en interne ne sont jamais touchées." },
       { title: "Piles prêtes", body: "WordPress, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Jupyter Lab, Mailpit… et des kits de démarrage Django, Flask, FastAPI et Next.js qui génèrent un projet au premier lancement." },
       { title: "Compose, en entier", body: "Ouvrez un dossier, Solon reconnaît la pile ou en propose une. Services, journaux mêlés, Up / Down / Rebuild, et le fichier Compose modifiable sur place avec Save and Up." },
-      { title: "Voir dedans", body: "Onglet Fichiers avec glisser-déposer, terminal, shell de débogage même dans les images sans shell, courbes CPU, mémoire et réseau par conteneur." },
+      { title: "Voir dedans", body: "Onglet Fichiers avec glisser-déposer, terminal, shell de débogage même dans les images sans shell, courbes CPU, mémoire et réseau par conteneur. VS Code Dev Containers fonctionne tel quel." },
     ],
   },
   compare: {

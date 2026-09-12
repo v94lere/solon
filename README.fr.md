@@ -234,6 +234,17 @@ docker context use solon
 > des identifiants Docker Hub périmés (« unauthorized: incorrect username or password »). Faites
 > `docker logout` ou utilisez un `DOCKER_CONFIG` vide pour le vérifier ; ce n'est pas lié à Solon.
 
+### VS Code Dev Containers
+
+L'extension **Dev Containers** fonctionne avec Solon telle quelle : elle utilise le `docker` de votre PATH,
+qui est celui de Solon. Ouvrez un dossier qui contient `.devcontainer/devcontainer.json`, lancez « Dev Containers :
+Rouvrir dans un conteneur », et VS Code construit ou tire l'image, démarre le conteneur avec le dossier monté
+dans `/workspaces/<nom>`, installe son serveur dedans et s'y connecte. Les ports transmis fonctionnent, le
+`postCreateCommand` s'exécute, et le conteneur apparaît dans la liste des conteneurs de Solon (et dans
+« Chercher les projets sur ce PC »). Rien à configurer ; si vous aviez réglé `dev.containers.dockerPath` pour
+Docker Desktop, retirez-le. Testé avec `@devcontainers/cli` 0.89 et l'image
+`mcr.microsoft.com/devcontainers/base:alpine`.
+
 ## Dossiers Windows partagés : comment ça marche
 
 Les dossiers Windows montés dans les conteneurs (`-v C:\...`, projets Compose) passent par **solonfs**, le système de

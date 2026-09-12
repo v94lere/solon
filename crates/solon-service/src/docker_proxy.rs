@@ -16,9 +16,8 @@ use std::time::Duration;
 use serde_json::Value;
 use solon_core::ipc::DOCKER_PIPE;
 use solon_core::protocol::PORT_DOCKER;
-use solon_hvsock::relay::{DOCKER_PIPE_SDDL, create_server};
+use solon_hvsock::relay::DOCKER_PIPE_SDDL;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::windows::named_pipe::NamedPipeServer;
 use windows::core::GUID;
 
 use crate::engine::Engine;
@@ -28,26 +27,33 @@ const MAX_REWRITE_BODY: usize = 8 * 1024 * 1024;
 const MAX_HEAD: usize = 1024 * 1024;
 
 pub async fn serve(engine: Engine, vm_id: GUID) -> io::Result<()> {
-    let mut server = create_server(DOCKER_PIPE, true, Some(DOCKER_PIPE_SDDL))?;
+    // Le pipe est servi en mode message par des fils Windows dédiés (voir `docker_pipe`) ; chaque client
+    // arrive ici sous la forme d'un flux tokio ordinaire.
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    let rt = tokio::runtime::Handle::current();
+    std::thread::Builder::new()
+        .name("docker-pipe-accept".into())
+        .spawn(move || crate::docker_pipe::accept_loop(DOCKER_PIPE, DOCKER_PIPE_SDDL, rt, tx))
+        .map_err(io::Error::other)?;
     tracing::info!(
         pipe = DOCKER_PIPE,
         port = PORT_DOCKER,
         "mandataire API Docker à l'écoute"
     );
-    loop {
-        server.connect().await?;
-        let connected = server;
-        server = create_server(DOCKER_PIPE, false, Some(DOCKER_PIPE_SDDL))?;
+    while let Some(stream) = rx.recv().await {
         let engine = engine.clone();
         tokio::spawn(async move {
-            if let Err(e) = handle(engine, connected, vm_id).await {
+            if let Err(e) = handle(engine, stream, vm_id).await {
                 tracing::debug!("connexion API Docker terminée : {e}");
             }
         });
     }
+    Err(io::Error::other(
+        "boucle d'acceptation du pipe Docker terminée",
+    ))
 }
 
-async fn handle(engine: Engine, pipe: NamedPipeServer, vm_id: GUID) -> io::Result<()> {
+async fn handle(engine: Engine, pipe: tokio::io::DuplexStream, vm_id: GUID) -> io::Result<()> {
     let std_stream = tokio::task::spawn_blocking(move || {
         solon_hvsock::connect_with_retry(&vm_id, PORT_DOCKER, Duration::from_secs(5))
     })
@@ -68,10 +74,10 @@ async fn handle(engine: Engine, pipe: NamedPipeServer, vm_id: GUID) -> io::Resul
         let _ = hv_write.shutdown().await;
         r
     };
-    tokio::select! {
-        r = to_guest => { tracing::trace!(?r, "client → invité terminé"); }
-        r = to_client => { tracing::trace!(?r, "invité → client terminé"); }
-    }
+    // Les deux sens vont jusqu'à leur fin : après la fin de l'entrée standard (client → invité), la
+    // sortie du conteneur (invité → client) continue d'être relayée jusqu'à ce que dockerd ferme.
+    let (r1, r2) = tokio::join!(to_guest, to_client);
+    tracing::trace!(?r1, ?r2, "connexion API Docker terminée");
     Ok(())
 }
 

@@ -214,6 +214,16 @@ docker context use solon
 > credentials ("unauthorized: incorrect username or password"). Run `docker logout` or test with an empty
 > `DOCKER_CONFIG`; this is not related to Solon.
 
+### VS Code Dev Containers
+
+The **Dev Containers** extension works with Solon as is: it uses the `docker` on your PATH, which is Solon's.
+Open a folder that has `.devcontainer/devcontainer.json`, run "Dev Containers: Reopen in Container", and VS Code
+builds or pulls the image, starts the container with the folder mounted at `/workspaces/<name>`, installs its
+server inside and connects. Forwarded ports work, `postCreateCommand` runs, and the container appears in Solon's
+Containers list (and in "Find projects on this PC"). Nothing to configure; if you had set
+`dev.containers.dockerPath` for Docker Desktop, remove it. Tested with `@devcontainers/cli` 0.89 and the
+`mcr.microsoft.com/devcontainers/base:alpine` image.
+
 ## Shared Windows folders: how it works
 
 Windows folders mounted into containers (`-v C:\...`, Compose projects) go through **solonfs**, Solon's file

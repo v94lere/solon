@@ -1235,3 +1235,46 @@ Livrable : `docs/guide-fonctionnel.md`, le guide fonctionnel de l'application, �
 **Version 0.1.9** (finitions du tour) : release GitHub `v0.1.9`, installation silencieuse par-dessus la 0.1.8 en
 22 s ; les deux projets en marche (mailpit, odoo18) notés à l'arrêt et relancés au démarrage suivant, trois
 conteneurs `Up` en 18 s.
+
+## Compatibilité VS Code Dev Containers (13 septembre 2026, version 0.1.10)
+
+Méthode : le même outil que l'extension utilise en interne, `@devcontainers/cli` 0.89, contre le `docker` de
+Solon, sur un dossier `.devcontainer/devcontainer.json` (image `mcr.microsoft.com/devcontainers/base:alpine`,
+`postCreateCommand`, `forwardPorts`). Extension `ms-vscode-remote.remote-containers` 0.469 installée dans le
+VS Code de Valère (1.136).
+
+| Étape | Résultat |
+|---|---|
+| `devcontainer up` (montage `--mount type=bind,source=C:\…,target=/workspaces/devc`, étiquettes, entrypoint) | **succès** en 18 s, `postCreateCommand` exécuté |
+| `devcontainer exec` : lecture du dossier Windows, écriture depuis le conteneur relue côté Windows | **succès** dans les deux sens |
+| `tar … \| docker exec -i … tar -xf -` (c'est ainsi que VS Code installe son serveur dans le conteneur) | **bloqué indéfiniment** : la fin de l'entrée standard n'arrivait jamais au conteneur |
+
+Cause : le pipe `\.\pipe\solon` était en **mode octets**. Le client Docker de Windows (go-winio) n'a de
+`CloseWrite` qu'en **mode message**, où il l'exprime par un message vide ; `dockerd` sous Windows écoute
+justement en mode message (`MessageMode: true`). Première correction : pipe tokio en mode message → la fin
+d'entrée passe, mais un envoi de 200 Ko n'arrive qu'à **4 096 octets** : mio (sous tokio) traite un
+`ERROR_MORE_DATA` synchrone comme un tampon vide et perd le reste du message (son tampon interne fait 4 Kio,
+le client écrit par blocs de 32 Kio). Correction retenue : le pipe Docker est servi par des entrées-sorties
+Windows directes (`docker_pipe.rs`) : instances en mode message et recouvrement, un fil de lecture et un fil
+d'écriture par connexion, `ERROR_MORE_DATA` géré, message vide = fin de l'entrée ; le mandataire HTTP voit un
+flux tokio ordinaire. Le relais garde aussi la sortie du conteneur après la fin de l'entrée (`join` au lieu de
+`select`).
+
+Test dans VS Code lui-même (`code --folder-uri vscode-remote://dev-container+<hex du chemin>/workspaces/devc`) :
+la fenêtre s'ouvre, l'extension lance `docker version` et échoue sur
+`npipe:////./pipe/docker_engine` (le pipe de Docker Desktop, absent). Cause : l'extension pose
+**`DOCKER_CONTEXT=default`** dans l'environnement du `docker` qu'elle lance ; le shim `docker.exe` de Solon
+considérait tout `DOCKER_CONTEXT` comme un ciblage explicite et n'injectait plus `DOCKER_HOST`. Or le contexte
+« default » signifie précisément « suivre `DOCKER_HOST` ». Reproduit en ligne de commande
+(`DOCKER_CONTEXT=default docker version` → même erreur). Correction : le contexte `default` (variable, `-c`,
+`--context`) n'est plus un ciblage explicite ; un autre contexte nommé reste respecté. Cinq cas de test.
+
+**Résultat final (0.1.10, installée sur le PC de Valère)** : `tar | docker exec -i` petit et 200 Ko exacts,
+5 Mo avec empreinte MD5 identique, sortie du conteneur après la fin de l'entrée, fin propre (code 0, plus de
+« No process is on the other end of the pipe » grâce au message vide envoyé comme dockerd), codes de sortie
+transmis (`exit 7` → 7) ; `DOCKER_CONTEXT=default docker version` et `docker --context default version`
+répondent 29.5.3. **VS Code** : `code --folder-uri vscode-remote://dev-container+…` ouvre une fenêtre
+« devc [Dev Container: Solon demo] », le serveur VS Code est installé dans `/home/vscode/.vscode-server/bin/…`,
+terminal `vscode → /workspaces/devc`, un port transmis, fichiers du dossier Windows visibles. La première
+tentative avait échoué : fenêtre laissée ouverte par l'essai précédent, à fermer avant de relancer.
+Démonstration nettoyée (conteneur, image, dossier, fichiers de test).

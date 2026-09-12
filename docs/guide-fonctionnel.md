@@ -1,6 +1,6 @@
 # Solon — guide fonctionnel
 
-*Version 0.1.8, 12 septembre 2026. Ce guide décrit ce que fait l'application, écran par écran, du point de vue de
+*Version 0.1.10, 13 septembre 2026. Ce guide décrit ce que fait l'application, écran par écran, du point de vue de
 la personne qui l'utilise. Les choix techniques sont dans `ARCHITECTURE.md`, les mesures dans
 `docs/measurements.md`.*
 
@@ -231,6 +231,13 @@ apparaît dans Solon, et inversement. Les chemins Windows (`C:\…`) dans `-v`, 
 sont traduits et le lecteur partagé à la volée. Les dossiers Windows montés passent par le partage de fichiers
 de Solon, bien plus rapide que le 9P de WSL ; pour les bases de données, préférez tout de même des volumes.
 
+## 14 bis. VS Code Dev Containers
+
+Un dossier avec `.devcontainer/devcontainer.json` s'ouvre dans VS Code par « Rouvrir dans un conteneur » :
+l'extension se sert du `docker` de Solon sans rien régler. Le dossier est monté dans le conteneur dans les deux
+sens, les ports déclarés sont transmis, le `postCreateCommand` s'exécute, et le conteneur apparaît dans Solon
+comme les autres, avec son adresse locale. « Chercher les projets sur ce PC » repère aussi ces dossiers.
+
 ## 15. Limites connues
 
 - Windows Famille non pris en charge ; ports UDP publiés non relayés vers `localhost` ; un seul moteur par PC.
@@ -240,8 +247,8 @@ de Solon, bien plus rapide que le 9P de WSL ; pour les bases de données, préf�
   éveillé » si cela compte).
 - `curl.exe` de Windows demande `--ssl-no-revoke` pour les certificats locaux ; les navigateurs et .NET les
   acceptent.
-- Le partage d'un projet à un collègue sur le réseau, l'import depuis Docker Desktop, la mise à jour des images
-  et l'extension VS Code ne sont pas encore là.
+- Le partage d'un projet à un collègue sur le réseau, l'import depuis Docker Desktop et la mise à jour des
+  images ne sont pas encore là.
 
 ## 16. Où chercher de l'aide
 

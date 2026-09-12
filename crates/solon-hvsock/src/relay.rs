@@ -16,14 +16,32 @@ use windows::core::GUID;
 /// CLI `docker`, non élevés, s'y connectent ; les comptes de service n'y ont pas accès.
 pub const DOCKER_PIPE_SDDL: &str = "D:(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;IU)";
 
-/// Crée une instance de serveur de pipe avec un descripteur de sécurité SDDL.
+/// Crée une instance de serveur de pipe avec un descripteur de sécurité SDDL (mode octets).
 pub fn create_server(
     pipe_name: &str,
     first: bool,
     sddl: Option<&str>,
 ) -> io::Result<NamedPipeServer> {
+    create_server_with_mode(pipe_name, first, sddl, false)
+}
+
+/// Comme [`create_server`], avec le choix du **mode message**. C'est le mode de `dockerd` sous Windows :
+/// le client Docker (go-winio) n'a de « fermeture de l'écriture » qu'en mode message, où il l'exprime
+/// par un message vide. Sans cela, `docker exec -i … tar -xf -` ne voit jamais la fin de l'entrée
+/// standard et attend indéfiniment (constaté avec VS Code Dev Containers, qui installe son serveur ainsi).
+pub fn create_server_with_mode(
+    pipe_name: &str,
+    first: bool,
+    sddl: Option<&str>,
+    message_mode: bool,
+) -> io::Result<NamedPipeServer> {
     let mut opts = ServerOptions::new();
     opts.first_pipe_instance(first);
+    if message_mode {
+        opts.pipe_mode(tokio::net::windows::named_pipe::PipeMode::Message)
+            .in_buffer_size(64 * 1024)
+            .out_buffer_size(64 * 1024);
+    }
     match sddl {
         None => opts.create(pipe_name),
         Some(sddl) => {
