@@ -52,6 +52,13 @@ pub struct PersistedState {
     /// les conteneurs qui montent `/mnt/host/<lettre>/…` retrouvent leurs dossiers.
     #[serde(default)]
     pub shares: Vec<String>,
+    /// Projets Compose (noms) qui avaient des conteneurs en marche au dernier arrêt propre ; relancés
+    /// au démarrage suivant si le réglage `resume_running` est actif.
+    #[serde(default)]
+    pub resume_projects: Vec<String>,
+    /// Conteneurs hors Compose (identifiants) en marche au dernier arrêt propre.
+    #[serde(default)]
+    pub resume_containers: Vec<String>,
     /// `true` dès que la machine est arrêtée proprement par le service.
     pub clean_shutdown: bool,
     pub updated_unix_ms: u64,

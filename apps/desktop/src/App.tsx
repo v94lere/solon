@@ -8,6 +8,7 @@ import { Notices } from "./components/Notices";
 import { MachineTerminalPanel } from "./components/MachineTerminalPanel";
 import { CommandPalette } from "./components/CommandPalette";
 import { ProjectView } from "./views/ProjectView";
+import { ProjectsView } from "./views/ProjectsView";
 import { SetupScreen } from "./views/SetupScreen";
 import { ContainersView } from "./views/ContainersView";
 import { ContainerDetail, type Tab as DetailTab } from "./views/ContainerDetail";
@@ -17,17 +18,25 @@ import { NetworksView } from "./views/NetworksView";
 import { ActivityView } from "./views/ActivityView";
 import { SettingsView } from "./views/SettingsView";
 
-export type Section = "containers" | "volumes" | "images" | "networks" | "activity" | "terminal" | "settings";
+export type Section = "projects" | "containers" | "volumes" | "images" | "networks" | "activity" | "terminal" | "settings";
 
-/** Ordre d'affichage du menu, aussi celui des raccourcis Ctrl+1 … Ctrl+7. */
-export const SECTION_KEYS: Section[] = ["containers", "volumes", "images", "networks", "activity", "terminal", "settings"];
+/** Ordre d'affichage du menu, aussi celui des raccourcis Ctrl+1 … Ctrl+8. */
+export const SECTION_KEYS: Section[] = ["projects", "containers", "volumes", "images", "networks", "activity", "terminal", "settings"];
 const GROUPS: { id: "docker" | "general"; items: Section[] }[] = [
-  { id: "docker", items: ["containers", "volumes", "images", "networks"] },
+  { id: "docker", items: ["projects", "containers", "volumes", "images", "networks"] },
   { id: "general", items: ["activity", "terminal", "settings"] },
 ];
 const SIDEBAR_KEY = "solon.sidebar";
 
 const icons: Record<Section, JSX.Element> = {
+  projects: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
+      <rect x="3" y="3" width="8" height="8" rx="2" />
+      <rect x="13" y="3" width="8" height="8" rx="2" />
+      <rect x="3" y="13" width="8" height="8" rx="2" />
+      <path d="M17 14v6M14 17h6" />
+    </svg>
+  ),
   containers: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
       <path d="M12 3 3.5 7.5v9L12 21l8.5-4.5v-9Z" />
@@ -131,7 +140,7 @@ function Nav({ section, collapsed, onSelect, onToggle }: { section: Section; col
 
 function Shell() {
   const { ready } = useEngine();
-  const [section, setSection] = useState<Section>("containers");
+  const [section, setSection] = useState<Section>("projects");
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<DetailTab>("overview");
   const [project, setProject] = useState<string | null>(null);
@@ -140,7 +149,7 @@ function Shell() {
   const [collapsed, setCollapsed] = useState<boolean>(loadCollapsed);
   // Le terminal n'est monté qu'à la première visite, puis reste vivant (masqué) entre deux sections.
   const [terminalMounted, setTerminalMounted] = useState(false);
-  const previousSection = useRef<Section>("containers");
+  const previousSection = useRef<Section>("projects");
 
   useEffect(() => {
     if (!ready) {
@@ -160,13 +169,18 @@ function Shell() {
     setSelected(null);
     setProject(null);
   }, []);
+  // Depuis l'accueil Projets, la fiche d'un conteneur s'ouvre sur place (Retour revient au projet) ;
+  // partout ailleurs, dans la section Conteneurs.
   const openContainer = useCallback((id: string, tab?: DetailTab) => {
-    go("containers");
+    setSection((cur) => {
+      if (cur !== "projects" && cur !== "containers") previousSection.current = cur;
+      return cur === "projects" ? cur : "containers";
+    });
     setSelectedTab(tab ?? "overview");
     setSelected(id);
-  }, [go]);
+  }, []);
   const openProject = useCallback((dir: string, autoUp = false) => {
-    go("containers");
+    go("projects");
     setProjectAutoUp(autoUp);
     setProject(dir);
   }, [go]);
@@ -174,7 +188,7 @@ function Shell() {
     if (!ready) return;
     setPaletteOpen(false);
     setSection((cur) => {
-      if (cur === "terminal") return previousSection.current === "terminal" ? "containers" : previousSection.current;
+      if (cur === "terminal") return previousSection.current === "terminal" ? "projects" : previousSection.current;
       previousSection.current = cur;
       return "terminal";
     });
@@ -192,7 +206,7 @@ function Shell() {
   const closePalette = useCallback(() => setPaletteOpen(false), []);
   const paletteActions = useMemo(() => ({ go, openContainer, openProject, openTerminal: toggleTerminal }), [go, openContainer, openProject, toggleTerminal]);
 
-  // Raccourcis globaux : Ctrl+K recherche, Ctrl+` terminal, Ctrl+B barre latérale, Ctrl+1…7 sections.
+  // Raccourcis globaux : Ctrl+K recherche, Ctrl+` terminal, Ctrl+B barre latérale, Ctrl+1…8 sections.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.ctrlKey || e.altKey) return;
@@ -206,7 +220,7 @@ function Shell() {
       } else if (k === "b") {
         e.preventDefault();
         toggleSidebar();
-      } else if (/^[1-7]$/.test(e.key)) {
+      } else if (/^[1-8]$/.test(e.key)) {
         e.preventDefault();
         go(SECTION_KEYS[Number(e.key) - 1]);
       }
@@ -219,7 +233,11 @@ function Shell() {
   if (section === "settings") content = <SettingsView />;
   else if (!ready) content = <SetupScreen />;
   else if (section === "terminal") content = null; // rendu à part, pour rester monté
-  else if (section === "containers") {
+  else if (section === "projects") {
+    if (selected) content = <ContainerDetail key={selected} id={selected} initialTab={selectedTab} onBack={() => setSelected(null)} onOpenProject={(d) => { setSelected(null); openProject(d); }} />;
+    else if (project) content = <ProjectView dir={project} autoUp={projectAutoUp} onBack={() => setProject(null)} onOpenContainer={openContainer} />;
+    else content = <ProjectsView onOpenProject={openProject} onOpenContainer={openContainer} />;
+  } else if (section === "containers") {
     if (selected) content = <ContainerDetail key={selected} id={selected} initialTab={selectedTab} onBack={() => setSelected(null)} onOpenProject={(d) => { setSelected(null); openProject(d); }} />;
     else if (project) content = <ProjectView dir={project} autoUp={projectAutoUp} onBack={() => setProject(null)} onOpenContainer={openContainer} />;
     else content = <ContainersView onOpen={(id, tab) => { setSelectedTab(tab ?? "overview"); setSelected(id); }} onOpenProject={openProject} />;

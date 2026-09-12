@@ -123,9 +123,19 @@ Le bloc en bas du menu montre l'état du moteur, son temps de fonctionnement et 
 L'icône de la barre des tâches porte un point vert, orange, rouge ou gris selon l'état. La taille et la position de la
 fenêtre sont mémorisées.
 
-Le menu de gauche a deux parties : **Docker** (Containers, Volumes, Images, Networks) et **General** (Activity,
+Le menu de gauche a deux parties : **Docker** (Projects, Containers, Volumes, Images, Networks) et **General** (Activity,
 Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icônes seules ; le choix est mémorisé.
 
+- **Projets** (accueil) : une carte par projet Compose avec son état, son **adresse principale**
+  (`https://web.blog.solon.local`, copiable, avec le cadenas), ses services, Ouvrir / Up / Arrêter / Détails et
+  « Toujours démarrer avec Solon ». Les dossiers ouverts auparavant mais arrêtés sont listés aussi ; les
+  conteneurs lancés hors projet sont dans « Autres conteneurs ». Sans rien encore, la page propose trois
+  départs : ouvrir un dossier, choisir une pile, essayer hello-world. La page d'un projet gagne un onglet
+  **Environnement** : le `.env` et les blocs `environment:` du `compose.yaml`, plus les ports publiés,
+  modifiables sans toucher au YAML.
+- **Relance de ce qui tournait** : quand le moteur s'arrête (redémarrage de Windows, installation, Stop depuis
+  Solon), Solon retient les projets et conteneurs en marche et les redémarre une fois le moteur revenu ; Docker
+  seul ne le fait que pour les conteneurs `restart: always`. Réglages → moteur, activé par défaut.
 - **Conteneurs** : liste temps réel avec CPU et mémoire, filtre, groupes Compose, actions en icônes, journaux en
   flux, terminal, inspection. Un **port publié est un lien** vers `http://localhost:<port>`, le domaine local aussi.
   Les **projets Compose** vivent ici : « Ouvrir un projet… » choisit un dossier contenant `compose.yaml`, la liste
@@ -177,7 +187,7 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
 - **Terminal** (section, ou `Ctrl+\``) : un shell root dans le moteur Linux lui-même, pour `docker`, `ps`, `df`,
   `dmesg`… La session reste ouverte quand on change de section ; « Nouvelle session » en relance une.
 - **Recherche globale `Ctrl+K`** : conteneurs, images, volumes, réseaux, projets, actions du moteur, sections.
-  `Ctrl+1` à `Ctrl+7` changent de section dans l'ordre du menu.
+  `Ctrl+1` à `Ctrl+8` changent de section dans l'ordre du menu.
 - **Réglages** : langue (anglais par défaut, français), apparence (clair, sombre, Windows), couleur d'accent (bleu
   Solon ou couleur de Windows), mémoire et processeurs du moteur (par défaut
   tous les cœurs moins deux), limite de stockage, démarrage à l'ouverture de session.

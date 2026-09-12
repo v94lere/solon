@@ -80,6 +80,10 @@ export interface Settings {
   sleep_enabled?: boolean;
   sleep_idle_minutes?: number;
   sleep_never?: string[];
+  /** Relancer au démarrage du moteur les projets et conteneurs qui tournaient à son arrêt. */
+  resume_running?: boolean;
+  /** Projets Compose (noms) démarrés à chaque démarrage du moteur. */
+  autostart_projects?: string[];
 }
 
 // ---- moteur / service ----
@@ -385,6 +389,9 @@ export const compose = {
   detect: (dir: string) => invoke<ComposeProject | null>("compose_detect", { dir }),
   read: (dir: string) => invoke<string>("compose_read", { dir }),
   write: (dir: string, content: string) => invoke<void>("compose_write", { dir, content }),
+  /** Fichier `.env` du projet (chaîne vide s'il n'existe pas). */
+  envRead: (dir: string) => invoke<string>("env_read", { dir }),
+  envWrite: (dir: string, content: string) => invoke<void>("env_write", { dir, content }),
   run: (dir: string, args: string[], timeoutS?: number) => invoke<ComposeResult>("compose_run", { dir, args, timeoutS: timeoutS ?? null }),
   /** Sortie en flux ; la promesse se résout avec le code de sortie. */
   stream: (dir: string, args: string[], onChunk: (c: ComposeChunk) => void) => {

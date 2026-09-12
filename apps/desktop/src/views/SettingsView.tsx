@@ -132,6 +132,26 @@ export function SettingsView() {
                 <p className="mt-1 kbd-hint">{t("settings.sleep_never", { names: (settings.sleep_never ?? []).join(", ") })}</p>
               )}
             </div>
+            <div className="col-span-2 mt-1 border-t pt-3" style={{ borderColor: "var(--line)" }}>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={settings.resume_running ?? true} onChange={(e) => setSettings({ ...settings, resume_running: e.target.checked })} />
+                {t("settings.resume")}
+              </label>
+              <p className="mt-1" style={{ color: "var(--ink-2)" }}>{t("settings.resume_help")}</p>
+              {(settings.autostart_projects ?? []).length > 0 ? (
+                <p className="mt-2 flex flex-wrap items-center gap-2">
+                  <span>{t("settings.autostart_projects")}</span>
+                  {(settings.autostart_projects ?? []).map((p) => (
+                    <span key={p} className="pill pill-muted">
+                      {p}
+                      <button type="button" className="link-btn" style={{ marginLeft: 6 }} aria-label={t("common.close")} onClick={() => setSettings({ ...settings, autostart_projects: (settings.autostart_projects ?? []).filter((x) => x !== p) })}>×</button>
+                    </span>
+                  ))}
+                </p>
+              ) : (
+                <p className="mt-2 kbd-hint">{t("settings.autostart_none")}</p>
+              )}
+            </div>
             <label className="col-span-2 flex items-center gap-2" title={t("settings.legacy_fs_help")}>
               <input type="checkbox" checked={settings.legacy_file_sharing ?? false} onChange={(e) => setSettings({ ...settings, legacy_file_sharing: e.target.checked })} />
               {t("settings.legacy_fs")}

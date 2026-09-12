@@ -179,6 +179,8 @@ pub fn run() {
             compose::compose_detect,
             compose::compose_read,
             compose::compose_write,
+            compose::env_read,
+            compose::env_write,
             compose::compose_run,
             compose::compose_stream,
             engine_status,

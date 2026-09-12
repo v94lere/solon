@@ -131,11 +131,20 @@ Development mode without installing: `solon-service.exe console` in an administr
 
 ## Using Solon
 
-The left menu has two groups: **Docker** (Containers, Volumes, Images, Networks) and **General** (Activity,
-Terminal, Settings). The button at the top (or `Ctrl+B`) collapses it to icons. The block at the bottom shows
+The left menu has two groups: **Docker** (Projects, Containers, Volumes, Images, Networks) and **General**
+(Activity, Terminal, Settings). The button at the top (or `Ctrl+B`) collapses it to icons. The block at the bottom shows
 the engine state, its uptime and two mini gauges (CPU, RAM). The tray icon carries a green, orange, red or grey
 dot depending on the engine state.
 
+- **Projects** (home): one card per Compose project with its state, its **main address**
+  (`https://web.blog.solon.local`, copyable, with the lock), its services, Open / Up / Stop / Details and
+  "Always start with Solon". Folders opened before but not running are listed too; containers started
+  outside a project sit in "Other containers". With nothing yet, the page offers three ways to start: open a
+  folder, choose a stack, try hello-world. The project page adds an **Environment** tab: the `.env` and the
+  `environment:` blocks of `compose.yaml`, plus the published ports, editable without touching the YAML.
+- **Restart what was running**: when the engine stops (Windows restart, install, Stop from Solon), Solon
+  remembers the projects and containers that were running and starts them again once the engine is back;
+  Docker alone only does that for `restart: always` containers. Settings → engine, on by default.
 - **Containers**: live list with CPU and memory, filter, Compose groups, icon actions, streamed logs,
   terminal, inspection. A **published port is a link**, and so is the local domain. Compose projects live
   here: "Open a project…" picks a folder containing `compose.yaml`, and clicking a group header opens the
@@ -157,7 +166,7 @@ dot depending on the engine state.
   container with CPU, memory, network rates and a CPU curve.
 - **Terminal** (`Ctrl+\``): a root shell inside the Linux engine itself, for `docker`, `ps`, `df`, `dmesg`…
 - **Search `Ctrl+K`**: containers, images, volumes, networks, projects, engine actions, sections.
-  `Ctrl+1` to `Ctrl+7` switch sections.
+  `Ctrl+1` to `Ctrl+8` switch sections.
 - **Settings**: language (English by default, French), appearance (light, dark, follow Windows), accent
   colour (Solon blue or the Windows accent), engine memory and processors (all cores minus two by default),
   storage limit, start at sign-in, sleep of idle containers, legacy file sharing fallback, diagnostic export.

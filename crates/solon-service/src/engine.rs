@@ -180,6 +180,10 @@ impl Engine {
                     s.guest_address = Some(guest_address);
                     s.docker_pipe = Some(solon_core::ipc::DOCKER_PIPE.into());
                 });
+                // Relance de ce qui tournait à l'arrêt précédent et des projets « toujours démarrés »,
+                // en tâche de fond : le moteur est déjà prêt pour l'utilisateur.
+                let engine = self.clone();
+                tokio::spawn(async move { engine.resume_after_start().await });
                 Ok(())
             }
             Err(e) => {
@@ -357,6 +361,9 @@ impl Engine {
                 guest_address: Some(guest_net.address.to_string()),
                 image_version: Some(image.manifest.version.clone()),
                 shares: shares.iter().map(|sh| sh.name.clone()).collect(),
+                // Conservé pour `resume_after_start`, qui lit l'état une fois le moteur prêt.
+                resume_projects: previous.resume_projects.clone(),
+                resume_containers: previous.resume_containers.clone(),
                 clean_shutdown: false,
                 updated_unix_ms: settings::now_unix_ms(),
             },
@@ -700,6 +707,13 @@ impl Engine {
             t.abort();
         }
         let mut graceful = false;
+        // Ce qui tourne à l'instant de l'arrêt, pour le relancer au prochain démarrage (Docker ne
+        // redémarre de lui-même que les conteneurs `always` / `unless-stopped`).
+        let (resume_projects, resume_containers) = if force {
+            (Vec::new(), Vec::new())
+        } else {
+            running_now(&running.agent).await
+        };
         if !force {
             match running
                 .agent
@@ -731,6 +745,8 @@ impl Engine {
         let state_path = self.inner.cfg.paths.state_file();
         let mut st = settings::load_state(&state_path);
         st.clean_shutdown = true;
+        st.resume_projects = resume_projects;
+        st.resume_containers = resume_containers;
         st.updated_unix_ms = settings::now_unix_ms();
         let _ = settings::save_state(&state_path, &st);
         self.update_domains(&[]).await;
@@ -908,6 +924,110 @@ impl Engine {
 }
 
 /// Lit la console série de l'invité (pipe servi par vmwp) et la journalise (cible `guest`).
+impl Engine {
+    /// Après « moteur prêt » : relance les projets Compose et les conteneurs isolés qui tournaient au
+    /// dernier arrêt propre (réglage `resume_running`), puis les projets « toujours démarrés »
+    /// (`autostart_projects`). Compose respecte l'ordre des dépendances (`depends_on`) ; si un projet
+    /// n'est plus reconstituable depuis les étiquettes, ses conteneurs sont démarrés un à un.
+    async fn resume_after_start(&self) {
+        let paths = &self.inner.cfg.paths;
+        let settings = settings::load_settings(&paths.settings_file());
+        let state_path = paths.state_file();
+        let mut st = settings::load_state(&state_path);
+        let mut projects: Vec<String> = Vec::new();
+        let mut containers: Vec<String> = Vec::new();
+        if settings.resume_running {
+            projects.extend(st.resume_projects.iter().cloned());
+            containers.extend(st.resume_containers.iter().cloned());
+        }
+        for p in &settings.autostart_projects {
+            if !projects.contains(p) {
+                projects.push(p.clone());
+            }
+        }
+        // Consommé : un arrêt forcé ou un plantage ne relancera pas deux fois la même liste.
+        if !st.resume_projects.is_empty() || !st.resume_containers.is_empty() {
+            st.resume_projects.clear();
+            st.resume_containers.clear();
+            let _ = settings::save_state(&state_path, &st);
+        }
+        if projects.is_empty() && containers.is_empty() {
+            return;
+        }
+        // Laisse dockerd finir de charger son état.
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        let mut script = String::new();
+        for p in &projects {
+            let q = shell_quote(p);
+            script.push_str(&format!(
+                "docker compose -p {q} start >/dev/null 2>&1 || docker start $(docker ps -aq --filter label=com.docker.compose.project={q}) >/dev/null 2>&1 && echo \"project {q} started\" || echo \"project {q} failed\"\n"
+            ));
+        }
+        if !containers.is_empty() {
+            let ids: Vec<String> = containers.iter().map(|c| shell_quote(c)).collect();
+            script.push_str(&format!(
+                "docker start {} >/dev/null 2>&1 && echo \"containers started\" || echo \"containers failed\"\n",
+                ids.join(" ")
+            ));
+        }
+        match self.exec(script, 120).await {
+            Ok(r) => {
+                for line in r.stdout.lines() {
+                    tracing::info!("relance au démarrage : {line}");
+                }
+                if !r.stderr.trim().is_empty() {
+                    tracing::warn!("relance au démarrage : {}", r.stderr.trim());
+                }
+            }
+            Err(e) => tracing::warn!("relance au démarrage impossible : {e}"),
+        }
+    }
+}
+
+/// Projets Compose et conteneurs isolés en marche à cet instant, d'après `docker ps` dans la machine.
+async fn running_now(agent: &AgentClient) -> (Vec<String>, Vec<String>) {
+    let result: Result<solon_core::protocol::ExecResult> = agent
+        .call_typed(
+            Command::Exec {
+                command: "docker ps --no-trunc --format '{{.ID}}\t{{.Label \"com.docker.compose.project\"}}'"
+                    .to_owned(),
+                timeout_s: Some(10),
+            },
+            Duration::from_secs(15),
+        )
+        .await;
+    let mut projects = Vec::new();
+    let mut containers = Vec::new();
+    if let Ok(r) = result {
+        for line in r.stdout.lines() {
+            let mut parts = line.split('\t');
+            let id = parts.next().unwrap_or("").trim();
+            let project = parts.next().unwrap_or("").trim();
+            if id.is_empty() {
+                continue;
+            }
+            if project.is_empty() {
+                containers.push(id.to_owned());
+            } else if !projects.iter().any(|p| p == project) {
+                projects.push(project.to_owned());
+            }
+        }
+    }
+    if !projects.is_empty() || !containers.is_empty() {
+        tracing::info!(
+            "en marche à l'arrêt : {} projet(s), {} conteneur(s) isolé(s)",
+            projects.len(),
+            containers.len()
+        );
+    }
+    (projects, containers)
+}
+
+/// Entoure une valeur de guillemets simples pour le shell de la machine.
+fn shell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
+
 fn spawn_console_logger() -> JoinHandle<()> {
     tokio::task::spawn_blocking(|| {
         use std::io::Read;

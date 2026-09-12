@@ -44,7 +44,7 @@
   DetailPrint "Stopping and removing the Solon service…"
   nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\installer\setup.ps1" -InstallDir "$INSTDIR" -Uninstall'
   Pop $0
-  MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 "Also delete Solon's container data (images, volumes)?$\r$\nFolder: %ProgramData%\Solon" /SD IDNO IDNO keep_data
-    nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "Remove-Item -Recurse -Force \"$$env:ProgramData\Solon\" -ErrorAction SilentlyContinue"'
+  MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 "Also remove Solon's container data (images, volumes, databases)?$\r$\n$\r$\nNo (recommended): the data stays in %ProgramData%\Solon and is found again by the next install.$\r$\nYes: the folder is moved to %ProgramData%\Solon.removed-<date>; delete that folder yourself once you are sure." /SD IDNO IDNO keep_data
+    nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "$$src = Join-Path $$env:ProgramData Solon; if (Test-Path $$src) { $$dst = Join-Path $$env:ProgramData (\"Solon.removed-\" + (Get-Date -Format yyyyMMdd-HHmm)); Move-Item -Force $$src $$dst -ErrorAction SilentlyContinue }"'
   keep_data:
 !macroend

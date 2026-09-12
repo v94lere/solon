@@ -1036,3 +1036,42 @@ outil (« Building the debug toolbox image… ») avec l'avertissement `DEPRECAT
 deprecated` de Docker ; réenregistré après construction. À traiter : construire l'image outil avec BuildKit ou
 masquer cet avertissement. (4) Étiquettes de l'axe des ordonnées coupées à gauche sur l'onglet Network
 (« 9.8 KiB/s ») : marge gauche des courbes portée de 52 à 66 px (0.1.3).
+
+## Chantier 1 : « tes projets tournent, tu ne t'occupes de rien » (12 septembre 2026)
+
+Ligne directrice retenue avec Valère : Solon est l'outil de celui qui veut que ses services soient là, avec une
+adresse, sans savoir ce qu'est un conteneur ; Docker devient un détail d'implémentation. Premier chantier livré :
+
+1. **Accueil Projets** (`ProjectsView`, section par défaut, Ctrl+1) : une carte par projet Compose (nom, x/y en
+   marche, « Up 15 seconds » ou date de création, adresse principale en gros avec cadenas et bouton Copier,
+   services avec leur adresse, Ouvrir / Up ou Stop / Détails, case « Toujours démarrer avec Solon ») ; les dossiers
+   ouverts récemment sans conteneur en cartes « Pas encore démarré » (Up, Détails, Oublier ; les dossiers disparus
+   sont oubliés d'eux-mêmes) ; les conteneurs hors projet dans « Autres conteneurs ». Depuis l'accueil, la fiche
+   d'un conteneur s'ouvre sur place et Retour revient au projet.
+2. **Adresse principale** (`primaryAddress`) : le service qui ressemble le plus à une application web d'après ses
+   ports (préférence 80, 8080, 3000, 8000, 8069… ; ports de bases exclus : 5432, 3306, 6379, 27017… ; port publié
+   bonus ; en marche bonus). Reprise en tête de la vue projet.
+3. **Relance de ce qui tournait** (service) : à l'arrêt propre, `docker ps` dans la machine liste les projets
+   Compose et conteneurs isolés en marche, enregistrés dans `state.json` (`resume_projects`,
+   `resume_containers`) ; le provisionnement les conserve ; une fois le moteur prêt, `docker compose -p P start`
+   (ordre des `depends_on` respecté ; repli `docker start` des conteneurs étiquetés) puis `docker start` des
+   isolés, liste consommée. Réglage `resume_running` (défaut oui) et `autostart_projects` (case sur la carte,
+   liste dans Réglages) dans `Settings`. Un service 0.1.3 ignore ces deux champs (serde sans
+   `deny_unknown_fields`) : la case ne tient que quand le nouveau service est installé.
+4. **Onglet Environnement** (`EnvPanel`, `env.ts`) : `.env` et blocs `environment:` de chaque service (liste ou
+   table), ports hôte publiés (conflits signalés, ceux du projet lui-même exclus), valeurs qui ressemblent à des
+   secrets masquées, ajout/suppression ; réécriture **ligne à ligne** des fichiers (commentaires et mise en
+   forme conservés ; test Node sur les huit opérations), `Save and Up`. Nouvelles commandes `env_read` /
+   `env_write` (fichier temporaire puis renommage).
+5. **Accueil vide en trois choix** : Ouvrir un dossier, Choisir une pile, Essayer hello-world.
+
+Constat en testant : le moteur de Valère était **vide** ce matin. `%ProgramData%\Solon` a été recréé à 10 h 22
+(disque, autorité, journaux neufs) après une désinstallation (commutateur réseau supprimé à 10 h 21) puis une
+réinstallation de la 0.1.3 : la question du désinstalleur « Also delete Solon's container data? » a reçu Oui. Les
+volumes odoo18 et wordpress sont perdus. Changement dans `hooks.nsh` : « Oui » **déplace** désormais le dossier
+vers `%ProgramData%\Solon.removed-<date>` au lieu de le supprimer, et le texte dit ce qui se passe dans les deux
+cas. Le test de l'accueil a donc été fait avec un projet de démonstration (`C:\Projects\demo\blog`, nginx +
+PostgreSQL) et un conteneur isolé, supprimés ensuite.
+
+Piège de construction : `cargo build --release -p solon` produit un binaire qui charge `http://localhost:1420`
+(page d'erreur Edge) ; il faut `npx tauri build --no-bundle` pour intégrer le frontend construit.

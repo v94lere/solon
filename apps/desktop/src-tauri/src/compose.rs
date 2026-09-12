@@ -262,3 +262,37 @@ mod tests {
         assert_eq!(shell_quote("it's"), "'it'\\''s'");
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Fichier `.env` du projet (variables lues par Compose)
+// ---------------------------------------------------------------------------------------------
+
+fn env_file(dir: &str) -> Result<PathBuf, String> {
+    let path = Path::new(dir);
+    if !path.is_dir() {
+        return Err(format!("dossier introuvable : {dir}"));
+    }
+    Ok(path.join(".env"))
+}
+
+/// Contenu du `.env` du projet (chaîne vide s'il n'existe pas).
+#[tauri::command]
+pub fn env_read(dir: String) -> Result<String, String> {
+    let file = env_file(&dir)?;
+    if !file.is_file() {
+        return Ok(String::new());
+    }
+    std::fs::read_to_string(file).map_err(|e| e.to_string())
+}
+
+/// Écrit le `.env` du projet (fichier temporaire puis renommage, comme pour le fichier Compose).
+#[tauri::command]
+pub fn env_write(dir: String, content: String) -> Result<(), String> {
+    let target = env_file(&dir)?;
+    let tmp = target.with_extension("env.solon-tmp");
+    std::fs::write(&tmp, content).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, &target).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        e.to_string()
+    })
+}

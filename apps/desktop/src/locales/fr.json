@@ -13,7 +13,8 @@
     "activity": "Activité",
     "terminal": "Terminal",
     "collapse": "Replier le menu",
-    "expand": "Déplier le menu"
+    "expand": "Déplier le menu",
+    "projects": "Projets"
   },
   "engine": {
     "state": {
@@ -269,7 +270,11 @@
     "sleep_help": "Les conteneurs joints via Solon (adresses solon.local ou ports publiés) sont mis en pause quand plus personne ne leur parle ; ils se réveillent à la première requête en une fraction de seconde. Les bases de données et les tâches de fond qui ne parlent qu'en interne ne sont jamais concernées.",
     "sleep_after": "Après",
     "sleep_minutes": "minutes sans trafic",
-    "sleep_never": "Toujours éveillés : {{names}}"
+    "sleep_never": "Toujours éveillés : {{names}}",
+    "resume": "Au démarrage du moteur, relancer les projets et conteneurs qui tournaient à son arrêt",
+    "resume_help": "Couvre les redémarrages de Windows, les installations et Stop / Start depuis Solon. Docker seul ne relance que les conteneurs marqués restart: always ou unless-stopped.",
+    "autostart_projects": "Toujours démarrés avec Solon :",
+    "autostart_none": "Aucun projet n'est encore marqué « Toujours démarrer avec Solon » (case sur chaque carte de projet)."
   },
   "images": {
     "title": "Images",
@@ -405,10 +410,38 @@
     "containers_more": "… et {{count}} autres (ouvrir Solon)"
   },
   "projects": {
-    "running_count": "{{running}}/{{total}} en marche"
+    "running_count": "{{running}}/{{total}} en marche",
+    "title": "Projets",
+    "count_one": "{{count}} projet",
+    "count_other": "{{count}} projets",
+    "welcome_title": "Bienvenue dans Solon",
+    "welcome_hint": "Trois façons de lancer un premier projet. Tout ce que vous démarrez reçoit une adresse https://….solon.local.",
+    "welcome_open_title": "Ouvrir un dossier",
+    "welcome_open_body": "Un dossier avec un compose.yaml démarre tel quel. Sans compose.yaml, Solon regarde ce qu'il contient et propose un environnement.",
+    "welcome_stack_title": "Choisir une pile",
+    "welcome_stack_body": "WordPress, PostgreSQL, n8n, Nextcloud, Django, Next.js… un compose.yaml écrit pour vous, démarré en un clic.",
+    "welcome_hello_title": "Essayer hello-world",
+    "welcome_hello_body": "Lance une fois la minuscule image hello-world et ouvre ses journaux : la preuve que le moteur marche, en dix secondes.",
+    "open": "Ouvrir",
+    "open_browser": "Ouvrir {{url}} dans le navigateur",
+    "address_copy": "Copier l'adresse",
+    "address_copied": "Copiée",
+    "no_address": "Aucun port web détecté ; les services sont listés ci-dessous.",
+    "address_when_running": "L'adresse apparaît quand le projet tourne.",
+    "stop": "Arrêter",
+    "details": "Détails",
+    "always_start": "Toujours démarrer avec Solon",
+    "always_start_hint": "Démarré à chaque démarrage du moteur, même s'il était arrêté avant.",
+    "stopped_since": "créé le {{date}}",
+    "not_started": "Pas encore démarré",
+    "forget": "Oublier",
+    "no_dir": "Démarré hors de Solon : son dossier est inconnu.",
+    "misc": "Autres conteneurs",
+    "misc_hint": "lancés avec docker run ou depuis une image, hors projet",
+    "command_failed": "{{name}} : la commande a échoué (code {{code}}). Ouvrez le projet pour les détails."
   },
   "project": {
-    "back": "Conteneurs",
+    "back": "Projets",
     "rebuild": "Reconstruire",
     "explorer": "Explorateur",
     "vscode": "VS Code",
@@ -422,14 +455,34 @@
     "exit_code": "code de sortie {{code}}",
     "tabs": {
       "logs": "Journaux",
-      "compose": "Compose"
+      "compose": "Compose",
+      "env": "Environnement"
     },
     "save": "Enregistrer",
     "save_up": "Enregistrer et Up",
     "reload": "Recharger",
     "unsaved": "Modifications non enregistrées",
     "saved": "Enregistré",
-    "port_conflict": "Le port {{port}} est déjà utilisé sur ce PC par un autre programme ou une autre pile. Dans l'onglet Compose, changez le port hôte (par exemple {{port}} → {{next}}), puis Save and Up."
+    "port_conflict": "Le port {{port}} est déjà utilisé sur ce PC par un autre programme ou une autre pile. Dans l'onglet Compose, changez le port hôte (par exemple {{port}} → {{next}}), puis Save and Up.",
+    "env": {
+      "hint": "Valeurs du .env et des blocs environment: du compose.yaml, modifiables ici ; commentaires et mise en forme conservés.",
+      "address": "Adresse",
+      "address_hint": "Donnée par Solon d'après les noms du projet et du service ; rien à configurer.",
+      "dotenv_hint": "variables communes à tous les services, référencées ${VAR} dans compose.yaml",
+      "service": "Service {{name}}",
+      "ports": "Ports publiés (hôte → conteneur)",
+      "host_port": "Port hôte",
+      "key": "Nom",
+      "value": "Valeur",
+      "add": "Ajouter",
+      "add_var": "Ajouter une variable",
+      "remove": "Retirer",
+      "show": "Afficher la valeur",
+      "hide": "Masquer la valeur",
+      "empty": "Pas encore de fichier .env.",
+      "no_vars": "Aucune variable d'environnement pour ce service.",
+      "no_services": "Aucun bloc services: dans le fichier Compose."
+    }
   },
   "machine": {
     "terminal": "Terminal",

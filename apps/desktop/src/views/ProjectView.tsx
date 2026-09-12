@@ -4,11 +4,13 @@ import { openPath } from "@tauri-apps/plugin-opener";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { compose, containers, host, system, type ComposeProject, type ContainerSummary } from "../api";
 import { portConflictIn } from "../ports";
-import { markUserAction } from "../engine";
-import { projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, serviceNameOf } from "../projects";
+import { markUserAction, useEngine } from "../engine";
+import { EnvPanel } from "../components/EnvPanel";
+import { AddressLine } from "./ProjectsView";
+import { primaryAddress, projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, serviceNameOf } from "../projects";
 import { MultiLogsPanel } from "../components/MultiLogsPanel";
 import { PortLinks } from "../components/PortLinks";
-import { IconFile, IconLogs, IconPlay, IconRestart, IconStop } from "../components/Icons";
+import { IconFile, IconLogs, IconPencil, IconPlay, IconRestart, IconStop } from "../components/Icons";
 
 function stateClass(state: string) {
   switch (state) {
@@ -31,7 +33,8 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
   const [error, setError] = useState<string | null>(null);
   const [showOutput, setShowOutput] = useState(false);
   const query = useQuery({ queryKey: ["containers", true], queryFn: () => containers.list(true), refetchInterval: 5000 });
-  const [tab, setTab] = useState<"logs" | "compose">("logs");
+  const [tab, setTab] = useState<"logs" | "compose" | "env">("logs");
+  const { snapshot } = useEngine();
   const [yaml, setYaml] = useState("");
   const [savedYaml, setSavedYaml] = useState("");
   const [saving, setSaving] = useState(false);
@@ -89,6 +92,8 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
     return list.sort((a, b) => serviceNameOf(a).localeCompare(serviceNameOf(b)));
   }, [query.data, dir, project]);
   const running = services.filter((c) => c.State === "running").length;
+  const addr = snapshot?.local_domains ? primaryAddress(services, !!snapshot?.local_domains_tls) : null;
+  const ownPorts = useMemo(() => [...new Set(services.flatMap((c) => (c.Ports ?? []).map((p) => p.PublicPort ?? 0).filter((p) => p > 0)))], [services]);
   const logSources = useMemo(() => services.map((c) => ({ id: c.Id, name: serviceNameOf(c) })), [services]);
 
   async function run(label: string, args: string[]) {
@@ -162,6 +167,11 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
         <span className="mono kbd-hint" title={dir}>{dir}{project ? `\\${project.file}` : ""}</span>
         {project === null && <span className="ml-3" style={{ color: "var(--warn)" }}>{t("compose.not_found", { dir })}</span>}
       </div>
+      {addr && running > 0 && (
+        <div className="px-4 pb-3">
+          <AddressLine url={addr.url} host={addr.host} big />
+        </div>
+      )}
       {error && <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>}
 
       <div className="card list-card mx-4 mb-3 overflow-auto" style={{ maxHeight: "40%" }}>
@@ -237,7 +247,11 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
           <IconFile />{t("project.tabs.compose")}
           {dirty && <span className="pill pill-warn" style={{ marginLeft: 4 }}>{t("project.unsaved")}</span>}
         </button>
+        <button role="tab" type="button" aria-selected={tab === "env"} onClick={() => setTab("env")} className="tab"><IconPencil />{t("project.tabs.env")}</button>
       </div>
+      {tab === "env" && (
+        <EnvPanel dir={dir} composeFile={project?.file ?? null} address={addr?.url ?? null} ownPorts={ownPorts} busy={busy !== null} onUp={() => run("up", ["up", "-d", "--remove-orphans"])} onFilesChanged={() => void loadYaml()} />
+      )}
       <div className="mx-4 mb-4 min-h-0 flex-1" hidden={tab !== "logs"}>
         <MultiLogsPanel sources={logSources} />
       </div>

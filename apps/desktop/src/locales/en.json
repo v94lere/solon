@@ -13,7 +13,8 @@
     "activity": "Activity",
     "terminal": "Terminal",
     "collapse": "Collapse sidebar",
-    "expand": "Expand sidebar"
+    "expand": "Expand sidebar",
+    "projects": "Projects"
   },
   "engine": {
     "state": {
@@ -269,7 +270,11 @@
     "sleep_help": "Containers reached through Solon (solon.local addresses or published ports) are paused when nobody talks to them; they wake up on the first request in a fraction of a second. Databases and background workers that only talk internally are never affected.",
     "sleep_after": "After",
     "sleep_minutes": "minutes without traffic",
-    "sleep_never": "Kept awake: {{names}}"
+    "sleep_never": "Kept awake: {{names}}",
+    "resume": "When the engine starts, restart the projects and containers that were running when it stopped",
+    "resume_help": "Covers Windows restarts, installs and Stop / Start from Solon. Docker alone only restarts containers marked restart: always or unless-stopped.",
+    "autostart_projects": "Always started with Solon:",
+    "autostart_none": "No project is marked “Always start with Solon” yet (checkbox on each project card)."
   },
   "images": {
     "title": "Images",
@@ -405,10 +410,38 @@
     "containers_more": "… and {{count}} more (open Solon)"
   },
   "projects": {
-    "running_count": "{{running}}/{{total}} running"
+    "running_count": "{{running}}/{{total}} running",
+    "title": "Projects",
+    "count_one": "{{count}} project",
+    "count_other": "{{count}} projects",
+    "welcome_title": "Welcome to Solon",
+    "welcome_hint": "Three ways to get your first project running. Everything you start gets an https://….solon.local address.",
+    "welcome_open_title": "Open a folder",
+    "welcome_open_body": "A folder with a compose.yaml starts as is. A folder without one: Solon looks at what it contains and proposes an environment.",
+    "welcome_stack_title": "Choose a stack",
+    "welcome_stack_body": "WordPress, PostgreSQL, n8n, Nextcloud, Django, Next.js… a compose.yaml written for you, started in one click.",
+    "welcome_hello_title": "Try hello-world",
+    "welcome_hello_body": "Runs the tiny hello-world image once and opens its logs: proof that the engine works, in ten seconds.",
+    "open": "Open",
+    "open_browser": "Open {{url}} in the browser",
+    "address_copy": "Copy the address",
+    "address_copied": "Copied",
+    "no_address": "No web port detected; the services are listed below.",
+    "address_when_running": "The address appears when the project runs.",
+    "stop": "Stop",
+    "details": "Details",
+    "always_start": "Always start with Solon",
+    "always_start_hint": "Started every time the engine starts, even if it was stopped before.",
+    "stopped_since": "created {{date}}",
+    "not_started": "Not started yet",
+    "forget": "Forget",
+    "no_dir": "Started outside Solon: its folder is unknown.",
+    "misc": "Other containers",
+    "misc_hint": "started with docker run or from an image, outside a project",
+    "command_failed": "{{name}}: the command failed (exit code {{code}}). Open the project for details."
   },
   "project": {
-    "back": "Containers",
+    "back": "Projects",
     "rebuild": "Rebuild",
     "explorer": "Explorer",
     "vscode": "VS Code",
@@ -422,14 +455,34 @@
     "exit_code": "exit code {{code}}",
     "tabs": {
       "logs": "Logs",
-      "compose": "Compose"
+      "compose": "Compose",
+      "env": "Environment"
     },
     "save": "Save",
     "save_up": "Save and Up",
     "reload": "Reload",
     "unsaved": "Unsaved changes",
     "saved": "Saved",
-    "port_conflict": "Port {{port}} is already in use on this PC by another program or another stack. In the Compose tab, change the host port (for example {{port}} → {{next}}), then Save and Up."
+    "port_conflict": "Port {{port}} is already in use on this PC by another program or another stack. In the Compose tab, change the host port (for example {{port}} → {{next}}), then Save and Up.",
+    "env": {
+      "hint": "Values from .env and from the environment: blocks of compose.yaml, editable here; comments and layout are kept.",
+      "address": "Address",
+      "address_hint": "Given by Solon from the project and service names; nothing to configure.",
+      "dotenv_hint": "variables shared by every service, referenced as ${VAR} in compose.yaml",
+      "service": "Service {{name}}",
+      "ports": "Published ports (host → container)",
+      "host_port": "Host port",
+      "key": "Name",
+      "value": "Value",
+      "add": "Add",
+      "add_var": "Add a variable",
+      "remove": "Remove",
+      "show": "Show the value",
+      "hide": "Hide the value",
+      "empty": "No .env file yet.",
+      "no_vars": "No environment variable for this service.",
+      "no_services": "No services: block found in the Compose file."
+    }
   },
   "machine": {
     "terminal": "Terminal",
