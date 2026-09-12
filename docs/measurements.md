@@ -1157,3 +1157,7 @@ volume → `git checkout -b feature/login` dans un terminal → bandeau en moins
 
 Limites connues : le nom de branche est tronqué à 40 caractères ; deux branches qui publient le même port hôte
 se heurtent (le contrôle des ports avant Up le signale) ; HEAD détaché utilise l'abrégé du commit comme nom.
+
+**Version 0.1.6** : release GitHub `v0.1.6` (site redéployé, CI verte), installation silencieuse par-dessus la
+0.1.5 en 33 s. Trois projets de Valère notés à l'arrêt (`mailpit`, `odoo18`, `wordpress`), les trois relancés
+au démarrage suivant : cinq conteneurs `Up` en 18 s, dix adresses dans le fichier `hosts`.
