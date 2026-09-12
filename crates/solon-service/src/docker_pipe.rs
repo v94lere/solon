@@ -10,7 +10,6 @@
 //! ce qui autorise une lecture et une écriture simultanées, avec `ERROR_MORE_DATA` géré comme il faut.
 //! Le mandataire HTTP (`docker_proxy`) voit un [`tokio::io::DuplexStream`] ordinaire.
 
-use std::ffi::c_void;
 use std::sync::Arc;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt, DuplexStream};
@@ -74,8 +73,10 @@ fn read_overlapped(
     ev: &Event,
     buf: &mut [u8],
 ) -> Result<(usize, bool), windows::core::Error> {
-    let mut ov = OVERLAPPED::default();
-    ov.hEvent = ev.0;
+    let mut ov = OVERLAPPED {
+        hEvent: ev.0,
+        ..Default::default()
+    };
     let mut n = 0u32;
     let r = unsafe { ReadFile(h, Some(buf), Some(&mut n), Some(&mut ov)) };
     match r {
@@ -95,8 +96,10 @@ fn read_overlapped(
 
 fn write_overlapped(h: HANDLE, ev: &Event, mut data: &[u8]) -> Result<(), windows::core::Error> {
     while !data.is_empty() {
-        let mut ov = OVERLAPPED::default();
-        ov.hEvent = ev.0;
+        let mut ov = OVERLAPPED {
+            hEvent: ev.0,
+            ..Default::default()
+        };
         let mut n = 0u32;
         let r = unsafe { WriteFile(h, Some(data), Some(&mut n), Some(&mut ov)) };
         let written = match r {
@@ -157,9 +160,7 @@ fn create_instance(name: &str, first: bool, sddl: &str) -> Result<HANDLE, String
         )
     };
     unsafe {
-        windows::Win32::Foundation::LocalFree(Some(windows::Win32::Foundation::HLOCAL(
-            sd.0 as *mut c_void,
-        )));
+        windows::Win32::Foundation::LocalFree(Some(windows::Win32::Foundation::HLOCAL(sd.0)));
     }
     if h == INVALID_HANDLE_VALUE {
         return Err(format!(
@@ -172,8 +173,10 @@ fn create_instance(name: &str, first: bool, sddl: &str) -> Result<HANDLE, String
 
 /// Attend un client sur l'instance `h` (en recouvrement, bloquant pour ce fil).
 fn wait_client(h: HANDLE, ev: &Event) -> Result<(), windows::core::Error> {
-    let mut ov = OVERLAPPED::default();
-    ov.hEvent = ev.0;
+    let mut ov = OVERLAPPED {
+        hEvent: ev.0,
+        ..Default::default()
+    };
     match unsafe { ConnectNamedPipe(h, Some(&mut ov)) } {
         Ok(()) => Ok(()),
         Err(e) if is(&e, ERROR_PIPE_CONNECTED) => Ok(()),
@@ -283,8 +286,10 @@ pub fn accept_loop(
                 // Fin propre, comme dockerd : un message vide dit au client « fin de la réponse » (son
                 // Read renvoie EOF au lieu de « No process is on the other end of the pipe »), puis on
                 // lui laisse jusqu'à cinq secondes pour fermer avant de déconnecter l'instance.
-                let mut ov = OVERLAPPED::default();
-                ov.hEvent = ev.0;
+                let mut ov = OVERLAPPED {
+                    hEvent: ev.0,
+                    ..Default::default()
+                };
                 let mut n = 0u32;
                 let r = unsafe { WriteFile(pipe.0, Some(&[]), Some(&mut n), Some(&mut ov)) };
                 if let Err(e) = r {
