@@ -32,7 +32,9 @@ moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une ic
 - **Aucune télémétrie, aucune requête réseau sortante** en dehors de ce que vos conteneurs et vos
   `docker pull` demandent.
 
-## Comparatif : Docker Desktop et Solon
+## Comparatif : performances, empreinte et fonctionnalités
+
+### Performances : Docker Desktop et Solon
 
 Même machine (Windows 11 Pro, 24 cœurs logiques, NVMe), même pile Compose (une application web Python et sa base PostgreSQL 16,
 `bench/compose.yaml`), chaque moteur avec ses réglages par défaut : Docker Desktop 4.66.1 sur WSL2 avec tous les
@@ -61,6 +63,43 @@ par défaut), Docker Desktop est monté à 5 Go.
 Pour reproduire : `powershell -ExecutionPolicy Bypass -File bench\bench.ps1` sur le moteur visé par votre
 commande `docker` (`-Docker "C:\Program Files\Solon\bin\docker.exe"` pour Solon). Le script ne touche qu'un
 projet Compose nommé `solon-bench` sur le port 18069 et le supprime à la fin.
+
+### Empreinte
+
+Solon mesuré le 13 septembre 2026 (0.1.11, trois conteneurs en marche) ; Docker Desktop mesuré sur la même machine
+le 3 septembre ; les deux autres d'après leur documentation (marqués *publié*).
+
+| | Solon | Docker Desktop | Podman Desktop | Rancher Desktop |
+|---|---|---|---|---|
+| Installateur | **102 Mo** | ≈ 600 Mo *(publié)* | ≈ 100 Mo + machine WSL *(publié)* | ≈ 500 Mo *(publié)* |
+| Installé sur le disque | **406 Mo** (image Linux 310, CLI `docker` 73, Solon 22) | 6 Go requis *(publié)* | 500 Mo + 2 à 10 Go d'images *(publié)* | non publié |
+| Mémoire au repos, aucun conteneur | **430 à 520 Mo** | 1 998 Mo | machine WSL 2, jusqu'à 50 % de la RAM par défaut *(publié)* | moitié des cœurs et de la RAM par défaut *(publié)* |
+| Mémoire avec une application web + PostgreSQL | **1 196 Mo** | 5 146 Mo | non mesuré | non mesuré |
+| Exige WSL 2 | non (machine Hyper-V propre) | oui (ou ancien moteur Hyper-V) | oui | oui |
+
+### Fonctionnalités comparées
+
+Solon en 0.1.12 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.
+
+| | Solon | Docker Desktop | Podman Desktop | Rancher Desktop |
+|---|---|---|---|---|
+| CLI `docker` et Compose officiels, sans alias | oui | oui | partiel : socket compatible, quelques différences | oui (moby) |
+| Fonctionne sans WSL 2 | oui | partiel : ancien moteur Hyper-V | non | non |
+| Windows Famille | oui (Plateforme de machine virtuelle) | oui (WSL 2) | oui | oui |
+| `https://<service>.<projet>.solon.local` pour chaque conteneur, certificat local reconnu | oui | non | non | non |
+| Page Projets : adresse, environnement, ports vérifiés avant Up, journaux filtrés | oui | partiel : liste Compose | partiel : liste Compose | non |
+| Un environnement par branche Git, volumes copiés | oui | non | non | non |
+| Sauvegarde et restauration d'un projet, volumes compris | oui | partiel : extension tierce | non | non |
+| Conteneurs inactifs mis en veille, réveil à la demande | oui | partiel : Resource Saver met toute la machine en pause | non | non |
+| Dossiers Windows partagés par solonfs (4 à 94× plus rapide que 9P) | oui | non : 9P via WSL 2 | non : 9P | non : 9P |
+| Recherche des projets Compose sur le disque (7 s sur 928 Go) | oui | non | non | non |
+| Projets relancés après un redémarrage de Windows ou une mise à jour | oui | partiel : politique `restart` de Docker | partiel | partiel |
+| VS Code Dev Containers | oui, vérifié | oui | partiel : réglage du chemin docker | oui |
+| Kubernetes intégré | non | oui | partiel : extensions Kind / Minikube | oui (K3s) |
+| Conteneurs Windows | non | oui | non | non |
+| Place de marché d'extensions | non | oui | oui | non |
+| Gratuit en entreprise | oui (Apache 2.0) | payant au-delà de 250 salariés ou 10 M$ de CA | oui (Apache 2.0) | oui (Apache 2.0) |
+| Installateur signé | pas encore | oui | oui | oui |
 
 ## Prérequis
 

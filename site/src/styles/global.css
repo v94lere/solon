@@ -216,3 +216,12 @@ td:nth-child(3) { font-weight: 650; color: var(--accent-ink); }
 .codes tr:last-child td { border-bottom: 0; }
 .codes td:first-child { white-space: nowrap; }
 @media (max-width: 700px) { .codes td:first-child { white-space: normal; } .help-item { padding: 18px; } }
+
+/* Comparatif : empreinte et fonctionnalites (Solon en 2e colonne, quatre outils) */
+.compare-extra { margin-top: 36px; }
+.compare-extra h3 { margin: 0 0 6px; font-size: 1.25rem; }
+.compare-extra .lead { margin: 0 0 14px; max-width: 80ch; }
+.compare-wide { min-width: 860px; font-size: 0.92rem; }
+.compare-wide td:nth-child(2), .compare-wide td:nth-child(3), .compare-wide td:nth-child(n+4) { font-weight: 400; color: var(--ink-2); }
+.compare-wide td.solon { font-weight: 650; color: var(--accent-ink); }
+.compare-wide th:nth-child(2) { color: var(--accent-ink); }

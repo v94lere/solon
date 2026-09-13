@@ -133,6 +133,22 @@ const TOOLS = ["Mailpit", lang === "fr" ? "Blank compose.yaml" : "Blank compose.
       </table>
     </div>
     <p class="honest">{t.compare.honest} <a href={`${REPO}/tree/main/bench`} rel="noopener">bench/</a></p>
+    {[t.compare.footprint, t.compare.features].map((tbl) => (
+      <div class="compare-extra">
+        <h3>{tbl.title}</h3>
+        <p class="lead">{tbl.lead}</p>
+        <div class="table-wrap">
+          <table class="compare-wide">
+            <thead><tr>{tbl.cols.map((c) => <th>{c}</th>)}</tr></thead>
+            <tbody>
+              {tbl.rows.map((r) => (
+                <tr>{r.map((c, i) => <td class={i === 1 ? "solon" : ""}>{c}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ))}
   </div>
 </section>
 
