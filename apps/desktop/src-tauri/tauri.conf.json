@@ -46,7 +46,10 @@
         ],
         "installMode": "perMachine",
         "installerHooks": "../../../installer/hooks.nsh",
-        "displayLanguageSelector": true
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/installer-header.bmp",
+        "sidebarImage": "icons/installer-sidebar.bmp"
       }
     },
     "resources": {
