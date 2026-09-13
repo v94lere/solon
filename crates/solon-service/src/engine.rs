@@ -185,8 +185,8 @@ impl Engine {
                     s.guest_address = Some(guest_address);
                     s.docker_pipe = Some(solon_core::ipc::DOCKER_PIPE.into());
                 });
-                // Relance de ce qui tournait à l'arrêt précédent et des projets « toujours démarrés »,
-                // en tâche de fond : le moteur est déjà prêt pour l'utilisateur.
+                // Relance de ce qui tournait à l'arrêt précédent, en tâche de fond : le moteur est
+                // déjà prêt pour l'utilisateur.
                 let engine = self.clone();
                 tokio::spawn(async move { engine.resume_after_start().await });
                 Ok(())
@@ -946,9 +946,9 @@ impl Engine {
 /// Lit la console série de l'invité (pipe servi par vmwp) et la journalise (cible `guest`).
 impl Engine {
     /// Après « moteur prêt » : relance les projets Compose et les conteneurs isolés qui tournaient au
-    /// dernier arrêt propre (réglage `resume_running`), puis les projets « toujours démarrés »
-    /// (`autostart_projects`). Compose respecte l'ordre des dépendances (`depends_on`) ; si un projet
-    /// n'est plus reconstituable depuis les étiquettes, ses conteneurs sont démarrés un à un.
+    /// dernier arrêt propre (réglage `resume_running`). Compose respecte l'ordre des dépendances
+    /// (`depends_on`) ; si un projet n'est plus reconstituable depuis les étiquettes, ses conteneurs
+    /// sont démarrés un à un.
     async fn resume_after_start(&self) {
         let paths = &self.inner.cfg.paths;
         let settings = settings::load_settings(&paths.settings_file());
@@ -959,11 +959,6 @@ impl Engine {
         if settings.resume_running {
             projects.extend(st.resume_projects.iter().cloned());
             containers.extend(st.resume_containers.iter().cloned());
-        }
-        for p in &settings.autostart_projects {
-            if !projects.contains(p) {
-                projects.push(p.clone());
-            }
         }
         // Consommé : un arrêt forcé ou un plantage ne relancera pas deux fois la même liste.
         if !st.resume_projects.is_empty() || !st.resume_containers.is_empty() {

@@ -137,8 +137,7 @@ the engine state, its uptime and two mini gauges (CPU, RAM). The tray icon carri
 dot depending on the engine state.
 
 - **Projects** (home): one card per Compose project with its state, its **main address**
-  (`https://web.blog.solon.local`, copyable, with the lock), its services, Open / Up / Stop / Details and
-  "Always start with Solon". Folders opened before but not running are listed too; containers started
+  (`https://web.blog.solon.local`, copyable, with the lock), its services, Open / Up / Stop / Details. Folders opened before but not running are listed too; containers started
   outside a project sit in "Other containers". With nothing yet, the page offers three ways to start: open a
   folder, choose a stack, try hello-world. The project page adds an **Environment** tab: the `.env` and the
   `environment:` blocks of `compose.yaml`, plus the published ports, editable without touching the YAML.

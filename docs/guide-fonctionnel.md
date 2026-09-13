@@ -53,9 +53,7 @@ C'est la première entrée du menu (Ctrl+1) et la page d'ouverture.
   le plus à une application web (ports 80, 8080, 3000, 8000, 8069… ; les bases de données ne sont jamais
   choisies). Un clic l'ouvre dans le navigateur ;
 - la liste des services avec leur état et leur adresse propre ;
-- **Ouvrir** (navigateur), **Up** ou **Arrêter**, **Détails** (la page du projet) ;
-- la case **« Toujours démarrer avec Solon »** : le projet est lancé à chaque démarrage du moteur, qu'il ait
-  tourné ou non.
+- **Ouvrir** (navigateur), **Up** ou **Arrêter**, **Détails** (la page du projet).
 
 **Cartes « Pas encore démarré »** : les dossiers ouverts auparavant mais sans conteneur ; Up les lance, Oublier
 les retire de la liste. Un dossier qui n'existe plus disparaît de lui-même.
@@ -196,7 +194,7 @@ l'ouvre et le referme depuis n'importe quelle vue ; la session reste vivante en 
   propose le nettoyage sur place.
 - **Ressources du moteur** : mémoire, processeurs (tous les cœurs moins deux par défaut), limite de stockage,
   démarrage à l'ouverture de session ; **mise en veille** des conteneurs inactifs et délai ; **relance de ce
-  qui tournait** à l'arrêt et liste des projets « toujours démarrés » ; partage de fichiers de repli (9P).
+  qui tournait** à l'arrêt ; partage de fichiers de repli (9P).
 
 ## 12. Ce qui se passe tout seul
 

@@ -127,8 +127,7 @@ Le menu de gauche a deux parties : **Docker** (Projects, Containers, Volumes, Im
 Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icônes seules ; le choix est mémorisé.
 
 - **Projets** (accueil) : une carte par projet Compose avec son état, son **adresse principale**
-  (`https://web.blog.solon.local`, copiable, avec le cadenas), ses services, Ouvrir / Up / Arrêter / Détails et
-  « Toujours démarrer avec Solon ». Les dossiers ouverts auparavant mais arrêtés sont listés aussi ; les
+  (`https://web.blog.solon.local`, copiable, avec le cadenas), ses services, Ouvrir / Up / Arrêter / Détails. Les dossiers ouverts auparavant mais arrêtés sont listés aussi ; les
   conteneurs lancés hors projet sont dans « Autres conteneurs ». Sans rien encore, la page propose trois
   départs : ouvrir un dossier, choisir une pile, essayer hello-world. La page d'un projet gagne un onglet
   **Environnement** : le `.env` et les blocs `environment:` du `compose.yaml`, plus les ports publiés,

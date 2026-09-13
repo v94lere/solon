@@ -84,7 +84,6 @@ export interface Settings {
   /** Relancer au démarrage du moteur les projets et conteneurs qui tournaient à son arrêt. */
   resume_running?: boolean;
   /** Projets Compose (noms) démarrés à chaque démarrage du moteur. */
-  autostart_projects?: string[];
 }
 
 // ---- moteur / service ----

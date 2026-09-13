@@ -211,9 +211,6 @@ pub struct Settings {
     /// (installation, redémarrage de Windows, arrêt depuis l'application).
     #[serde(default = "default_true")]
     pub resume_running: bool,
-    /// Projets Compose (noms) à démarrer à chaque démarrage du moteur, qu'ils aient tourné ou non.
-    #[serde(default)]
-    pub autostart_projects: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -236,7 +233,6 @@ impl Default for Settings {
             sleep_idle_minutes: 10,
             sleep_never: Vec::new(),
             resume_running: true,
-            autostart_projects: Vec::new(),
         }
     }
 }

@@ -278,8 +278,6 @@
     "sleep_never": "Kept awake: {{names}}",
     "resume": "When the engine starts, restart the projects and containers that were running when it stopped",
     "resume_help": "Covers Windows restarts, installs and Stop / Start from Solon. Docker alone only restarts containers marked restart: always or unless-stopped.",
-    "autostart_projects": "Always started with Solon:",
-    "autostart_none": "No project is marked “Always start with Solon” yet (checkbox on each project card)."
   },
   "images": {
     "title": "Images",
@@ -438,8 +436,6 @@
     "address_when_running": "The address appears when the project runs.",
     "stop": "Stop",
     "details": "Details",
-    "always_start": "Always start with Solon",
-    "always_start_hint": "Started every time the engine starts, even if it was stopped before.",
     "stopped_since": "created {{date}}",
     "not_started": "Not started yet",
     "forget": "Forget",

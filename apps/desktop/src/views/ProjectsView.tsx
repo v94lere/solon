@@ -1,5 +1,5 @@
 // Accueil : une carte par projet Compose (nom, état, adresse principale en évidence, dernière activité,
-// Ouvrir dans le navigateur, Up / Stop, « Toujours démarrer avec Solon »), les conteneurs isolés dans
+// Ouvrir dans le navigateur, Up / Stop), les conteneurs isolés dans
 // un groupe « Divers », les dossiers ouverts récemment mais sans conteneur, et l'accueil en trois choix
 // quand il n'y a encore rien.
 import { useEffect, useMemo, useState } from "react";
@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { backup, compose, containers, engine, stacks, type ContainerSummary, type Probe, type Settings } from "../api";
+import { backup, compose, containers, engine, stacks, type ContainerSummary, type Probe } from "../api";
 import { StackDialog } from "../components/StackDialog";
 import { ScanDialog } from "../components/ScanDialog";
 import { Avatar, EmptyState, IconBox, IconFolderOpen, IconGlobe, PageHeader, imageBase } from "../components/ui";
@@ -77,7 +77,6 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
   const tls = !!snapshot?.local_domains_tls;
   const domainsOn = !!snapshot?.local_domains;
   const query = useQuery({ queryKey: ["containers", true], queryFn: () => containers.list(true), refetchInterval: 5000 });
-  const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: engine.settingsGet });
   const [recent, setRecent] = useState<string[]>(loadRecentProjects);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -153,18 +152,6 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
   // Dossiers ouverts récemment qui n'ont aucun conteneur : proposés à la reprise.
   const dormant = useMemo(() => recent.filter((dir) => !groups.some((g) => samePath(g.dir, dir))), [recent, groups]);
 
-  const autostart = settingsQuery.data?.autostart_projects ?? [];
-  async function setAlwaysStart(name: string, on: boolean) {
-    const s = settingsQuery.data;
-    if (!s) return;
-    const next: Settings = { ...s, autostart_projects: on ? [...autostart.filter((p) => p !== name), name] : autostart.filter((p) => p !== name) };
-    try {
-      await engine.settingsSet(next);
-      await queryClient.invalidateQueries({ queryKey: ["settings"] });
-    } catch (e) {
-      setError(String(e));
-    }
-  }
 
   async function run(g: Group, args: string[]) {
     if (!g.dir) return;
@@ -288,7 +275,6 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
                 const running = g.list.filter((c) => c.State === "running").length;
                 const addr = domainsOn ? primaryAddress(g.list, tls) : null;
                 const activity = lastActivity(g.list);
-                const always = autostart.includes(g.name);
                 const isBusy = busy === g.name;
                 return (
                   <article key={g.name} className={`project-card${running > 0 ? " is-running" : ""}`}>
@@ -335,11 +321,6 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
                         <button type="button" className="btn btn-primary btn-sm" disabled={isBusy || !g.dir} onClick={() => void run(g, ["up", "-d"])}><IconPlay />{isBusy ? t("compose.running") : t("compose.up")}</button>
                       )}
                       {g.dir && <button type="button" className="btn btn-ghost btn-sm" onClick={() => onOpenProject(g.dir as string)}>{t("projects.details")}</button>}
-                      <span className="flex-1" />
-                      <label className="project-always" title={t("projects.always_start_hint")}>
-                        <input type="checkbox" checked={always} disabled={!settingsQuery.data} onChange={(e) => void setAlwaysStart(g.name, e.target.checked)} />
-                        {t("projects.always_start")}
-                      </label>
                     </footer>
                   </article>
                 );
