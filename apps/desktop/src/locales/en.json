@@ -277,7 +277,7 @@
     "sleep_minutes": "minutes without traffic",
     "sleep_never": "Kept awake: {{names}}",
     "resume": "When the engine starts, restart the projects and containers that were running when it stopped",
-    "resume_help": "Covers Windows restarts, installs and Stop / Start from Solon. Docker alone only restarts containers marked restart: always or unless-stopped.",
+    "resume_help": "Covers Windows restarts, installs and Stop / Start from Solon. Docker alone only restarts containers marked restart: always or unless-stopped."
   },
   "images": {
     "title": "Images",

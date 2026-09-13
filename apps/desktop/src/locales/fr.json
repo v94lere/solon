@@ -277,7 +277,7 @@
     "sleep_minutes": "minutes sans trafic",
     "sleep_never": "Toujours éveillés : {{names}}",
     "resume": "Au démarrage du moteur, relancer les projets et conteneurs qui tournaient à son arrêt",
-    "resume_help": "Couvre les redémarrages de Windows, les installations et Stop / Start depuis Solon. Docker seul ne relance que les conteneurs marqués restart: always ou unless-stopped.",
+    "resume_help": "Couvre les redémarrages de Windows, les installations et Stop / Start depuis Solon. Docker seul ne relance que les conteneurs marqués restart: always ou unless-stopped."
   },
   "images": {
     "title": "Images",
