@@ -52,18 +52,32 @@ pub fn product_sku() -> u32 {
     sku.0
 }
 
+/// Windows Famille (SKU « Core ») : pas de rôle Hyper-V ni de service `vmms`, mais la « Plateforme de
+/// machine virtuelle » (HCS, sockets Hyper-V, HNS) y est présente.
+pub fn is_home_edition() -> bool {
+    HOME_SKUS.contains(&product_sku())
+}
+
 fn check_edition() -> PrereqItem {
     let sku = product_sku();
     let home = HOME_SKUS.contains(&sku);
+    // Windows Famille est pris en charge depuis que le partage de fichiers passe par solonfs (sockets
+    // Hyper-V) et non plus par Plan9 (qui exige `vmms`) : vérifié sur Windows 11 Famille 25H2 le
+    // 13 septembre 2026 (machine imbriquée) : moteur prêt, dossiers partagés, ports, adresses locales.
+    // Le constat reste dans le rapport, à titre d'information.
     item(
         "windows_edition",
-        !home,
         true,
+        false,
         format!(
             "SKU Windows 0x{sku:X}{}",
-            if home { " (édition Famille)" } else { "" }
+            if home {
+                " (édition Famille : Plateforme de machine virtuelle)"
+            } else {
+                ""
+            }
         ),
-        Some(ErrorCode::UnsupportedWindowsEdition),
+        None,
     )
 }
 

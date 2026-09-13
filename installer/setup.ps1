@@ -48,8 +48,8 @@ foreach ($feature in @("Microsoft-Hyper-V", "VirtualMachinePlatform")) {
     try {
         $info = Get-WindowsOptionalFeature -Online -FeatureName $feature -ErrorAction Stop
     } catch {
-        Log "feature ${feature}: not available on this edition ($($_.Exception.Message))"
-        # Sur Windows Famille, Microsoft-Hyper-V n'existe pas : l'application affichera UNSUPPORTED_WINDOWS_EDITION.
+        # Sur Windows Famille, Microsoft-Hyper-V n'existe pas : la Plateforme de machine virtuelle suffit à Solon.
+        Log "feature ${feature}: not available on this edition (Windows Home: the Virtual Machine Platform is enough)"
         continue
     }
     if ($info.State -eq "Enabled") { Log "feature ${feature}: already enabled"; continue }

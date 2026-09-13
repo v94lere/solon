@@ -60,7 +60,7 @@
   "error": {
     "title": "Something needs your attention",
     "VIRTUALIZATION_DISABLED_IN_FIRMWARE": "Hardware virtualization is disabled. Enable Intel VT-x or AMD-V in your BIOS/UEFI settings (usually under Advanced or CPU), then start Solon again.",
-    "UNSUPPORTED_WINDOWS_EDITION": "Solon requires Windows 11 Pro, Enterprise or Education. Windows Home does not include the components Solon needs.",
+    "UNSUPPORTED_WINDOWS_EDITION": "This Windows edition is not supported.",
     "WINDOWS_FEATURE_MISSING": "A Windows component is missing. Reinstall Solon to enable it; a restart may be required.",
     "WINDOWS_FEATURE_BLOCKED_BY_POLICY": "Your organization restricts enabling Windows components. Ask your administrator to enable Hyper-V and Virtual Machine Platform.",
     "HYPERVISOR_NOT_RUNNING": "The Windows virtualization engine is not running. Common causes: an older VirtualBox/VMware, virtualization disabled at boot, or running inside another virtual machine.",

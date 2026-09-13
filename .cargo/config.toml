@@ -4,3 +4,9 @@
 [target.x86_64-unknown-linux-musl]
 linker = "rust-lld"
 rustflags = ["-C", "link-self-contained=yes", "-C", "target-feature=+crt-static", "-C", "relocation-model=static"]
+
+# Binaires Windows autonomes : la CRT de Visual C++ est liée statiquement. Sans cela, solon-service.exe,
+# solon.exe et docker.exe exigent vcruntime140.dll, absent d'un Windows fraîchement installé (constaté sur
+# Windows 11 Famille le 13 septembre 2026 : « DLL introuvable », code 0xC0000135, service jamais installé).
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

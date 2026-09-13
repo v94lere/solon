@@ -23,7 +23,7 @@ Solon est un gestionnaire de conteneurs autonome pour Windows, dans l'esprit d'O
 | Ports publiés (`localhost:8080`) | **Relais TCP sur HvSocket** dans le service Windows, piloté par les événements Docker | Port-forwarding HNS | Haute |
 | Privilèges | **Service Windows `SolonService`** (LocalSystem) possède la VM ; l'app Tauri lui parle par named pipe ; l'installeur fait toute l'élévation | App élevée en permanence (UAC à chaque lancement) | Haute |
 | Distribution de l'image Linux | **Embarquée dans l'installeur** (~100 Mo compressés estimés) | Téléchargée au premier lancement | Haute |
-| Éditions Windows | **Windows 11 (et 10 22H2) Pro / Entreprise / Éducation** pour le MVP | Windows Home : nécessite un travail supplémentaire (voir §13) | — |
+| Éditions Windows | **Windows 11 (et 10 22H2), toutes éditions** depuis 0.1.12 : Pro+ par Hyper-V, Famille par la seule Plateforme de machine virtuelle (vérifié le 13 sept. 2026, voir §13 R2) | Repli 9P indisponible sur Famille | — |
 
 ### Points sans solution mature aujourd'hui (je ne les tranche pas seul)
 
@@ -443,7 +443,7 @@ Git : dépôt déjà initialisé (`main`), commits atomiques par bloc et par cra
 | # | Risque | Probabilité | Impact | Réponse |
 |---|---|---|---|---|
 | R1 | Performance 9P insuffisante pour les cas d'usage Node/PHP/Python volumineux | Élevée | Perception « plus lent que Docker Desktop WSL2 » sur les montages | Mesurer au bloc 0b ; volumes nommés mis en avant ; interface remplaçable ; chantier post-MVP (sync ou 9P/FUSE maison) |
-| R2 | Windows Home exclu | Certaine pour le MVP | Part de marché grand public | Message clair ; phase 2 : serveur de fichiers maison sur HvSocket (VM HCS seule semble démarrer sur Home : à vérifier en VM imbriquée) ou OpenVMM/WHP |
+| R2 | Windows Home exclu | **Levé le 13 sept. 2026** | Part de marché grand public | Vérifié sur Windows 11 Famille 25H2 en machine imbriquée : la VM HCS démarre avec la seule Plateforme de machine virtuelle, sockets Hyper-V, HNS, solonfs, ports et domaines locaux fonctionnent ; `vmms` absent donc pas de repli Plan9. Deux correctifs nécessaires : CRT liée statiquement (`vcruntime140.dll` absent d'un Windows neuf) et contrôle d'édition non bloquant |
 | R3 | HvSocket incompatible avec Tokio/mio | **Levé** (bloc 0b) | — | `TcpStream::from_raw_socket` + `tokio::net::TcpStream::from_std` fonctionnent ; RTT ~450 µs |
 | R4 | Champs HCS (`LinuxKernelDirect`, hints mémoire, `Plan9`) rejetés par certaines builds Windows | Faible à moyenne (validé sur Windows 11 Pro 26200 seulement) | Provisionnement qui échoue sur certaines versions | Matrice de versions testée ; document HCS adaptatif selon `SchemaVersion` supportée ; Windows 10 22H2 vérifié en VM imbriquée |
 | R5 | Conflits réseau HNS (VPN, Docker Desktop, plages IP) | Moyenne | `docker pull` échoue | Plage dynamique, MTU, diagnostic ; pile utilisateur post-MVP |

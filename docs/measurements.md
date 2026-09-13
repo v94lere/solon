@@ -1338,3 +1338,38 @@ Publiée le même jour que 0.1.10, à la demande de Valère, pour deux changemen
 | RAM `solon.exe` / `solon-service.exe` / `vmwp` + `vmcompute` | 49 / 17 / 37 Mo |
 | Total RAM | ≈ 830 Mo |
 | CPU au repos (10 s, tous processus Solon et machine) | 0,0 % ; conteneurs 0,00 à 0,01 % |
+
+
+## Windows 11 Famille (13 septembre 2026, soirée)
+
+Question de Valère : « c'est vraiment utile d'être sur Windows Famille ? » puis « vas-y » pour lever le doute sans
+toucher au code. Méthode : machine virtuelle Hyper-V « SolonHome » sur le PC de test (Gen 2, 4 processeurs,
+virtualisation imbriquée, TPM virtuel, **2,5 Go de RAM** faute de mieux : le PC n'a que 14 Go et 1,9 Go libres au
+départ), ISO officiel Windows 11 25H2 français (7,9 Go, lien obtenu par Fido), installation sans surveillance
+(`Autounattend.xml` sur un second ISO : édition **Famille** par clé générique d'installation, compte local,
+OpenSSH), pilotage par PowerShell Direct (un script élevé par phase). Solon 0.1.11 installé depuis la release GitHub.
+
+Accrocs de la méthode, pour mémoire : l'invite « Press any key to boot from CD » de l'UEFI Hyper-V expire sans
+clavier (VM restée 32 min sur « boot loader failed » ; envoi d'Entrée par `Msvm_Keyboard.TypeKey`), et ces mêmes
+Entrée ont ouvert « Voulez-vous vraiment fermer ? » dans le programme d'installation (fermé par Entrée sur Non).
+`Copy-VMFile` refuse (« périphérique pas prêt ») juste après un redémarrage : copie par PowerShell Direct en base64.
+
+| Constat dans Windows 11 Famille (SKU 0x65) | Résultat |
+|---|---|
+| Installateur `/S` | active `VirtualMachinePlatform` (redémarrage requis), `Microsoft-Hyper-V` inconnu (attendu) |
+| `solon-service.exe install` par l'installateur | **échec 0xC0000135, DLL introuvable** : `vcruntime140.dll` absent d'un Windows neuf (les DLL HCS `computecore`, `computenetwork`, `virtdisk` sont bien là) ; l'installateur reste ouvert sur une boîte d'erreur invisible |
+| Après liaison statique de la CRT (`target-feature=+crt-static`, plus aucune import `vcruntime140`) | service installé et démarré |
+| `prereq` | `hcs_api` OK, `hns` Running, `vmcompute` Stopped (démarre à la demande), `vmms` **absent**, édition signalée |
+| Moteur prêt (première création, disque de données 16 Go, 1 Go / 2 processeurs) | **10,3 s** en machine imbriquée |
+| `docker version` | client 29.7.2 / serveur 29.5.3 |
+| Dossier Windows monté (`-v C:\solon-test\share:/w`, solonfs) | écriture depuis le conteneur relue côté Windows : **OK** |
+| Port publié `-p 8085:80` → `http://localhost:8085` | **200** |
+| Adresse locale `http://web.solon.local` | **200** (fichier hosts et mandataire 80/443 actifs) |
+| Journal du service | aucun WARN ni ERROR |
+
+Conclusion : **Windows Famille fonctionne** avec la seule Plateforme de machine virtuelle, grâce à solonfs (le
+partage Plan9 d'origine exigeait `vmms`, absent sur Famille). Deux correctifs retenus : la CRT Visual C++ liée
+statiquement pour tous les binaires Windows (bogue général : tout Windows sans redistribuable VC++ était touché,
+Pro compris), et le contrôle d'édition devenu informatif ; le repli 9P est ignoré sur Famille. Non vérifié : les
+performances réelles hors machine imbriquée, et Windows 10 Famille. La VM d'essai est conservée éteinte
+(`.local\vm\SolonHome.vhdx`, 22 Go), réutilisable pour les prochains essais « machine neuve ».

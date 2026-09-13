@@ -60,7 +60,7 @@
   "error": {
     "title": "Une action est nécessaire",
     "VIRTUALIZATION_DISABLED_IN_FIRMWARE": "La virtualisation matérielle est désactivée. Activez Intel VT-x ou AMD-V dans le BIOS/UEFI (souvent dans Avancé ou CPU), puis relancez Solon.",
-    "UNSUPPORTED_WINDOWS_EDITION": "Solon nécessite Windows 11 Pro, Entreprise ou Éducation. Windows Famille ne contient pas les composants nécessaires.",
+    "UNSUPPORTED_WINDOWS_EDITION": "Cette édition de Windows n'est pas prise en charge.",
     "WINDOWS_FEATURE_MISSING": "Un composant Windows est absent. Réinstallez Solon pour l'activer ; un redémarrage peut être nécessaire.",
     "WINDOWS_FEATURE_BLOCKED_BY_POLICY": "Votre organisation restreint l'activation de composants Windows. Demandez à votre administrateur d'activer Hyper-V et la Plateforme de machine virtuelle.",
     "HYPERVISOR_NOT_RUNNING": "Le moteur de virtualisation Windows n'est pas démarré. Causes fréquentes : un VirtualBox/VMware ancien, virtualisation désactivée au démarrage, ou exécution dans une autre machine virtuelle.",

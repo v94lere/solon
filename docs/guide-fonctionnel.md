@@ -245,7 +245,8 @@ Open the Solon app to start it. »
 
 ## 15. Limites connues
 
-- Windows Famille non pris en charge ; ports UDP publiés non relayés vers `localhost` ; un seul moteur par PC.
+- Ports UDP publiés non relayés vers `localhost` ; un seul moteur par PC ; sur Windows Famille, pas de repli 9P
+  pour le partage de fichiers (le partage par défaut fonctionne).
 - Installateur non signé (SmartScreen) ; signature via la SignPath Foundation demandée.
 - Pas de Kubernetes, pas de machines Linux séparées, pas d'images ARM.
 - Un conteneur endormi n'exécute pas ses tâches planifiées internes jusqu'à ce qu'on l'appelle (« Garder

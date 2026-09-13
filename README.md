@@ -81,7 +81,7 @@ project named `solon-bench` on port 18069 and removes it when done.
 
 | Requirement | Detail |
 |---|---|
-| Windows | **Windows 11 (or Windows 10 22H2) Pro, Enterprise or Education**. Windows Home is not supported in this version: it lacks a Hyper-V component used for file sharing (see `ARCHITECTURE.md` §13, risk R2). |
+| Windows | **Windows 11 or Windows 10 22H2, any edition, Home included.** Pro, Enterprise and Education use Hyper-V; Home uses the Virtual Machine Platform, which the installer enables (one restart). Verified on Windows 11 Home 25H2. On Home the legacy 9P file-sharing fallback is unavailable; the default sharing works. |
 | CPU | Hardware virtualization **enabled in the BIOS/UEFI**: Intel VT-x ("Intel Virtualization Technology") or AMD-V ("SVM Mode"). |
 | Memory | 8 GB recommended (4 GB minimum). Solon gives the engine 2 GB by default, adjustable in Settings. |
 | Disk | ~400 MB for Solon and its Linux image, plus a dynamic data disk (64 GB maximum by default, used on demand). |
@@ -259,7 +259,6 @@ from the error screen.
 | Code | Cause | What to do |
 |---|---|---|
 | `VIRTUALIZATION_DISABLED_IN_FIRMWARE` | VT-x / AMD-V disabled | Enable virtualization in the BIOS/UEFI (Advanced, CPU or Security tab), reboot. |
-| `UNSUPPORTED_WINDOWS_EDITION` | Windows Home | Move to Windows Pro/Enterprise/Education. |
 | `WINDOWS_FEATURE_MISSING` | Hyper-V or Virtual Machine Platform disabled | Reinstall Solon (the installer enables them) or, in an administrator PowerShell: `Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V,VirtualMachinePlatform -All`, then reboot. |
 | `WINDOWS_FEATURE_BLOCKED_BY_POLICY` | Company policy (WSUS, GPO) refuses the feature | Ask your administrator to enable `Microsoft-Hyper-V` and `VirtualMachinePlatform`. |
 | `HYPERVISOR_NOT_RUNNING` | Windows hypervisor not started | Uninstall old VirtualBox/VMware (< 6.1 / < 15.5), check `bcdedit /enum` (`hypervisorlaunchtype Auto`), do not run Solon in a VM without nested virtualization. |
@@ -277,7 +276,6 @@ the engine. Unsynced writes of the last two seconds may be lost, as on any Linux
 
 ## Known limitations (0.1)
 
-- **Windows Home** is not supported (missing Hyper-V component).
 - **UDP** published ports are not relayed to `localhost` (TCP only).
 - **One engine per machine**, no multiple profiles.
 - **Not signed** (SmartScreen warning). **No automatic update**: Solon tells you when a new version exists

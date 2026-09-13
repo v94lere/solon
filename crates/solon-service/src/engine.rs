@@ -321,7 +321,8 @@ impl Engine {
                 .collect();
             cmdline.push_str(&format!(" solon.shares={}", list.join(",")));
         }
-        if settings.legacy_file_sharing {
+        // Repli 9P : indisponible sur Windows Famille (le partage Plan9 exige le service `vmms`).
+        if settings.legacy_file_sharing && !solon_prereq::is_home_edition() {
             cmdline.push_str(" solon.fs=9p");
         }
         let vm_config = VmConfig {
@@ -836,12 +837,14 @@ impl Engine {
         let guest_root = format!("/mnt/host/{drive}");
         // Le 9P de Windows est monté en secours sous /mnt/host9p ; /mnt/host est servi par solonfs
         // (sauf réglage de repli, où le 9P garde /mnt/host).
-        let nine_p_target =
-            if settings::load_settings(&self.inner.cfg.paths.settings_file()).legacy_file_sharing {
-                guest_root.clone()
-            } else {
-                format!("/mnt/host9p/{drive}")
-            };
+        let legacy = settings::load_settings(&self.inner.cfg.paths.settings_file())
+            .legacy_file_sharing
+            && !solon_prereq::is_home_edition();
+        let nine_p_target = if legacy {
+            guest_root.clone()
+        } else {
+            format!("/mnt/host9p/{drive}")
+        };
         let mut guard = self.inner.running.lock().await;
         let running = guard.as_mut().ok_or_else(|| {
             SolonError::new(ErrorCode::EngineUnreachable, "le moteur n'est pas démarré")

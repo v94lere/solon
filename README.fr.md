@@ -66,7 +66,7 @@ projet Compose nommé `solon-bench` sur le port 18069 et le supprime à la fin.
 
 | Prérequis | Détail |
 |---|---|
-| Windows | **Windows 11 (ou Windows 10 22H2) Pro, Entreprise ou Éducation**. Windows Famille n'est pas pris en charge dans cette version : il lui manque un composant Hyper-V nécessaire au partage de fichiers (voir `ARCHITECTURE.md` §13, risque R2). |
+| Windows | **Windows 11 ou Windows 10 22H2, toutes éditions, Famille comprise.** Pro, Entreprise et Éducation utilisent Hyper-V ; Famille utilise la Plateforme de machine virtuelle, que l'installateur active (un redémarrage). Vérifié sur Windows 11 Famille 25H2. Sur Famille, le repli de partage de fichiers 9P n'est pas disponible ; le partage par défaut fonctionne. |
 | Processeur | Virtualisation matérielle **activée dans le BIOS/UEFI** : Intel VT-x (souvent « Intel Virtualization Technology ») ou AMD-V (« SVM Mode »). |
 | Mémoire | 8 Go recommandés (4 Go minimum). Solon alloue 2 Go au moteur par défaut, ajustable dans les réglages. |
 | Disque | ~400 Mo pour Solon et son image Linux, plus un disque de données dynamique (64 Go maximum par défaut, occupé à la demande). |
@@ -283,7 +283,6 @@ Les messages de l'interface portent un **code stable** ; les journaux sont dans
 | Code | Cause | Que faire |
 |---|---|---|
 | `VIRTUALIZATION_DISABLED_IN_FIRMWARE` | VT-x / AMD-V désactivé | Activer la virtualisation dans le BIOS/UEFI (onglet Advanced, CPU ou Security), redémarrer. |
-| `UNSUPPORTED_WINDOWS_EDITION` | Windows Famille | Passer à Windows Pro/Entreprise/Éducation. |
 | `WINDOWS_FEATURE_MISSING` | Hyper-V ou Plateforme de machine virtuelle désactivés | Réinstaller Solon (l'installeur les active) ou, en PowerShell administrateur : `Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V,VirtualMachinePlatform -All`, puis redémarrer. |
 | `WINDOWS_FEATURE_BLOCKED_BY_POLICY` | Stratégie d'entreprise (WSUS, GPO) refuse l'activation | Demander à l'administrateur d'activer `Microsoft-Hyper-V` et `VirtualMachinePlatform`. |
 | `HYPERVISOR_NOT_RUNNING` | Hyperviseur Windows non démarré | Désinstaller les anciens VirtualBox/VMware (< 6.1 / < 15.5), vérifier `bcdedit /enum` (`hypervisorlaunchtype Auto`), ne pas exécuter Solon dans une VM sans virtualisation imbriquée. |
@@ -302,7 +301,6 @@ perdues, comme sur toute machine Linux.
 
 ## Limites connues (version 0.1)
 
-- **Windows Famille** n'est pas pris en charge (composant Hyper-V absent).
 - **Ports UDP** publiés non relayés vers `localhost` (TCP seulement).
 - **Un seul moteur par machine**, pas de profils multiples.
 - **Montages de dossiers Windows** : métadonnées lentes (voir plus haut). Les chemins `C:\...` de `docker run -v`,

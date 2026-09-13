@@ -69,7 +69,7 @@ const en = {
   limits: {
     title: "Known limitations",
     items: [
-      "Windows Home is not supported: it lacks a Hyper-V component Solon needs for file sharing.",
+      "Windows Home works too: the installer enables the Virtual Machine Platform, which is enough for Solon.",
       "No Kubernetes, no separate Linux machines, no ARM images (x86-64 only).",
       "The installer is not signed yet; signing is the next step before a wider launch.",
       "No automatic update: Solon tells you when a new version exists (Settings → Updates, can be turned off); you download and install it over the old one.",
@@ -99,7 +99,7 @@ const en = {
         steps: [
           "<b>Reboot first.</b> The installer enables Hyper-V and the Virtual Machine Platform when they were off; they only work after a restart. Most first-start failures end here.",
           "If the code is <code>VIRTUALIZATION_DISABLED_IN_FIRMWARE</code>: enable hardware virtualization in the BIOS/UEFI (called Intel VT-x, AMD-V or SVM, usually under Advanced, CPU or Security), save, reboot.",
-          "If the code is <code>UNSUPPORTED_WINDOWS_EDITION</code>: you are on Windows Home, which lacks a Hyper-V component Solon needs. Solon needs Windows 10 22H2 or 11 in Pro, Enterprise or Education.",
+          "Windows Home is supported since 0.1.12: the installer enables the Virtual Machine Platform and asks for one restart. Solon needs Windows 10 22H2 or 11, any edition.",
           "If the code is <code>HYPERVISOR_NOT_RUNNING</code>: an old VirtualBox or VMware, or a <code>bcdedit</code> setting, turned the Windows hypervisor off. Remove or update them (VirtualBox ≥ 6.1, VMware ≥ 15.5), then in an administrator PowerShell: <code>bcdedit /set hypervisorlaunchtype auto</code> and reboot.",
           "Still stuck: Settings → Diagnostic → Export a diagnostic, and open a bug report with the zip (see below).",
         ],
@@ -176,7 +176,6 @@ const en = {
       power: "Power loss or hard shutdown: at the next start Solon checks and repairs the data disk (<code>fsck</code>), then restarts the engine. Unsynced writes of the last two seconds may be lost, as on any Linux machine.",
       rows: [
         ["VIRTUALIZATION_DISABLED_IN_FIRMWARE", "VT-x / AMD-V disabled", "Enable virtualization in the BIOS/UEFI (Advanced, CPU or Security tab), reboot."],
-        ["UNSUPPORTED_WINDOWS_EDITION", "Windows Home", "Move to Windows Pro, Enterprise or Education."],
         ["WINDOWS_FEATURE_MISSING", "Hyper-V or Virtual Machine Platform disabled", "Reboot if you just installed. Otherwise reinstall Solon (the installer enables them) or, in an administrator PowerShell: <code>Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V,VirtualMachinePlatform -All</code>, then reboot."],
         ["WINDOWS_FEATURE_BLOCKED_BY_POLICY", "Company policy (WSUS, GPO) refuses the feature", "Ask your administrator to enable Microsoft-Hyper-V and VirtualMachinePlatform."],
         ["HYPERVISOR_NOT_RUNNING", "Windows hypervisor not started", "Uninstall old VirtualBox/VMware (< 6.1 / < 15.5), check <code>bcdedit /enum</code> (hypervisorlaunchtype Auto), do not run Solon in a VM without nested virtualization."],
@@ -258,7 +257,7 @@ const fr: typeof en = {
   limits: {
     title: "Limites connues",
     items: [
-      "Windows Famille n'est pas pris en charge : il lui manque un composant Hyper-V nécessaire au partage de fichiers.",
+      "Windows Famille fonctionne aussi : l'installateur active la Plateforme de machine virtuelle, qui suffit à Solon.",
       "Pas de Kubernetes, pas de machines Linux séparées, pas d'images ARM (x86-64 seulement).",
       "L'installateur n'est pas encore signé ; c'est la prochaine étape avant un lancement plus large.",
       "Pas de mise à jour automatique : Solon signale qu'une nouvelle version existe (Réglages → Mises à jour, désactivable) ; on la télécharge et on l'installe par-dessus.",
@@ -288,7 +287,7 @@ const fr: typeof en = {
         steps: [
           "<b>Redémarrez d'abord.</b> L'installateur active Hyper-V et la Plateforme de machine virtuelle s'ils étaient éteints ; ils ne fonctionnent qu'après un redémarrage. La plupart des échecs du premier démarrage s'arrêtent là.",
           "Code <code>VIRTUALIZATION_DISABLED_IN_FIRMWARE</code> : activez la virtualisation matérielle dans le BIOS/UEFI (Intel VT-x, AMD-V ou SVM, en général sous Advanced, CPU ou Security), enregistrez, redémarrez.",
-          "Code <code>UNSUPPORTED_WINDOWS_EDITION</code> : vous êtes sur Windows Famille, à qui manque un composant Hyper-V nécessaire à Solon. Il faut Windows 10 22H2 ou 11 en Pro, Entreprise ou Éducation.",
+          "Windows Famille est pris en charge depuis 0.1.12 : l'installateur active la Plateforme de machine virtuelle et demande un redémarrage. Il faut Windows 10 22H2 ou 11, toutes éditions.",
           "Code <code>HYPERVISOR_NOT_RUNNING</code> : un vieux VirtualBox ou VMware, ou un réglage <code>bcdedit</code>, a éteint l'hyperviseur Windows. Retirez-les ou mettez-les à jour (VirtualBox ≥ 6.1, VMware ≥ 15.5), puis en PowerShell administrateur : <code>bcdedit /set hypervisorlaunchtype auto</code> et redémarrez.",
           "Toujours bloqué : Réglages → Diagnostic → Exporter un diagnostic, et ouvrez un rapport avec le zip (voir plus bas).",
         ],
@@ -365,7 +364,6 @@ const fr: typeof en = {
       power: "Coupure de courant ou arrêt brutal : au démarrage suivant, Solon vérifie et répare le disque de données (<code>fsck</code>), puis redémarre le moteur. Les écritures non synchronisées des deux dernières secondes peuvent être perdues, comme sur toute machine Linux.",
       rows: [
         ["VIRTUALIZATION_DISABLED_IN_FIRMWARE", "VT-x / AMD-V désactivé", "Activer la virtualisation dans le BIOS/UEFI (onglet Advanced, CPU ou Security), redémarrer."],
-        ["UNSUPPORTED_WINDOWS_EDITION", "Windows Famille", "Passer à Windows Pro, Entreprise ou Éducation."],
         ["WINDOWS_FEATURE_MISSING", "Hyper-V ou Plateforme de machine virtuelle désactivés", "Redémarrer si vous venez d'installer. Sinon réinstaller Solon (l'installeur les active) ou, en PowerShell administrateur : <code>Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V,VirtualMachinePlatform -All</code>, puis redémarrer."],
         ["WINDOWS_FEATURE_BLOCKED_BY_POLICY", "Stratégie d'entreprise (WSUS, GPO) refuse l'activation", "Demander à l'administrateur d'activer Microsoft-Hyper-V et VirtualMachinePlatform."],
         ["HYPERVISOR_NOT_RUNNING", "Hyperviseur Windows non démarré", "Désinstaller les anciens VirtualBox/VMware (< 6.1 / < 15.5), vérifier <code>bcdedit /enum</code> (hypervisorlaunchtype Auto), ne pas exécuter Solon dans une VM sans virtualisation imbriquée."],
