@@ -1313,3 +1313,28 @@ grâce pour l'état `Stopped` transitoire du lancement. La création de la premi
 réessayée chaque seconde si le nom est encore tenu par l'ancien processus. Reste hors de portée de Solon : la
 coupure de quelques secondes pendant une mise à jour du service (l'extension abandonne alors ; *Developer:
 Reload Window* la relance), et la même limite existe avec Docker Desktop.
+
+## Version 0.1.11 (13 septembre 2026)
+
+Publiée le même jour que 0.1.10, à la demande de Valère, pour deux changements :
+
+- **Retrait de « Toujours démarrer avec Solon »** (case sur les cartes de projet, liste dans les Réglages, champ
+  `autostart_projects`, relance au démarrage). La relance de ce qui tournait à l'arrêt reste. Un `settings.json`
+  qui contient encore le champ est lu sans erreur (serde ignore les champs inconnus). Le premier commit du
+  retrait avait laissé une virgule finale dans `en.json` et `fr.json` ; le build Vite l'a signalé, corrigé.
+- **Icône de l'installateur.** `Solon_0.1.10_x64-setup.exe` portait l'icône générique de NSIS (vérifié par
+  extraction de l'icône associée). Tauri ne reprend l'icône de l'application qu'avec `installerIcon`. Ajout de
+  `installerIcon`, d'un bandeau 150 × 57 et d'un panneau latéral 164 × 314 (BMP 24 bits générés depuis
+  `icon.png` avec Pillow, logo sur fond blanc). Icône vérifiée sur l'exécutable reconstruit.
+
+**Empreinte mesurée sur le PC de Valère (0.1.10, trois conteneurs en marche : odoo18 ×2, njmc).**
+
+| Quoi | Mesure |
+|---|---|
+| Installateur | 102 Mo |
+| `C:\Program Files\Solon` | 406 Mo, dont image Linux 310 Mo (`rootfs.vhd` 294 + noyau 15,5), CLI `docker` + `compose` 73 Mo, Solon 22 Mo |
+| Données (`data.vhdx`) | 7,5 Go utilisés, 64 Go max |
+| RAM `vmmem` (machine) | 727 Mo de jeu de travail sur 2 048 Mo alloués ; vu de l'intérieur : 394 Mo utilisés, 232 Mo de cache, 1 274 Mo libres |
+| RAM `solon.exe` / `solon-service.exe` / `vmwp` + `vmcompute` | 49 / 17 / 37 Mo |
+| Total RAM | ≈ 830 Mo |
+| CPU au repos (10 s, tous processus Solon et machine) | 0,0 % ; conteneurs 0,00 à 0,01 % |
