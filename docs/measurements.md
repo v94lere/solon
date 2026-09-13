@@ -1373,3 +1373,9 @@ statiquement pour tous les binaires Windows (bogue général : tout Windows sans
 Pro compris), et le contrôle d'édition devenu informatif ; le repli 9P est ignoré sur Famille. Non vérifié : les
 performances réelles hors machine imbriquée, et Windows 10 Famille. La VM d'essai est conservée éteinte
 (`.local\vm\SolonHome.vhdx`, 22 Go), réutilisable pour les prochains essais « machine neuve ».
+
+## Version 0.1.12 (13 septembre 2026, soir)
+
+Publiée le soir même de l'essai Windows Famille : prise en charge de Famille (contrôle d'édition informatif, repli
+9P ignoré) et **CRT Visual C++ liée statiquement** pour le service, le shim `docker` et l'application (plus aucun
+import de `vcruntime140.dll`, vérifié sur les trois exécutables). Taille de l'installateur inchangée à ±0,1 Mo.
