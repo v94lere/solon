@@ -100,7 +100,7 @@ export function parseComposeConfigError(stderr: string, text: string, fileName: 
   // Fichier cité : on cherche son nom dans le texte.
   const file = message.match(/(?:env file|file) (\S+) not found/);
   if (file) {
-    const base = file[1].split(/[\/]/).pop() ?? file[1];
+    const base = file[1].split(/[\\/]/).pop() ?? file[1];
     return { line: lineContaining(text, base), message, kind: "structure" };
   }
 
