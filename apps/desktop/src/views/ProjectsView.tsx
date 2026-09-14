@@ -226,7 +226,7 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
     <div className="flex h-full flex-col">
       <PageHeader
         title={t("projects.title")}
-        count={groups.length > 0 ? t("projects.count", { count: groups.length }) : undefined}
+        count={totalCount > 0 ? t("projects.count", { count: totalCount }) : undefined}
         actions={
           <>
             <button type="button" className="btn btn-sm" onClick={() => void pickProject()}><IconFolderOpen />{t("compose.open")}</button>
