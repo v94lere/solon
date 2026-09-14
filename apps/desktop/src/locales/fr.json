@@ -416,6 +416,9 @@
     "project_stop": "Arrêter le projet"
   },
   "projects": {
+    "filter_all": "Toutes ({{count}})",
+    "filter_running": "Actives ({{count}})",
+    "filter_stopped": "Arrêtées ({{count}})",
     "running_count": "{{running}}/{{total}} en marche",
     "title": "Projets",
     "count_one": "{{count}} projet",

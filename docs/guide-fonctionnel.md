@@ -49,11 +49,13 @@ C'est la première entrée du menu (Ctrl+1) et la page d'ouverture.
 **Une carte par projet** :
 
 - nom, pastille d'état, « 2/2 en marche · Up 14 minutes » ou « créé le … » ;
-- **l'adresse principale** en gros, avec le cadenas HTTPS et un bouton Copier : celle du service qui ressemble
-  le plus à une application web (ports 80, 8080, 3000, 8000, 8069… ; les bases de données ne sont jamais
-  choisies). Un clic l'ouvre dans le navigateur ;
-- la liste des services avec leur état et leur adresse propre ;
+- **l'adresse principale** en gros, dans un bloc rose : celle du service qui ressemble le plus à une application
+  web (ports 80, 8080, 3000, 8000, 8069… ; les bases de données ne sont jamais choisies). Un clic l'ouvre dans le
+  navigateur ; la copie et le cadenas HTTPS sont sur la page du projet ;
+- la liste des services avec leur état : le nom, ou l'adresse propre du service quand il en a une ;
 - **Ouvrir** (navigateur), **Up** ou **Arrêter**, **Détails** (la page du projet).
+
+Au-dessus des cartes, trois filtres : **Toutes**, **Actives**, **Arrêtées**, avec le compte de chacun.
 
 **Cartes « Pas encore démarré »** : les dossiers ouverts auparavant mais sans conteneur ; Up les lance, Oublier
 les retire de la liste. Un dossier qui n'existe plus disparaît de lui-même.

@@ -44,9 +44,9 @@ export function AddressLine({ url, host, big = false }: { url: string; host: str
   const tls = url.startsWith("https://");
   return (
     <span className={`addr${big ? " addr-big" : ""}`}>
-      {tls && <span className="addr-lock" title="HTTPS"><IconLock /></span>}
+      {!big && tls && <span className="addr-lock" title="HTTPS"><IconLock /></span>}
       <button type="button" className="addr-host mono" title={t("projects.open_browser", { url })} onClick={() => void openUrl(url)}>{host}</button>
-      <button
+      {!big && <button
         type="button"
         className="icon-btn addr-copy"
         title={copied ? t("projects.address_copied") : t("projects.address_copy")}
@@ -59,7 +59,7 @@ export function AddressLine({ url, host, big = false }: { url: string; host: str
         }}
       >
         <IconCopy />
-      </button>
+      </button>}
       {copied && <span className="kbd-hint">{t("projects.address_copied")}</span>}
     </span>
   );
@@ -146,6 +146,13 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
 
   // Dossiers ouverts récemment qui n'ont aucun conteneur : proposés à la reprise.
   const dormant = useMemo(() => recent.filter((dir) => !groups.some((g) => samePath(g.dir, dir))), [recent, groups]);
+  // Filtre des cartes : tout, en marche, arrêté (les dossiers « pas encore démarrés » comptent comme arrêtés).
+  const [filter, setFilter] = useState<"all" | "running" | "stopped">("all");
+  const isActive = (g: Group) => g.list.some((c) => c.State === "running");
+  const activeCount = groups.filter(isActive).length;
+  const totalCount = groups.length + dormant.length;
+  const shownGroups = filter === "all" ? groups : filter === "running" ? groups.filter(isActive) : groups.filter((g) => !isActive(g));
+  const shownDormant = filter === "running" ? [] : dormant;
 
 
   async function run(g: Group, args: string[]) {
@@ -230,6 +237,13 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
         }
       />
       {error && <div className="mx-4 mb-2 rounded px-3 py-2" role="alert" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}>{error}</div>}
+      {!empty && (
+        <div role="tablist" className="tabs project-filters mx-4 mb-3">
+          <button role="tab" type="button" className="tab" aria-selected={filter === "all"} onClick={() => setFilter("all")}>{t("projects.filter_all", { count: totalCount })}</button>
+          <button role="tab" type="button" className="tab" aria-selected={filter === "running"} onClick={() => setFilter("running")}>{t("projects.filter_running", { count: activeCount })}</button>
+          <button role="tab" type="button" className="tab" aria-selected={filter === "stopped"} onClick={() => setFilter("stopped")}>{t("projects.filter_stopped", { count: totalCount - activeCount })}</button>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-auto px-4 pb-4">
         {empty ? (
@@ -266,7 +280,7 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
         ) : (
           <>
             <div className="project-grid">
-              {groups.map((g) => {
+              {shownGroups.map((g) => {
                 const running = g.list.filter((c) => c.State === "running").length;
                 const addr = domainsOn ? primaryAddress(g.list, tls) : null;
                 const activity = lastActivity(g.list);
@@ -274,7 +288,7 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
                 return (
                   <article key={g.name} className={`project-card${running > 0 ? " is-running" : ""}`}>
                     <header className="project-head">
-                      <Avatar label={g.name} seed={g.name} size={34} />
+                      <Avatar label={g.name} seed={g.name} size={44} />
                       <div className="min-w-0 flex-1">
                         <button type="button" className="project-name" disabled={!g.dir} title={g.dir ?? t("projects.no_dir")} onClick={() => g.dir && onOpenProject(g.dir)}>
                           {g.name}
@@ -283,7 +297,7 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
                           )}
                         </button>
                         <div className="project-meta">
-                          <span className={`pill pill-dot ${running > 0 ? "pill-ok" : "pill-muted"}`} aria-hidden="true" />
+                          <span className={`dot ${running > 0 ? "dot-ok" : "dot-muted"}`} aria-hidden="true" />
                           <span>{t("projects.running_count", { running, total: g.list.length })}</span>
                           {activity.running ? <span>· {activity.text}</span> : activity.created > 0 ? <span>· {t("projects.stopped_since", { date: new Date(activity.created * 1000).toLocaleDateString() })}</span> : null}
                         </div>
@@ -299,43 +313,46 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
                         const d = domainOf(c);
                         return (
                           <li key={c.Id}>
-                            <span className={`pill pill-dot ${c.State === "running" ? "pill-ok" : "pill-muted"}`} aria-hidden="true" />
-                            <button type="button" className="project-service" onClick={() => onOpenContainer(c.Id)} title={imageBase(c.Image)}>{c.Labels?.["com.docker.compose.service"] ?? (c.Names?.[0] ?? "").replace(/^\//, "")}</button>
-                            {d && c.State === "running" && domainsOn && d !== addr?.host && <span className="mono kbd-hint truncate">{d}</span>}
+                            <span className={`dot ${c.State === "running" ? "dot-ok" : "dot-muted"}`} aria-hidden="true" />
+                            {d && c.State === "running" && domainsOn && d !== addr?.host ? (
+                              <button type="button" className="project-service mono" onClick={() => onOpenContainer(c.Id)} title={imageBase(c.Image)}>{d}</button>
+                            ) : (
+                              <button type="button" className="project-service" onClick={() => onOpenContainer(c.Id)} title={imageBase(c.Image)}>{c.Labels?.["com.docker.compose.service"] ?? (c.Names?.[0] ?? "").replace(/^\//, "")}</button>
+                            )}
                           </li>
                         );
                       })}
                     </ul>
                     <footer className="project-actions">
                       {addr && running > 0 && (
-                        <button type="button" className="btn btn-primary btn-sm" onClick={() => void openUrl(addr.url)}>{t("projects.open")}</button>
+                        <button type="button" className="btn btn-primary" onClick={() => void openUrl(addr.url)}>{t("projects.open")}</button>
                       )}
                       {running > 0 ? (
-                        <button type="button" className="btn btn-sm" disabled={isBusy || !g.dir} onClick={() => void run(g, ["stop"])}>{isBusy ? t("compose.running") : t("projects.stop")}</button>
+                        <button type="button" className="btn" disabled={isBusy || !g.dir} onClick={() => void run(g, ["stop"])}>{isBusy ? t("compose.running") : t("projects.stop")}</button>
                       ) : (
-                        <button type="button" className="btn btn-primary btn-sm" disabled={isBusy || !g.dir} onClick={() => void run(g, ["up", "-d"])}>{isBusy ? t("compose.running") : t("compose.up")}</button>
+                        <button type="button" className="btn btn-primary" disabled={isBusy || !g.dir} onClick={() => void run(g, ["up", "-d"])}>{isBusy ? t("compose.running") : t("compose.up")}</button>
                       )}
                       <span className="flex-1" />
-                      {g.dir && <button type="button" className="btn btn-ghost btn-sm project-details" onClick={() => onOpenProject(g.dir as string)}>{t("projects.details")}</button>}
+                      {g.dir && <button type="button" className="btn btn-ghost project-details" onClick={() => onOpenProject(g.dir as string)}>{t("projects.details")}</button>}
                     </footer>
                   </article>
                 );
               })}
-              {dormant.map((dir) => (
+              {shownDormant.map((dir) => (
                 <article key={dir} className="project-card is-dormant">
                   <header className="project-head">
-                    <Avatar label={projectBaseName(dir)} seed={projectBaseName(dir)} size={34} />
+                    <Avatar label={projectBaseName(dir)} seed={projectBaseName(dir)} size={44} />
                     <div className="min-w-0 flex-1">
                       <button type="button" className="project-name" title={dir} onClick={() => onOpenProject(dir)}>{projectBaseName(dir)}</button>
-                      <div className="project-meta"><span className="pill pill-dot pill-muted" aria-hidden="true" /><span>{t("projects.not_started")}</span></div>
+                      <div className="project-meta"><span className="dot dot-muted" aria-hidden="true" /><span>{t("projects.not_started")}</span></div>
                     </div>
                   </header>
                   <p className="kbd-hint mono truncate" title={dir}>{dir}</p>
                   <footer className="project-actions">
-                    <button type="button" className="btn btn-primary btn-sm" onClick={() => onOpenProject(dir, true)}>{t("compose.up")}</button>
+                    <button type="button" className="btn btn-primary" onClick={() => onOpenProject(dir, true)}>{t("compose.up")}</button>
                     <span className="flex-1" />
-                    <button type="button" className="btn btn-ghost btn-sm project-details" onClick={() => onOpenProject(dir)}>{t("projects.details")}</button>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => { forgetProject(dir); setRecent(loadRecentProjects()); }}>{t("projects.forget")}</button>
+                    <button type="button" className="btn btn-ghost project-details" onClick={() => onOpenProject(dir)}>{t("projects.details")}</button>
+                    <button type="button" className="btn btn-ghost" onClick={() => { forgetProject(dir); setRecent(loadRecentProjects()); }}>{t("projects.forget")}</button>
                   </footer>
                 </article>
               ))}
