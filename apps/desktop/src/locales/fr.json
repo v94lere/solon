@@ -471,6 +471,15 @@
     "reload": "Recharger",
     "unsaved": "Modifications non enregistrées",
     "saved": "Enregistré",
+    "check": {
+      "line": "Ligne {{line}}",
+      "goto": "Aller à la ligne {{line}}",
+      "save_anyway": "Enregistrer quand même",
+      "checking": "Vérification…",
+      "unchecked": "Enregistré sans vérifier la structure : le moteur est arrêté.",
+      "syntax": "Le YAML ne se lit pas",
+      "structure": "Compose refuse ce fichier"
+    },
     "port_conflict": "Le port {{port}} est déjà utilisé sur ce PC par un autre programme ou une autre pile. Dans l'onglet Compose, changez le port hôte (par exemple {{port}} → {{next}}), puis Save and Up.",
     "env": {
       "hint": "Valeurs du .env et des blocs environment: du compose.yaml, modifiables ici ; commentaires et mise en forme conservés.",

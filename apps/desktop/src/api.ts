@@ -441,6 +441,8 @@ export const compose = {
   detect: (dir: string) => invoke<ComposeProject | null>("compose_detect", { dir }),
   read: (dir: string) => invoke<string>("compose_read", { dir }),
   write: (dir: string, content: string) => invoke<void>("compose_write", { dir, content }),
+  /** `docker compose config` sur un contenu non enregistré : `ok`, ou le message d'erreur de Compose. */
+  check: (dir: string, content: string) => invoke<{ ok: boolean; message: string; guest_dir: string }>("compose_check", { dir, content }),
   /** Fichier `.env` du projet (chaîne vide s'il n'existe pas). */
   envRead: (dir: string) => invoke<string>("env_read", { dir }),
   envWrite: (dir: string, content: string) => invoke<void>("env_write", { dir, content }),

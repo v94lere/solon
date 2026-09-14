@@ -96,7 +96,11 @@ déjà lui-même ne comptent pas comme conflit.
 - **Journaux** : les journaux de tous les services mêlés, chaque ligne préfixée du service et colorée. Filtres
   **Tout / Avertissements / Erreurs** avec compteurs, une pastille par service pour l'afficher ou le masquer,
   recherche, suivi automatique (un défilement vers le haut le suspend).
-- **Compose** : le fichier `compose.yaml` modifiable sur place. Enregistrer (Ctrl+S), **Save and Up**, Recharger.
+- **Compose** : le fichier `compose.yaml` modifiable sur place, avec numéros de ligne. Enregistrer (Ctrl+S),
+  **Save and Up**, Recharger. Avant d'enregistrer, Solon vérifie le fichier : la syntaxe YAML à la frappe, la
+  structure par `docker compose config` dans le moteur (clé inconnue, type faux, réseau non déclaré, fichier
+  d'environnement absent…). L'erreur s'affiche avec la ligne fautive marquée dans la gouttière et un bouton
+  « Aller à la ligne » ; « Enregistrer quand même » reste possible. Moteur arrêté : seule la syntaxe est vérifiée.
 - **Environnement** : les variables du `.env` et des blocs `environment:` de chaque service, et les ports hôte
   publiés, **modifiables sans toucher au YAML**. Les valeurs qui ressemblent à des secrets sont masquées (œil
   pour les voir). Ajouter, retirer, Save and Up. Les fichiers sont réécrits ligne à ligne : commentaires et

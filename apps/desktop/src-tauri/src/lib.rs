@@ -206,6 +206,7 @@ pub fn run() {
             compose::env_read,
             compose::env_write,
             compose::compose_run,
+            compose::compose_check,
             compose::compose_stream,
             engine_status,
             engine_start,

@@ -248,6 +248,62 @@ pub async fn compose_run(
     })
 }
 
+/// Verdict de `docker compose config` sur un contenu non encore enregistré.
+#[derive(Debug, Clone, Serialize)]
+pub struct ComposeCheck {
+    pub ok: bool,
+    /// Sortie d'erreur de Compose (vide si `ok`).
+    pub message: String,
+    /// Dossier du projet vu du moteur, tel qu'il apparaît dans `message` (à remplacer par le chemin Windows).
+    pub guest_dir: String,
+}
+
+/// Soumet `content` à `docker compose config -q` dans le dossier du projet, sans l'enregistrer : le
+/// texte passe par l'entrée standard (`-f -`), le dossier du projet sert aux chemins relatifs et au
+/// `.env`. Erreur seulement si le moteur ne répond pas ; un fichier refusé donne `ok: false`.
+#[tauri::command]
+pub async fn compose_check(dir: String, content: String) -> Result<ComposeCheck, String> {
+    // Un argument shell est limité à 128 Kio sous Linux ; au-delà, on laisse passer sans vérifier.
+    if content.len() > 100 * 1024 {
+        return Ok(ComposeCheck {
+            ok: true,
+            message: String::new(),
+            guest_dir: String::new(),
+        });
+    }
+    let share: ShareInfo = serde_json::from_value(
+        service::call(ServiceCommand::EnsureShare {
+            host_path: dir.clone(),
+        })
+        .await?,
+    )
+    .map_err(|e| format!("réponse du service illisible : {e}"))?;
+    let command = format!(
+        "printf '%s' {} | docker compose -f - --project-directory {} config -q 2>&1",
+        shell_quote(&content),
+        shell_quote(&share.guest_path)
+    );
+    let result = service::call(ServiceCommand::Exec {
+        command,
+        timeout_s: Some(60),
+    })
+    .await?;
+    let code = result.get("code").and_then(|c| c.as_i64()).unwrap_or(-1);
+    let mut message = result
+        .get("stdout")
+        .and_then(|s| s.as_str())
+        .unwrap_or("")
+        .to_owned();
+    if let Some(err) = result.get("stderr").and_then(|s| s.as_str()) {
+        message.push_str(err);
+    }
+    Ok(ComposeCheck {
+        ok: code == 0,
+        message: message.trim().to_owned(),
+        guest_dir: share.guest_path,
+    })
+}
+
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }

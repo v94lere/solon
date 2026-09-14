@@ -21,7 +21,8 @@
     "i18next": "^26.4.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-i18next": "^17.0.13"
+    "react-i18next": "^17.0.13",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

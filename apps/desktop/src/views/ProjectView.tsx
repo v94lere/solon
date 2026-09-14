@@ -7,6 +7,7 @@ import { backup, compose, containers, git, host, system, type ComposeProject, ty
 import { branchEnvEnabled, branchOfProjectName, branchProjectName, setBranchEnvEnabled } from "../branches";
 import { parseComposeServices, setComposeHostPort } from "../env";
 import { portConflictIn } from "../ports";
+import { parseComposeConfigError, yamlSyntaxProblem, type ComposeProblem } from "../composeCheck";
 import { markUserAction, useEngine } from "../engine";
 import { EnvPanel } from "../components/EnvPanel";
 import { AddressLine } from "./ProjectsView";
@@ -57,6 +58,30 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
   const [savedYaml, setSavedYaml] = useState("");
   const [saving, setSaving] = useState(false);
   const dirty = yaml !== savedYaml;
+  // Vérification avant enregistrement : syntaxe YAML à la frappe, structure par `docker compose config` au Save.
+  const [problem, setProblem] = useState<ComposeProblem | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [unchecked, setUnchecked] = useState(false);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const gutterRef = useRef<HTMLPreElement>(null);
+  useEffect(() => {
+    const id = window.setTimeout(() => setProblem(yamlSyntaxProblem(yaml)), 300);
+    return () => window.clearTimeout(id);
+  }, [yaml]);
+
+  /** Sélectionne la ligne (1-indexée) dans l'éditeur et l'amène au milieu de la vue. */
+  function gotoLine(line: number | null) {
+    const ta = editorRef.current;
+    if (!ta || !line) return;
+    const lines = ta.value.split("\n");
+    let start = 0;
+    for (let i = 0; i < line - 1 && i < lines.length; i++) start += lines[i].length + 1;
+    const end = start + (lines[line - 1]?.length ?? 0);
+    ta.focus();
+    ta.setSelectionRange(start, end);
+    ta.scrollTop = Math.max(0, (line - 1) * 20 - ta.clientHeight / 2);
+    if (gutterRef.current) gutterRef.current.scrollTop = ta.scrollTop;
+  }
 
   // Le fichier Compose est lu dès que le projet est reconnu (et relu à la demande).
   async function loadYaml() {
@@ -74,12 +99,40 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project]);
 
-  async function saveYaml(): Promise<boolean> {
+  /** Vérifie puis enregistre ; `force` passe outre une erreur (« Enregistrer quand même »). */
+  async function saveYaml(force = false): Promise<boolean> {
     setSaving(true);
     setError(null);
+    setUnchecked(false);
     try {
+      if (!force) {
+        const syntax = yamlSyntaxProblem(yaml);
+        if (syntax) {
+          setProblem(syntax);
+          gotoLine(syntax.line);
+          return false;
+        }
+        setChecking(true);
+        try {
+          const verdict = await compose.check(dir, yaml);
+          if (!verdict.ok) {
+            // Le message de Compose cite le dossier vu du moteur : on montre le chemin Windows.
+            const message = verdict.guest_dir ? verdict.message.split(verdict.guest_dir).join(dir) : verdict.message;
+            const found = parseComposeConfigError(message, yaml, project?.file ?? "compose.yaml");
+            setProblem(found);
+            gotoLine(found.line);
+            return false;
+          }
+        } catch {
+          // Moteur arrêté : la structure n'est pas vérifiée, on enregistre et on le dit.
+          setUnchecked(true);
+        } finally {
+          setChecking(false);
+        }
+      }
       await compose.write(dir, yaml);
       setSavedYaml(yaml);
+      setProblem(null);
       return true;
     } catch (e) {
       setError(String(e));
@@ -465,22 +518,45 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
         <div className="card mx-4 mb-4 flex min-h-0 flex-1 flex-col">
           <div className="flex items-center gap-2 border-b px-3 py-1.5" style={{ borderColor: "var(--line)" }}>
             <span className="mono text-xs" style={{ color: "var(--ink-2)" }}>{project?.file ?? "compose.yaml"}</span>
-            <span className="kbd-hint">{dirty ? t("project.unsaved") : t("project.saved")}</span>
+            <span className="kbd-hint">{checking ? t("project.check.checking") : dirty ? t("project.unsaved") : t("project.saved")}</span>
+            {unchecked && <span className="text-xs" style={{ color: "var(--warn)" }}>{t("project.check.unchecked")}</span>}
             <span className="flex-1" />
             <button type="button" className="btn btn-ghost btn-sm" disabled={saving || !project} onClick={() => void loadYaml()}>{t("project.reload")}</button>
             <button type="button" className="btn btn-sm" disabled={saving || !dirty || !project} onClick={() => void saveYaml()}>{t("project.save")}</button>
             <button type="button" className="btn btn-primary btn-sm" disabled={saving || busy !== null || !project} onClick={() => void (async () => { if (await saveYaml()) await run("up", ["up", "-d", "--remove-orphans"]); })()}>{t("project.save_up")}</button>
           </div>
-          <textarea
-            className="mono min-h-0 flex-1 resize-none p-3 text-xs leading-5"
-            style={{ background: "transparent", color: "var(--ink)", border: 0, outline: "none", userSelect: "text" }}
-            spellCheck={false}
-            value={yaml}
-            disabled={!project}
-            aria-label={project?.file ?? "compose.yaml"}
-            onChange={(e) => setYaml(e.target.value)}
-            onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); if (dirty) void saveYaml(); } }}
-          />
+          {problem && (
+            <div className={`compose-problem${problem.kind === "syntax" ? " is-syntax" : ""}`} role="alert">
+              <strong>
+                {problem.line ? `${t("project.check.line", { line: problem.line })} · ` : ""}
+                {t(problem.kind === "syntax" ? "project.check.syntax" : "project.check.structure")}
+              </strong>
+              <span className="mono text-xs">{problem.message}</span>
+              <span className="flex-1" />
+              {problem.line && <button type="button" className="btn btn-ghost btn-sm" onClick={() => gotoLine(problem.line)}>{t("project.check.goto", { line: problem.line })}</button>}
+              {dirty && <button type="button" className="btn btn-sm" disabled={saving} onClick={() => void saveYaml(true)}>{t("project.check.save_anyway")}</button>}
+            </div>
+          )}
+          <div className="compose-editor">
+            <pre ref={gutterRef} className="compose-gutter mono text-xs leading-5" aria-hidden="true">
+              {Array.from({ length: yaml.split("\n").length }, (_, i) => (
+                <span key={i} className={problem?.line === i + 1 ? "is-bad" : ""}>{i + 1}</span>
+              ))}
+            </pre>
+            <textarea
+              ref={editorRef}
+              className="mono min-h-0 min-w-0 flex-1 resize-none p-3 text-xs leading-5"
+              style={{ background: "transparent", color: "var(--ink)", border: 0, outline: "none", userSelect: "text" }}
+              spellCheck={false}
+              wrap="off"
+              value={yaml}
+              disabled={!project}
+              aria-label={project?.file ?? "compose.yaml"}
+              onChange={(e) => setYaml(e.target.value)}
+              onScroll={(e) => { if (gutterRef.current) gutterRef.current.scrollTop = e.currentTarget.scrollTop; }}
+              onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); if (dirty) void saveYaml(); } }}
+            />
+          </div>
         </div>
       )}
     </div>

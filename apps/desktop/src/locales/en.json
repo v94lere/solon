@@ -471,6 +471,15 @@
     "reload": "Reload",
     "unsaved": "Unsaved changes",
     "saved": "Saved",
+    "check": {
+      "line": "Line {{line}}",
+      "goto": "Go to line {{line}}",
+      "save_anyway": "Save anyway",
+      "checking": "Checking…",
+      "unchecked": "Saved without checking the structure: the engine is stopped.",
+      "syntax": "The YAML cannot be read",
+      "structure": "Compose rejects this file"
+    },
     "port_conflict": "Port {{port}} is already in use on this PC by another program or another stack. In the Compose tab, change the host port (for example {{port}} → {{next}}), then Save and Up.",
     "env": {
       "hint": "Values from .env and from the environment: blocks of compose.yaml, editable here; comments and layout are kept.",

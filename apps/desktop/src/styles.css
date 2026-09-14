@@ -659,3 +659,13 @@ select {
 .update-progress .mini-meter > i.is-indeterminate { width: 40% !important; animation: update-slide 1.2s ease-in-out infinite; }
 @keyframes update-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
 @media (prefers-reduced-motion: reduce) { .update-progress .mini-meter > i.is-indeterminate { animation: none; width: 100% !important; opacity: 0.5; } }
+
+/* Onglet Compose : gouttière de numéros de ligne alignée sur le textarea, ligne fautive marquée */
+.compose-editor { display: flex; min-height: 0; flex: 1; }
+.compose-gutter { flex: 0 0 auto; margin: 0; padding: 12px 8px 12px 12px; overflow: hidden; text-align: right; color: var(--ink-3); background: var(--surface-2); border-right: 1px solid var(--line); user-select: none; }
+.compose-gutter > span { display: block; border-radius: 4px; }
+.compose-gutter > span.is-bad { background: var(--bad); color: #fff; font-weight: 600; }
+.compose-editor textarea { white-space: pre; overflow-wrap: normal; overflow-x: auto; }
+.compose-problem { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--warn-soft, var(--accent-soft)); font-size: 12.5px; }
+.compose-problem.is-syntax { background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.compose-problem .mono { word-break: break-word; }
