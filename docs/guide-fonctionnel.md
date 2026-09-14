@@ -187,7 +187,11 @@ l'ouvre et le referme depuis n'importe quelle vue ; la session reste vivante en 
 - **Diagnostic** : exporte un zip (journaux, état, réglages, prérequis, `docker info`, versions ; aucun
   identifiant, aucune donnée de conteneur) à joindre à un rapport de bug.
 - **Mises à jour** : vérification au démarrage (une requête vers github.com, rien envoyé sur vous ; désactivable),
-  « Vérifier maintenant », bouton Télécharger quand une version existe. Rien ne s'installe sans vous.
+  « Vérifier maintenant », et quand une version existe, **Installer la mise à jour** : Solon télécharge
+  l'installateur, vérifie son SHA-256 avec le `SHA256SUMS.txt` publié avec la version (un fichier qui ne
+  correspond pas est effacé, jamais lancé), puis Windows demande l'autorisation d'installer. Le moteur et les
+  conteneurs s'arrêtent une minute, Solon se rouvre et relance ce qui tournait. Rien ne s'installe sans vous ;
+  « Télécharger » reste là pour le faire à la main.
 - **Disque** : occupation du stockage du moteur, place libre du lecteur Windows, taille réelle du fichier
   disque ; **Récupérer l'espace** supprime les images inutilisées et le cache de construction puis rend la place
   à Windows (conteneurs et volumes jamais touchés). Un bandeau prévient quand le lecteur est presque plein et

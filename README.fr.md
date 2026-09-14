@@ -348,8 +348,10 @@ perdues, comme sur toute machine Linux.
   Desktop (voir « Utilisation »).
 - **Installeur non signé** (avertissement SmartScreen) ; le chemin « activation de Hyper-V puis redémarrage »
   n'a pas encore été éprouvé sur une machine vierge.
-- Pas de mise à jour automatique : Solon signale qu'une nouvelle version existe (Réglages → Mises à jour, une
-  requête vers github.com, désactivable) ; on la télécharge et on l'installe par-dessus.
+- Pas de mise à jour silencieuse : Solon signale qu'une nouvelle version existe (Réglages → Mises à jour, une
+  requête vers github.com, désactivable). « Installer la mise à jour » télécharge l'installateur, vérifie son
+  SHA-256 avec le `SHA256SUMS.txt` de la version, puis Windows demande l'autorisation ; Solon se rouvre et
+  relance ce qui tournait. Rien ne s'installe sans vous.
 
 ## Documentation
 

@@ -317,9 +317,10 @@ the engine. Unsynced writes of the last two seconds may be lost, as on any Linux
 
 - **UDP** published ports are not relayed to `localhost` (TCP only).
 - **One engine per machine**, no multiple profiles.
-- **Not signed** (SmartScreen warning). **No automatic update**: Solon tells you when a new version exists
-  (Settings → Updates, one request to github.com, can be turned off); you download it and install it over the
-  old one.
+- **Not signed** (SmartScreen warning). **No silent update**: Solon tells you when a new version exists
+  (Settings → Updates, one request to github.com, can be turned off). *Install update* downloads the
+  installer, checks its SHA-256 against the release's `SHA256SUMS.txt`, then Windows asks you to allow the
+  install; Solon reopens and restarts what was running. Nothing installs without you.
 - A sleeping container does not run its internal scheduled tasks until something calls it; use "Keep awake"
   on its page if that matters.
 - `curl.exe` on Windows rejects the local HTTPS certificates unless you pass `--ssl-no-revoke` (same as mkcert);

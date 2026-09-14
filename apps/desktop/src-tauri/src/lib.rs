@@ -14,6 +14,7 @@ mod service;
 mod shell;
 mod stacks;
 mod tray;
+mod update;
 
 use std::sync::Arc;
 
@@ -185,6 +186,7 @@ pub fn run() {
         .manage(Arc::new(shell::ShellState::default()))
         .setup(|app| {
             tray::setup(app.handle())?;
+            update::cleanup_later();
             Ok(())
         })
         // Fermer la fenêtre la cache ; l'application vit dans la barre des tâches.
@@ -221,6 +223,8 @@ pub fn run() {
             shell::machine_shell_resize,
             shell::machine_shell_close,
             diagnostic::diagnostic_export,
+            update::update_download,
+            update::update_install,
             host::ports_probe,
             backup::project_backup,
             backup::project_backup_info,

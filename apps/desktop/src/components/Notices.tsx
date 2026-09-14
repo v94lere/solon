@@ -2,10 +2,10 @@
 // Discrets : chacun se ferme d'un clic et ne revient pas pour la même version / la même session.
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { formatBytes, host, type HostDiskInfo, type ReclaimReport } from "../api";
 import { reclaimSpace } from "../reclaim";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { UpdateActions } from "./UpdateActions";
 import { useEngine } from "../engine";
 import { checkForUpdate, skipVersion, skippedVersion, updateCheckEnabled, type UpdateInfo } from "../updates";
 
@@ -76,9 +76,7 @@ export function Notices({ onOpenSettings }: { onOpenSettings: () => void }) {
       {update && (
         <div className="notice notice-bar" role="status">
           <span>{t("updates.available", { version: update.latest, current: update.current })}</span>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => void openUrl(update.installer ?? update.page)}>{t("updates.download")}</button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => void openUrl(update.page)}>{t("updates.notes")}</button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { skipVersion(update.latest); setUpdate(null); }}>{t("updates.later")}</button>
+          <UpdateActions info={update} onLater={() => { skipVersion(update.latest); setUpdate(null); }} />
         </div>
       )}
       {lowDisk && (

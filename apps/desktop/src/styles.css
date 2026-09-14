@@ -652,3 +652,10 @@ select {
 /* Recherche des projets sur le PC */
 .scan-table td { vertical-align: middle; }
 .scan-dir { font-size: 12.5px; max-width: 560px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Mise à jour depuis l'application : texte d'étape et jauge (indéterminée tant que la taille est inconnue) */
+.update-progress { display: inline-flex; align-items: center; gap: 10px; min-width: 260px; }
+.update-progress .mini-meter { flex: 0 0 120px; }
+.update-progress .mini-meter > i.is-indeterminate { width: 40% !important; animation: update-slide 1.2s ease-in-out infinite; }
+@keyframes update-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) { .update-progress .mini-meter > i.is-indeterminate { animation: none; width: 100% !important; opacity: 0.5; } }

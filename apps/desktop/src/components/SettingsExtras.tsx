@@ -10,6 +10,7 @@ import { useEngine } from "../engine";
 import { imageUsage } from "../usage";
 import { checkForUpdate, lastCheck, RELEASES_URL, setUpdateCheckEnabled, updateCheckEnabled, type UpdateInfo } from "../updates";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { UpdateActions } from "./UpdateActions";
 import { MiniMeter } from "./ui";
 import { lowDiskThreshold } from "./Notices";
 
@@ -47,8 +48,7 @@ export function UpdatesCard() {
         {info?.available && (
           <>
             <span>{t("updates.available", { version: info.latest, current: info.current })}</span>
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => void openUrl(info.installer ?? info.page)}>{t("updates.download")}</button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => void openUrl(info.page)}>{t("updates.notes")}</button>
+            <UpdateActions info={info} />
           </>
         )}
         {error && <span style={{ color: "var(--bad)" }}>{error}</span>}

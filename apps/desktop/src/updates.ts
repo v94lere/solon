@@ -1,8 +1,10 @@
 // Vérification des nouvelles versions : une requête vers l'API GitHub des releases, au lancement
 // (si l'utilisateur l'accepte, réglable) ou à la demande. Rien n'est envoyé sur l'utilisateur ni sur
 // son installation : la requête ne porte que l'adresse du dépôt. Sans télémétrie, sans mise à jour
-// automatique : on informe, et un bouton ouvre le téléchargement.
+// automatique au sens « à votre insu » : on informe, et « Installer la mise à jour » télécharge l'installateur,
+// vérifie son SHA-256 contre le SHA256SUMS.txt de la version, puis le lance (Windows demande l'élévation).
 import { getVersion } from "@tauri-apps/api/app";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 export const RELEASES_URL = "https://github.com/v94lere/solon/releases";
 const API = "https://api.github.com/repos/v94lere/solon/releases/latest";
@@ -21,6 +23,8 @@ export interface UpdateInfo {
   page: string;
   /** Installateur `.exe` de cette version, s'il est joint à la release. */
   installer: string | null;
+  /** `SHA256SUMS.txt` de la release ; sans lui, pas d'installation depuis l'application. */
+  sums: string | null;
   /** Notes de version (Markdown brut), tronquées. */
   notes: string;
   checkedAt: number;
@@ -110,12 +114,14 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
   }
   const latest = release.tag_name.replace(/^v/i, "");
   const installer = release.assets?.find((a) => /-setup\.exe$/i.test(a.name))?.browser_download_url ?? null;
+  const sums = release.assets?.find((a) => a.name === "SHA256SUMS.txt")?.browser_download_url ?? null;
   const info: UpdateInfo = {
     current,
     latest,
     available: compareVersions(latest, current) > 0,
     page: release.html_url,
     installer,
+    sums,
     notes: (release.body ?? "").slice(0, 2000),
     checkedAt: Date.now(),
   };
@@ -125,4 +131,24 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
     /* stockage indisponible */
   }
   return info;
+}
+
+export type UpdateProgress = { kind: "downloading"; received: number; total: number | null } | { kind: "verifying" };
+
+/** Une version s'installe depuis l'application quand la release joint l'installateur et ses empreintes. */
+export function canInstall(info: UpdateInfo): boolean {
+  return Boolean(info.installer && info.sums);
+}
+
+/** Télécharge l'installateur et vérifie son SHA-256 ; renvoie le chemin du fichier vérifié. */
+export function downloadUpdate(info: UpdateInfo, onProgress: (p: UpdateProgress) => void): Promise<string> {
+  if (!info.installer || !info.sums) return Promise.reject(new Error("installer or checksums missing from the release"));
+  const progress = new Channel<UpdateProgress>();
+  progress.onmessage = onProgress;
+  return invoke<string>("update_download", { version: info.latest, installerUrl: info.installer, sumsUrl: info.sums, progress });
+}
+
+/** Lance l'installateur vérifié ; Solon se ferme et l'installateur le relance une fois terminé. */
+export function installUpdate(path: string): Promise<void> {
+  return invoke<void>("update_install", { path });
 }
