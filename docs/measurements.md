@@ -1379,3 +1379,11 @@ performances réelles hors machine imbriquée, et Windows 10 Famille. La VM d'es
 Publiée le soir même de l'essai Windows Famille : prise en charge de Famille (contrôle d'édition informatif, repli
 9P ignoré) et **CRT Visual C++ liée statiquement** pour le service, le shim `docker` et l'application (plus aucun
 import de `vcruntime140.dll`, vérifié sur les trois exécutables). Taille de l'installateur inchangée à ±0,1 Mo.
+
+## Version 0.1.13 (14 septembre 2026)
+
+Mise à jour depuis l'application (téléchargement, SHA-256, installateur `/S /UPDATE /R`) et vérification du
+fichier Compose avant enregistrement. Le paquet `yaml` ajoute quelques dizaines de Kio au front ; `reqwest`
+était déjà compilé pour Tauri. Installateur : **103.0 Mo**. Téléchargement et contrôle de l'installateur
+0.1.12 (102 Mo) depuis l'application en test automatisé : **4,5 s**. Les six formes d'erreur de
+`docker compose config` relevées dans le moteur sont chacune ramenées à la ligne fautive (test).
