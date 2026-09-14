@@ -30,11 +30,6 @@ const IconCopy = () => (
     <path d="M5 15V6a2 2 0 0 1 2-2h9" />
   </svg>
 );
-const IconExternal = () => (
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" />
-  </svg>
-);
 
 interface Group {
   name: string;
@@ -313,14 +308,15 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
                     </ul>
                     <footer className="project-actions">
                       {addr && running > 0 && (
-                        <button type="button" className="btn btn-primary btn-sm" onClick={() => void openUrl(addr.url)}><IconExternal />{t("projects.open")}</button>
+                        <button type="button" className="btn btn-primary btn-sm" onClick={() => void openUrl(addr.url)}>{t("projects.open")}</button>
                       )}
                       {running > 0 ? (
-                        <button type="button" className="btn btn-sm" disabled={isBusy || !g.dir} onClick={() => void run(g, ["stop"])}><IconStop />{isBusy ? t("compose.running") : t("projects.stop")}</button>
+                        <button type="button" className="btn btn-sm" disabled={isBusy || !g.dir} onClick={() => void run(g, ["stop"])}>{isBusy ? t("compose.running") : t("projects.stop")}</button>
                       ) : (
-                        <button type="button" className="btn btn-primary btn-sm" disabled={isBusy || !g.dir} onClick={() => void run(g, ["up", "-d"])}><IconPlay />{isBusy ? t("compose.running") : t("compose.up")}</button>
+                        <button type="button" className="btn btn-primary btn-sm" disabled={isBusy || !g.dir} onClick={() => void run(g, ["up", "-d"])}>{isBusy ? t("compose.running") : t("compose.up")}</button>
                       )}
-                      {g.dir && <button type="button" className="btn btn-ghost btn-sm" onClick={() => onOpenProject(g.dir as string)}>{t("projects.details")}</button>}
+                      <span className="flex-1" />
+                      {g.dir && <button type="button" className="btn btn-ghost btn-sm project-details" onClick={() => onOpenProject(g.dir as string)}>{t("projects.details")}</button>}
                     </footer>
                   </article>
                 );
@@ -336,9 +332,9 @@ export function ProjectsView({ onOpenProject, onOpenContainer }: { onOpenProject
                   </header>
                   <p className="kbd-hint mono truncate" title={dir}>{dir}</p>
                   <footer className="project-actions">
-                    <button type="button" className="btn btn-primary btn-sm" onClick={() => onOpenProject(dir, true)}><IconPlay />{t("compose.up")}</button>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => onOpenProject(dir)}>{t("projects.details")}</button>
+                    <button type="button" className="btn btn-primary btn-sm" onClick={() => onOpenProject(dir, true)}>{t("compose.up")}</button>
                     <span className="flex-1" />
+                    <button type="button" className="btn btn-ghost btn-sm project-details" onClick={() => onOpenProject(dir)}>{t("projects.details")}</button>
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => { forgetProject(dir); setRecent(loadRecentProjects()); }}>{t("projects.forget")}</button>
                   </footer>
                 </article>

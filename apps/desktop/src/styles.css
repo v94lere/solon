@@ -607,6 +607,7 @@ select {
 .project-service:hover { text-decoration: underline; }
 .project-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
 .project-noaddr { margin: 0; }
+.project-actions .project-details { color: var(--accent-ink); font-weight: 600; }
 
 /* Adresse locale : hôte en évidence, cadenas, copie */
 .addr { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
