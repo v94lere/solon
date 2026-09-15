@@ -9,10 +9,12 @@ import { UpdateActions } from "./UpdateActions";
 import { useEngine } from "../engine";
 import { checkForUpdate, skipVersion, skippedVersion, updateCheckEnabled, type UpdateInfo } from "../updates";
 
-/** Sous ce seuil (5 % du lecteur, au moins 5 Gio), Solon prévient : le disque de données grossit
- *  dans ce lecteur et Windows lui-même se dégrade quand il est plein. */
+/** Sous ce seuil, Solon prévient : le disque de données grossit dans ce lecteur et Windows lui-même se
+ *  dégrade quand il est plein. 5 % du lecteur, borné entre 5 Gio (petit SSD) et 20 Gio : sur un disque
+ *  de 1 To, 46 Gio libres ne sont pas « presque plein ». */
 export function lowDiskThreshold(info: HostDiskInfo): number {
-  return Math.max(5 * 1024 ** 3, Math.floor(info.drive_total_bytes * 0.05));
+  const GiB = 1024 ** 3;
+  return Math.min(20 * GiB, Math.max(5 * GiB, Math.floor(info.drive_total_bytes * 0.05)));
 }
 
 export function Notices({ onOpenSettings }: { onOpenSettings: () => void }) {
