@@ -21,7 +21,7 @@ Un paquet MSIX **s'installe sans élévation**, ce qui a trois conséquences.
 |---|---|---|
 | Service `SolonService` | installé par `setup.ps1`, élevé | déclaré dans le manifeste ; Windows le crée, le démarre et le retire avec le paquet |
 | Composants Windows (Plateforme de machine virtuelle, Hyper-V) | activés à l'installation | **impossible à l'installation** : l'application propose un bouton qui lance `installer\setup-features.ps1` élevé, Windows demande l'autorisation |
-| `docker` dans le terminal | ajouté au PATH machine | alias d'exécution déclaré dans le manifeste, retiré tout seul à la désinstallation |
+| `docker` dans le terminal | ajouté au PATH machine | alias d'exécution déclaré dans le manifeste, retiré tout seul à la désinstallation. Un manifeste n'accepte qu'un alias par application, et une application sans entrée au menu Démarrer est refusée par le Store : il n'y a donc pas d'alias `solon`, seulement `docker`. |
 | Mises à jour | téléchargées et vérifiées par l'application | le Store s'en charge ; l'application détecte qu'elle est empaquetée (`GetCurrentPackageFullName`) et masque ses propres boutons |
 
 Le reste est identique : le moteur, le disque de données dans `%ProgramData%\Solon`, les adresses
@@ -95,6 +95,14 @@ depuis un terminal neuf, le moteur démarre, et sur une machine sans virtualisat
 
 Avant de soumettre, passer le **Windows App Certification Kit** (`appcert.exe`, fourni avec le SDK)
 sur le paquet installé : il signale à l'avance la plupart des motifs de refus.
+
+## Refus rencontrés au téléversement, et leur correction
+
+| Message de Partner Center | Cause | Correction |
+|---|---|---|
+| « application sans périphérique de contrôle… renonciation HeadlessAppBypass » | une seconde `<Application>` portait `AppListEntry="none"` pour exposer `docker` sans l'afficher au menu Démarrer | l'alias d'exécution porte son propre `Executable` : il est déclaré sous l'application principale, et la seconde application supprimée |
+| « The Extension element with Category "windows.appExecutionAlias" must only be declared once » | deux alias déclarés sous la même application | un seul alias, `docker` ; l'alias `solon` est abandonné |
+| « fonctionnalités restreintes nécessitent une approbation » | `runFullTrust`, `packagedServices`, `localSystemServices`, `allowElevation` | avertissement attendu, pas bloquant : la justification est dans les notes de certification (`.local/build/store-listing.md`) |
 
 ## Ce qui peut coincer
 

@@ -70,25 +70,11 @@
         <desktop6:Extension Category="windows.service" Executable="solon-service.exe" EntryPoint="Windows.FullTrustApplication">
           <desktop6:Service Name="SolonService" StartupType="auto" StartAccount="localSystem" Arguments="run" />
         </desktop6:Extension>
-        <!-- `solon` depuis n'importe quel terminal. -->
-        <uap3:Extension Category="windows.appExecutionAlias" Executable="solon.exe" EntryPoint="Windows.FullTrustApplication">
-          <uap3:AppExecutionAlias>
-            <desktop:ExecutionAlias Alias="solon.exe" />
-          </uap3:AppExecutionAlias>
-        </uap3:Extension>
-      </Extensions>
-    </Application>
-
-    <!-- Le CLI Docker de Solon : pas d'entrée dans le menu Démarrer, seulement l'alias `docker`. -->
-    <Application Id="Docker" Executable="bin\docker.exe" EntryPoint="Windows.FullTrustApplication">
-      <uap:VisualElements
-        AppListEntry="none"
-        DisplayName="Solon docker CLI"
-        Description="The docker and docker compose commands, pointed at the Solon engine."
-        BackgroundColor="transparent"
-        Square150x150Logo="Assets\Square150x150Logo.png"
-        Square44x44Logo="Assets\Square44x44Logo.png" />
-      <Extensions>
+        <!-- `docker` et `docker compose` depuis n'importe quel terminal. L'alias porte son propre
+             exécutable, donc pas besoin d'une seconde application pour lui : le Store refuse une
+             application sans entrée au menu Démarrer (« application sans périphérique de contrôle »,
+             qui demande une dérogation). Et le manifeste n'accepte qu'une seule déclaration d'alias
+             par application : `docker` passe avant le confort d'un alias `solon`, qui est abandonné. -->
         <uap3:Extension Category="windows.appExecutionAlias" Executable="bin\docker.exe" EntryPoint="Windows.FullTrustApplication">
           <uap3:AppExecutionAlias>
             <desktop:ExecutionAlias Alias="docker.exe" />
