@@ -33,7 +33,10 @@
     ProcessorArchitecture="x64" />
 
   <Properties>
-    <DisplayName>Solon</DisplayName>
+    <!-- Doit correspondre exactement à un nom réservé dans le Partner Center ; la certification le
+         vérifie. « Solon » étant pris, le nom réservé est « Solon Containers ». Le nom affiché dans
+         Windows (menu Démarrer, barre des tâches, fenêtre) reste « Solon » : voir VisualElements. -->
+    <DisplayName>@DISPLAY_NAME@</DisplayName>
     <PublisherDisplayName>@PUBLISHER_DISPLAY@</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
     <Description>Docker on Windows without Docker Desktop or WSL: a standalone container manager with its own tiny Linux machine.</Description>

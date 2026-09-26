@@ -225,7 +225,50 @@ const en = {
       ],
     },
   },
-  footer: { made: "Made in Luxembourg. No telemetry; the only outgoing request is an optional check for new versions, which you can turn off.", licence: "Apache 2.0", source: "Source code", issues: "Report a problem", security: "Security" },
+  privacy: {
+    kicker: "Privacy",
+    title: "Solon collects nothing",
+    lead: "No account, no telemetry, no analytics, no crash reporting. This page says exactly what leaves your PC, which is almost nothing, and where the rest is kept.",
+    updated: "Last updated 26 September 2026.",
+    sections: [
+      {
+        title: "What Solon sends",
+        body: [
+          "The Solon background service makes no outgoing network request of any kind. Not one.",
+          "The desktop application makes exactly one, and only while you leave it enabled: it asks github.com whether a newer version of Solon has been published. That request carries no identifier, nothing about you and nothing about your machine — it is the same request your browser makes by opening the releases page. Turn it off in Settings → Updates and Solon stops asking.",
+          "If you press Install update, the application then downloads that release's installer from github.com and checks its SHA-256 against the checksums published beside it. Nothing is sent in the other direction.",
+        ],
+      },
+      {
+        title: "What Solon keeps, and where",
+        body: [
+          "Everything stays on your PC, under C:\\ProgramData\\Solon: the engine's data disk holding your images, containers and volumes; your settings; the local certificate authority used for the https://….solon.local addresses; and log files.",
+          "The log files record what the engine does, including the paths of the Windows folders you share with containers. They never contain credentials, environment variable values, or anything from inside your containers.",
+          "Uninstalling Solon leaves that folder in place unless you ask for it to be removed, and even then it is moved aside rather than deleted.",
+        ],
+      },
+      {
+        title: "The diagnostic export",
+        body: [
+          "Settings → Diagnostic writes a zip file on your disk: logs, engine state, your settings, the system prerequisites and docker info. It is created only when you press the button, it is never sent anywhere automatically, and you decide whether to attach it to a bug report.",
+        ],
+      },
+      {
+        title: "Your containers",
+        body: [
+          "Containers reach the internet as they would under any container engine: pulling images from the registries you name, and whatever the images themselves do. That traffic is governed by what you run, not by Solon, and Solon neither inspects nor records it.",
+        ],
+      },
+      {
+        title: "No account, no third parties",
+        body: [
+          "Solon has no sign-in, no licence server and no paid tier. No advertising identifier, no analytics library, no third-party service embedded in the application.",
+        ],
+      },
+    ],
+    questions: "Questions about any of this? Open an issue and ask.",
+  },
+  footer: { made: "Made in Luxembourg. No telemetry; the only outgoing request is an optional check for new versions, which you can turn off.", licence: "Apache 2.0", source: "Source code", issues: "Report a problem", security: "Security", privacy: "Privacy" },
 };
 
 const fr: typeof en = {
@@ -448,13 +491,60 @@ const fr: typeof en = {
       ],
     },
   },
-  footer: { made: "Fait au Luxembourg. Aucune télémétrie ; la seule requête sortante est une vérification facultative des nouvelles versions, désactivable.", licence: "Apache 2.0", source: "Code source", issues: "Signaler un problème", security: "Sécurité" },
+  privacy: {
+    kicker: "Confidentialité",
+    title: "Solon ne collecte rien",
+    lead: "Aucun compte, aucune télémétrie, aucune statistique d'usage, aucun rapport d'incident. Cette page dit exactement ce qui sort de votre PC, c'est-à-dire presque rien, et où le reste est conservé.",
+    updated: "Mise à jour le 26 septembre 2026.",
+    sections: [
+      {
+        title: "Ce que Solon envoie",
+        body: [
+          "Le service Solon en arrière-plan ne fait aucune requête réseau sortante. Aucune.",
+          "L'application de bureau en fait exactement une, et seulement tant que vous la laissez activée : elle demande à github.com si une version plus récente de Solon existe. Cette requête ne porte aucun identifiant, rien sur vous et rien sur votre machine — c'est la même que celle de votre navigateur ouvrant la page des versions. Décochez-la dans Réglages → Mises à jour et Solon ne demande plus rien.",
+          "Si vous cliquez sur « Installer la mise à jour », l'application télécharge alors l'installateur de cette version depuis github.com et vérifie son empreinte SHA-256 avec les empreintes publiées à côté. Rien ne part dans l'autre sens.",
+        ],
+      },
+      {
+        title: "Ce que Solon conserve, et où",
+        body: [
+          "Tout reste sur votre PC, sous C:\\ProgramData\\Solon : le disque de données du moteur avec vos images, conteneurs et volumes ; vos réglages ; l'autorité de certification locale qui sert aux adresses https://….solon.local ; et les fichiers journaux.",
+          "Les journaux enregistrent ce que fait le moteur, y compris les chemins des dossiers Windows que vous partagez avec vos conteneurs. Ils ne contiennent jamais d'identifiants, ni les valeurs de vos variables d'environnement, ni quoi que ce soit venant de l'intérieur de vos conteneurs.",
+          "La désinstallation laisse ce dossier en place, sauf demande explicite, et même alors il est déplacé plutôt que supprimé.",
+        ],
+      },
+      {
+        title: "L'export de diagnostic",
+        body: [
+          "Réglages → Diagnostic écrit un fichier zip sur votre disque : journaux, état du moteur, vos réglages, les prérequis système et docker info. Il n'est créé que si vous appuyez sur le bouton, n'est jamais envoyé automatiquement, et c'est vous qui décidez de le joindre ou non à un rapport de bogue.",
+        ],
+      },
+      {
+        title: "Vos conteneurs",
+        body: [
+          "Les conteneurs accèdent à Internet comme sous n'importe quel moteur de conteneurs : téléchargement des images depuis les registres que vous indiquez, et ce que les images font d'elles-mêmes. Ce trafic dépend de ce que vous lancez, pas de Solon, qui ne l'inspecte ni ne l'enregistre.",
+        ],
+      },
+      {
+        title: "Aucun compte, aucun tiers",
+        body: [
+          "Solon n'a ni connexion, ni serveur de licences, ni offre payante. Aucun identifiant publicitaire, aucune bibliothèque de statistiques, aucun service tiers embarqué dans l'application.",
+        ],
+      },
+    ],
+    questions: "Une question là-dessus ? Ouvrez une issue et demandez.",
+  },
+  footer: { made: "Fait au Luxembourg. Aucune télémétrie ; la seule requête sortante est une vérification facultative des nouvelles versions, désactivable.", licence: "Apache 2.0", source: "Code source", issues: "Signaler un problème", security: "Sécurité", privacy: "Confidentialité" },
 };
 
 export const dict: Record<Lang, typeof en> = { en, fr };
 
 /** Page « Dépannage » : `troubleshooting/` en anglais, `depannage/` en français. */
 export const HELP_PATH: Record<Lang, string> = { en: "troubleshooting/", fr: "depannage/" };
+
+/** Page « Confidentialité » : `privacy/` en anglais, `confidentialite/` en français. Exigée par le
+ *  Microsoft Store, qui demande une adresse publique même quand l'application ne collecte rien. */
+export const PRIVACY_PATH: Record<Lang, string> = { en: "privacy/", fr: "confidentialite/" };
 
 /** Préfixe des liens internes pour une langue (l'anglais est à la racine). */
 export function langPath(lang: Lang, path = ""): string {

@@ -1,0 +1,39 @@
+---
+// Page « Confidentialité ». Le Microsoft Store exige une adresse publique même pour une application
+// qui ne collecte rien : autant en profiter pour dire précisément ce qui sort du PC et ce qui reste.
+import { dict, REPO, type Lang } from "../i18n";
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = dict[lang].privacy;
+---
+<section class="section help">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">{t.kicker}</span>
+      <h1>{t.title}</h1>
+      <p class="lead">{t.lead}</p>
+    </div>
+
+    <div class="privacy-body">
+      {t.sections.map((s) => (
+        <article class="privacy-block">
+          <h2>{s.title}</h2>
+          {s.body.map((p) => <p>{p}</p>)}
+        </article>
+      ))}
+      <p class="privacy-foot">
+        {t.questions} <a href={`${REPO}/issues`} rel="noopener">{REPO.replace("https://", "")}/issues</a>
+      </p>
+      <p class="privacy-foot">{t.updated}</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .privacy-body { max-width: 68ch; margin: 0 auto; }
+  .privacy-block { margin-top: 32px; }
+  .privacy-block h2 { font-size: 20px; margin: 0 0 8px; }
+  .privacy-block p { margin: 0 0 10px; color: var(--ink-2); }
+  .privacy-foot { margin-top: 28px; color: var(--ink-3); font-size: 14px; }
+</style>

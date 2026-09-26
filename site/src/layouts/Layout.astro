@@ -1,7 +1,7 @@
 ---
 // Gabarit commun : en-tête avec navigation et bascule de langue, pied de page.
 import "../styles/global.css";
-import { dict, langPath, HELP_PATH, REPO, LATEST, type Lang } from "../i18n";
+import { dict, langPath, HELP_PATH, PRIVACY_PATH, REPO, LATEST, type Lang } from "../i18n";
 import { latestInstaller } from "../releases";
 
 interface Props {
@@ -81,6 +81,7 @@ const downloadUrl = (await latestInstaller())?.url ?? LATEST;
           <a href={REPO} rel="noopener">{t.footer.source}</a>
           <a href={`${REPO}/issues`} rel="noopener">{t.footer.issues}</a>
           <a href={`${REPO}/blob/main/SECURITY.md`} rel="noopener">{t.footer.security}</a>
+          <a href={`${base}${langPath(lang, PRIVACY_PATH[lang])}`}>{t.footer.privacy}</a>
         </span>
       </div>
     </footer>

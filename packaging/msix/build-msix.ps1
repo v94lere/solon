@@ -15,6 +15,9 @@ param(
     [string]$IdentityName = "ValereNeveux.Solon",
     [string]$Publisher = "CN=Valere Neveux",
     [string]$PublisherDisplayName = "Valère Neveux",
+    # Nom réservé au Partner Center. La certification exige qu'il corresponde ; le nom affiché dans
+    # Windows reste « Solon », il vient du manifeste et ne change pas.
+    [string]$DisplayName = "Solon",
     [switch]$Store,
     [string]$Out
 )
@@ -96,9 +99,9 @@ foreach ($n in @("Square44x44Logo.png", "Square150x150Logo.png", "Square310x310L
 }
 
 # --- Manifeste.
-Step "manifeste : $IdentityName $Version, éditeur $Publisher"
+Step "manifeste : $IdentityName $Version, éditeur $Publisher, fiche « $DisplayName »"
 $manifest = Get-Content (Join-Path $msixDir "AppxManifest.xml") -Raw -Encoding UTF8
-$manifest = $manifest.Replace("@IDENTITY_NAME@", $IdentityName).Replace("@PUBLISHER@", $Publisher).Replace("@VERSION@", $Version).Replace("@PUBLISHER_DISPLAY@", $PublisherDisplayName)
+$manifest = $manifest.Replace("@IDENTITY_NAME@", $IdentityName).Replace("@PUBLISHER@", $Publisher).Replace("@VERSION@", $Version).Replace("@PUBLISHER_DISPLAY@", $PublisherDisplayName).Replace("@DISPLAY_NAME@", $DisplayName)
 [IO.File]::WriteAllText((Join-Path $layout "AppxManifest.xml"), $manifest, (New-Object Text.UTF8Encoding($false)))
 
 # --- Index des ressources (resources.pri), exigé par la certification du Store.
