@@ -60,6 +60,55 @@ fn targets_engine_explicitly(args: &[OsString]) -> bool {
     false
 }
 
+/// Vrai si le chemin désigne un dossier de plugins installé par Solon.
+fn is_solon_plugin_dir(path: &std::path::Path) -> bool {
+    let Some(bin_dir) = path.parent() else {
+        return false;
+    };
+    let Some(install_dir) = bin_dir.parent() else {
+        return false;
+    };
+    let Some(install_name) = install_dir.file_name() else {
+        return false;
+    };
+    let install_name = install_name.to_string_lossy();
+    let is_solon_install = install_name.eq_ignore_ascii_case("solon")
+        || install_name
+            .split('_')
+            .next()
+            .is_some_and(|identity| identity.to_ascii_lowercase().ends_with(".solon"));
+
+    path.file_name()
+        .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case("cli-plugins"))
+        && bin_dir
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case("bin"))
+        && is_solon_install
+}
+
+/// Retire les anciennes installations Solon invalides et garantit la présence du dossier courant.
+fn update_plugin_dir_list(list: &mut Vec<serde_json::Value>, plugins_dir: &std::path::Path) {
+    let wanted = plugins_dir.to_string_lossy().into_owned();
+
+    list.retain(|entry| {
+        entry.as_str().is_none_or(|dir| {
+            if dir.eq_ignore_ascii_case(&wanted) {
+                return true;
+            }
+            let path = std::path::Path::new(dir);
+            !is_solon_plugin_dir(path) || path.join("docker-compose.exe").is_file()
+        })
+    });
+
+    if !list.iter().any(|entry| {
+        entry
+            .as_str()
+            .is_some_and(|dir| dir.eq_ignore_ascii_case(&wanted))
+    }) {
+        list.push(serde_json::Value::String(wanted));
+    }
+}
+
 /// Ajoute `plugins_dir` à `cliPluginsExtraDirs` du `config.json` du CLI Docker s'il n'y est pas.
 /// Sans bruit en cas d'échec : `docker compose` sera alors simplement introuvable.
 fn ensure_plugin_dir(plugins_dir: &std::path::Path) {
@@ -72,7 +121,6 @@ fn ensure_plugin_dir(plugins_dir: &std::path::Path) {
         return;
     };
     let path = config_dir.join("config.json");
-    let wanted = plugins_dir.to_string_lossy().into_owned();
     let mut root: serde_json::Value = std::fs::read_to_string(&path)
         .ok()
         .and_then(|t| serde_json::from_str(&t).ok())
@@ -89,13 +137,7 @@ fn ensure_plugin_dir(plugins_dir: &std::path::Path) {
         return;
     }
     let list = dirs.as_array_mut().unwrap();
-    if list
-        .iter()
-        .any(|d| d.as_str().is_some_and(|s| s.eq_ignore_ascii_case(&wanted)))
-    {
-        return;
-    }
-    list.push(serde_json::Value::String(wanted));
+    update_plugin_dir_list(list, plugins_dir);
     if std::fs::create_dir_all(&config_dir).is_err() {
         return;
     }
@@ -155,6 +197,61 @@ mod tests {
 
     fn v(items: &[&str]) -> Vec<OsString> {
         items.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn removes_only_stale_solon_plugin_dirs() {
+        let temp = std::env::temp_dir().join(format!("solon-docker-shim-{}", std::process::id()));
+        let current = temp
+            .join("ValereNeveux.Solon_0.1.14.0_x64__publisher")
+            .join("bin")
+            .join("cli-plugins");
+        let stale = temp
+            .join("ValereNeveux.Solon_0.1.12.0_x64__publisher")
+            .join("bin")
+            .join("cli-plugins");
+        let live = temp
+            .join("ValereNeveux.Solon_0.1.13.0_x64__publisher")
+            .join("bin")
+            .join("cli-plugins");
+        let other = temp
+            .join("SolonHelper_1.0.0")
+            .join("bin")
+            .join("cli-plugins");
+
+        std::fs::create_dir_all(&live).unwrap();
+        std::fs::write(live.join("docker-compose.exe"), b"").unwrap();
+
+        let mut list = vec![
+            serde_json::Value::String(stale.to_string_lossy().into_owned()),
+            serde_json::Value::String(live.to_string_lossy().into_owned()),
+            serde_json::Value::String(other.to_string_lossy().into_owned()),
+        ];
+
+        update_plugin_dir_list(&mut list, &current);
+
+        assert!(!list.iter().any(|entry| {
+            entry
+                .as_str()
+                .is_some_and(|dir| dir.eq_ignore_ascii_case(&stale.to_string_lossy()))
+        }));
+        assert!(list.iter().any(|entry| {
+            entry
+                .as_str()
+                .is_some_and(|dir| dir.eq_ignore_ascii_case(&live.to_string_lossy()))
+        }));
+        assert!(list.iter().any(|entry| {
+            entry
+                .as_str()
+                .is_some_and(|dir| dir.eq_ignore_ascii_case(&other.to_string_lossy()))
+        }));
+        assert!(list.iter().any(|entry| {
+            entry
+                .as_str()
+                .is_some_and(|dir| dir.eq_ignore_ascii_case(&current.to_string_lossy()))
+        }));
+
+        let _ = std::fs::remove_dir_all(temp);
     }
 
     #[test]
