@@ -759,7 +759,7 @@
     "clear": "Effacer",
     "held": "En pause — {{count}} appels retenus",
     "empty": "Rien d'observé pour l'instant",
-    "empty_hint": "Dès qu'un service en appelle un autre, l'appel apparaît ici.",
+    "empty_hint": "Dès qu'un service en appelle un autre, ou que vous ouvrez une page .solon.local, cela apparaît ici.",
     "waiting": "En attente du moteur",
     "inactive": "Radiographie inactive : {{detail}}",
     "too_many": "{{count}} extrémités — trop pour une carte lisible. Choisissez un projet.",
@@ -771,6 +771,11 @@
       "established": "connecté",
       "failed": "refusé",
       "closed": "fermé"
-    }
+    },
+    "browser": "Navigateur",
+    "request": "Requête",
+    "response": "Réponse",
+    "show_headers": "voir les en-têtes",
+    "hide_headers": "masquer les en-têtes"
   }
 }

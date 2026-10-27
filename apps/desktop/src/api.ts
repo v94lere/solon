@@ -156,8 +156,31 @@ export interface TraceConnection {
   duration_ms?: number | null;
 }
 
-/** Un fait observé par les sondes du noyau (voir `solon_core::protocol::TraceEvent`). */
-export type TraceEvent = { kind: "status"; active: boolean; detail: string } | TraceConnection;
+export interface TraceHeader { name: string; value: string }
+
+/** Un échange HTTP complet, vu par le mandataire des domaines locaux — en clair même en HTTPS,
+ *  puisque c'est lui qui termine le TLS. Les valeurs sensibles sont déjà masquées à la capture. */
+export interface TraceHttp {
+  kind: "http";
+  ts_ms: number;
+  scheme: string;
+  host: string;
+  method: string;
+  path: string;
+  status: number;
+  duration_ms: number;
+  dst: TracePeer;
+  request_headers: TraceHeader[];
+  response_headers: TraceHeader[];
+  request_bytes: number;
+  response_bytes: number;
+}
+
+/** Un fait observé par la radiographie (voir `solon_core::protocol::TraceEvent`). */
+export type TraceEvent =
+  | { kind: "status"; active: boolean; detail: string }
+  | TraceConnection
+  | TraceHttp;
 
 export const trace = {
   /** Historique gardé par le service, puis le flux. Connexion dédiée, séparée des événements du moteur. */

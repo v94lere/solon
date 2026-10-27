@@ -507,8 +507,11 @@ impl Engine {
                 self.set(|s| s.local_domains = true);
                 let domains = self.inner.domains.clone();
                 let sleeper = self.inner.sleeper.clone();
+                let trace = self.inner.trace.clone();
                 tasks.push(tokio::spawn(async move {
-                    if let Err(e) = crate::domains::serve_proxy(listener, domains, sleeper).await {
+                    if let Err(e) =
+                        crate::domains::serve_proxy(listener, domains, sleeper, trace).await
+                    {
                         tracing::warn!("mandataire des domaines locaux arrêté : {e}");
                     }
                 }));
@@ -529,9 +532,11 @@ impl Engine {
                     self.set(|s| s.local_domains_tls = true);
                     let domains = self.inner.domains.clone();
                     let sleeper = self.inner.sleeper.clone();
+                    let trace = self.inner.trace.clone();
                     tasks.push(tokio::spawn(async move {
                         if let Err(e) =
-                            crate::domains::serve_tls_proxy(listener, domains, ca, sleeper).await
+                            crate::domains::serve_tls_proxy(listener, domains, ca, sleeper, trace)
+                                .await
                         {
                             tracing::warn!("mandataire HTTPS arrêté : {e}");
                         }

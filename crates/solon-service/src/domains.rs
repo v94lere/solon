@@ -19,7 +19,7 @@ use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use solon_core::protocol::ContainerEndpoint;
+use solon_core::protocol::{ContainerEndpoint, TraceHeader, TraceHttp, TracePeer};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
@@ -38,11 +38,17 @@ const PREFERRED_PORTS: &[u16] = &[
     80, 8080, 3000, 8000, 8069, 5000, 4200, 5173, 8888, 9000, 443,
 ];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Target {
     pub ip: Ipv4Addr,
     pub port: u16,
+    /// Le conteneur derrière ce domaine. Porté ici pour que le mandataire puisse nommer
+    /// l'extrémité d'un échange sans avoir à interroger le moteur à chaque requête.
+    pub peer: TracePeer,
 }
+
+/// Séparateur de lignes HTTP.
+const SEP: &str = "\r\n";
 
 /// Nom de domaine → cible dans le réseau des conteneurs.
 pub type DomainMap = BTreeMap<String, Target>;
@@ -89,15 +95,24 @@ pub fn domains_for(endpoints: &[ContainerEndpoint]) -> DomainMap {
         let target = Target {
             ip,
             port: pick_port(e),
+            peer: TracePeer {
+                ip: e.ip.clone(),
+                container_id: Some(e.id.chars().take(12).collect()),
+                name: Some(e.name.clone()),
+                project: e.compose_project.clone(),
+                service: e.compose_service.clone(),
+            },
         };
         let name = sanitize(&e.name);
         if !name.is_empty() {
-            map.entry(format!("{name}.{SUFFIX}")).or_insert(target);
+            map.entry(format!("{name}.{SUFFIX}"))
+                .or_insert_with(|| target.clone());
         }
         if let (Some(project), Some(service)) = (&e.compose_project, &e.compose_service) {
             let (p, s) = (sanitize(project), sanitize(service));
             if !p.is_empty() && !s.is_empty() {
-                map.entry(format!("{s}.{p}.{SUFFIX}")).or_insert(target);
+                map.entry(format!("{s}.{p}.{SUFFIX}"))
+                    .or_insert_with(|| target.clone());
             }
         }
     }
@@ -385,13 +400,15 @@ pub async fn serve_proxy(
     listener: TcpListener,
     domains: SharedDomains,
     sleeper: Arc<crate::sleep::Sleeper>,
+    trace: Arc<crate::trace::TraceHub>,
 ) -> io::Result<()> {
     loop {
         let (client, _) = listener.accept().await?;
         let domains = domains.clone();
         let sleeper = sleeper.clone();
+        let trace = trace.clone();
         tokio::spawn(async move {
-            if let Err(e) = handle(client, domains, sleeper, "http").await {
+            if let Err(e) = handle(client, domains, sleeper, trace, "http").await {
                 tracing::debug!("domaine local : {e}");
             }
         });
@@ -405,6 +422,7 @@ pub async fn serve_tls_proxy(
     domains: SharedDomains,
     ca: Arc<LocalCa>,
     sleeper: Arc<crate::sleep::Sleeper>,
+    trace: Arc<crate::trace::TraceHub>,
 ) -> io::Result<()> {
     let config = rustls::ServerConfig::builder()
         .with_no_client_auth()
@@ -415,10 +433,11 @@ pub async fn serve_tls_proxy(
         let domains = domains.clone();
         let acceptor = acceptor.clone();
         let sleeper = sleeper.clone();
+        let trace = trace.clone();
         tokio::spawn(async move {
             match acceptor.accept(client).await {
                 Ok(tls) => {
-                    if let Err(e) = handle(tls, domains, sleeper, "https").await {
+                    if let Err(e) = handle(tls, domains, sleeper, trace, "https").await {
                         tracing::debug!("domaine local (https) : {e}");
                     }
                 }
@@ -590,11 +609,13 @@ async fn read_line<R: tokio::io::AsyncRead + Unpin>(
 
 /// Relaie un corps `Transfer-Encoding: chunked` : chaque morceau (taille en hexadécimal, données,
 /// `\r\n`), puis le morceau vide et les éventuels en-têtes de fin.
-async fn forward_chunked<R, W>(r: &mut R, w: &mut W, buf: &mut Vec<u8>) -> io::Result<()>
+/// Renvoie le nombre d'octets de contenu relayés, hors enrobage des morceaux.
+async fn forward_chunked<R, W>(r: &mut R, w: &mut W, buf: &mut Vec<u8>) -> io::Result<u64>
 where
     R: tokio::io::AsyncRead + Unpin,
     W: tokio::io::AsyncWrite + Unpin,
 {
+    let mut total = 0u64;
     loop {
         let line = read_line(r, buf).await?;
         let size_text = String::from_utf8_lossy(&line);
@@ -609,18 +630,119 @@ where
                 w.write_all(&trailer).await?;
                 w.write_all(b"\r\n").await?;
                 if trailer.is_empty() {
-                    return Ok(());
+                    return Ok(total);
                 }
             }
         }
         forward_exact(r, w, buf, size + 2).await?;
+        total += size;
     }
+}
+
+/// Ce que le mandataire retient d'une requête en attendant sa réponse.
+///
+/// HTTP/1.1 sert les réponses dans l'ordre des requêtes : une simple file suffit à les apparier,
+/// sans identifiant à transporter.
+struct Pending {
+    ts_ms: u64,
+    started: std::time::Instant,
+    method: String,
+    path: String,
+    headers: Vec<TraceHeader>,
+    /// Corps annoncé par `Content-Length`. Zéro quand l'envoi est par morceaux : la requête part
+    /// dans la file avant d'être relayée, pour ne jamais retarder la réponse.
+    request_bytes: u64,
+}
+
+/// Découpe un en-tête en lignes, la première à part.
+fn head_lines(head: &[u8]) -> (String, Vec<(String, String)>) {
+    let text = String::from_utf8_lossy(head);
+    let mut lines = text.split(SEP);
+    let first = lines.next().unwrap_or("").to_owned();
+    let fields = lines
+        .filter(|l| !l.is_empty())
+        .filter_map(|l| l.split_once(':'))
+        .map(|(k, v)| (k.trim().to_owned(), v.trim().to_owned()))
+        .collect();
+    (first, fields)
+}
+
+/// Méthode, chemin et en-têtes d'une requête, masqués.
+fn parse_request_head(head: &[u8]) -> (String, String, Vec<TraceHeader>) {
+    let (line, fields) = head_lines(head);
+    let mut parts = line.split_whitespace();
+    let method = parts.next().unwrap_or("").to_owned();
+    let path = solon_core::mask::path(parts.next().unwrap_or(""));
+    let headers = fields
+        .iter()
+        .map(|(k, v)| TraceHeader::masked(k, v))
+        .collect();
+    (method, path, headers)
+}
+
+/// Nature du corps d'une réponse. Les règles ne sont pas celles d'une requête : plusieurs codes
+/// n'ont jamais de corps, une réponse à `HEAD` non plus malgré son `Content-Length`, et faute
+/// d'indication le corps court jusqu'à la fermeture.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RespBody {
+    None,
+    Length(u64),
+    Chunked,
+    /// `101` : la connexion devient un tunnel (WebSocket).
+    Upgrade,
+    UntilClose,
+}
+
+/// Code, en-têtes masqués et nature du corps d'une réponse.
+fn parse_response_head(head: &[u8], method: &str) -> (u16, Vec<TraceHeader>, RespBody) {
+    let (line, fields) = head_lines(head);
+    let status = line
+        .split_whitespace()
+        .nth(1)
+        .and_then(|c| c.parse().ok())
+        .unwrap_or(0);
+    let find = |name: &str| {
+        fields
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case(name))
+            .map(|(_, v)| v.as_str())
+    };
+    let body = if status == 101 {
+        RespBody::Upgrade
+    } else if method.eq_ignore_ascii_case("HEAD")
+        || status == 204
+        || status == 304
+        || (100..200).contains(&status)
+    {
+        RespBody::None
+    } else if find("transfer-encoding").is_some_and(|v| v.to_ascii_lowercase().contains("chunked"))
+    {
+        RespBody::Chunked
+    } else {
+        match find("content-length").and_then(|v| v.trim().parse().ok()) {
+            Some(n) => RespBody::Length(n),
+            None => RespBody::UntilClose,
+        }
+    };
+    let headers = fields
+        .iter()
+        .map(|(k, v)| TraceHeader::masked(k, v))
+        .collect();
+    (status, headers, body)
+}
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
 }
 
 async fn handle<S>(
     client: S,
     domains: SharedDomains,
     sleeper: Arc<crate::sleep::Sleeper>,
+    trace: Arc<crate::trace::TraceHub>,
     scheme: &'static str,
 ) -> io::Result<()>
 where
@@ -641,7 +763,7 @@ where
         })
         .unwrap_or_default();
     let host = host.split(':').next().unwrap_or("").to_owned();
-    let target = domains.read().await.get(&host).copied();
+    let target = domains.read().await.get(&host).cloned();
     let Some(target) = target else {
         let list = domains.read().await;
         let body = not_found_page(&host, &list);
@@ -676,18 +798,92 @@ where
             return Ok(());
         }
     };
-    // Réponses : copie brute du conteneur vers le client, en parallèle des requêtes.
+    // Réponses : lues en-tête par en-tête, puis relayées, en parallèle des requêtes. C'était une
+    // copie brute avant la radiographie ; il faut maintenant savoir ce qui a répondu, donc
+    // délimiter chaque réponse. Le corps, lui, n'est jamais gardé — seulement compté.
     let (mut upstream_rx, mut upstream) = upstream.into_split();
+    let (pending_tx, mut pending_rx) = tokio::sync::mpsc::unbounded_channel::<Pending>();
+    let trace_dst = target.peer.clone();
+    let trace_host = host.clone();
     let pump = tokio::spawn(async move {
-        let _ = tokio::io::copy(&mut upstream_rx, &mut client).await;
+        let mut buf = Vec::with_capacity(8192);
+        loop {
+            let head_end = match read_head(&mut upstream_rx, &mut buf).await {
+                Ok(Some(n)) => n,
+                _ => break,
+            };
+            // La requête est mise en file avant d'être relayée : elle est donc déjà là quand sa
+            // réponse arrive, et `try_recv` n'attend jamais.
+            let pending = pending_rx.try_recv().ok();
+            let method = pending.as_ref().map_or("GET", |p| p.method.as_str());
+            let (status, response_headers, body) = parse_response_head(&buf[..head_end], method);
+            let elapsed = pending
+                .as_ref()
+                .map_or(0, |p| p.started.elapsed().as_millis() as u64);
+            if client.write_all(&buf[..head_end]).await.is_err() {
+                break;
+            }
+            buf.drain(..head_end);
+            let relayed = match body {
+                RespBody::None => Ok(0),
+                RespBody::Length(n) => forward_exact(&mut upstream_rx, &mut client, &mut buf, n)
+                    .await
+                    .map(|()| n),
+                RespBody::Chunked => forward_chunked(&mut upstream_rx, &mut client, &mut buf).await,
+                RespBody::Upgrade | RespBody::UntilClose => {
+                    let head = std::mem::take(&mut buf);
+                    match client.write_all(&head).await {
+                        Ok(()) => tokio::io::copy(&mut upstream_rx, &mut client).await,
+                        Err(e) => Err(e),
+                    }
+                }
+            };
+            let done = !matches!(
+                body,
+                RespBody::Length(_) | RespBody::Chunked | RespBody::None
+            );
+            if let Some(p) = pending {
+                trace.push(solon_core::protocol::TraceEvent::Http(Box::new(
+                    TraceHttp {
+                        ts_ms: p.ts_ms,
+                        scheme: scheme.to_owned(),
+                        host: trace_host.clone(),
+                        method: p.method,
+                        path: p.path,
+                        status,
+                        duration_ms: elapsed,
+                        dst: trace_dst.clone(),
+                        request_headers: p.headers,
+                        response_headers,
+                        request_bytes: p.request_bytes,
+                        response_bytes: relayed.as_ref().copied().unwrap_or(0),
+                    },
+                )));
+            }
+            if done || relayed.is_err() {
+                break;
+            }
+        }
         let _ = client.shutdown().await;
     });
     // Requêtes : chaque en-tête est réécrit (en-têtes `X-Forwarded-*`), le corps relayé tel quel ;
     // la connexion peut porter plusieurs requêtes (keep-alive) ou devenir un tunnel (WebSocket).
     let result: io::Result<()> = async {
         loop {
+            let (method, path, headers) = parse_request_head(&buf[..head_end]);
             let (head, body) = rewrite_head(&buf[..head_end], scheme);
             buf.drain(..head_end);
+            let _ = pending_tx.send(Pending {
+                ts_ms: now_ms(),
+                started: std::time::Instant::now(),
+                method,
+                path,
+                headers,
+                request_bytes: match body {
+                    Body::Length(n) => n,
+                    _ => 0,
+                },
+            });
             upstream.write_all(&head).await?;
             match body {
                 Body::Upgrade => {
@@ -699,7 +895,9 @@ where
                 Body::Length(n) => {
                     forward_exact(&mut client_rx, &mut upstream, &mut buf, n).await?
                 }
-                Body::Chunked => forward_chunked(&mut client_rx, &mut upstream, &mut buf).await?,
+                Body::Chunked => {
+                    forward_chunked(&mut client_rx, &mut upstream, &mut buf).await?;
+                }
             }
             match read_head(&mut client_rx, &mut buf).await? {
                 Some(n) => head_end = n,
@@ -779,12 +977,71 @@ mod tests {
             m["web.solon.local"],
             Target {
                 ip: "10.90.0.2".parse().unwrap(),
-                port: 8080
+                port: 8080,
+                peer: m["web.solon.local"].peer.clone(),
             }
         );
         assert_eq!(m["odoo.odoo18.solon.local"].port, 8069);
         assert_eq!(m["api.solon.local"].port, 3000);
         assert!(!m.contains_key("nada.solon.local"));
+    }
+
+    /// Une réponse à `HEAD` annonce la taille du corps qu'aurait un `GET`, sans l'envoyer. La
+    /// lire comme un corps bloquerait la connexion jusqu'au délai d'attente.
+    #[test]
+    fn head_n_a_pas_de_corps_malgre_sa_taille() {
+        let head = b"HTTP/1.1 200 OK\r\nContent-Length: 4096\r\n\r\n";
+        let (status, _, body) = parse_response_head(head, "HEAD");
+        assert_eq!(status, 200);
+        assert_eq!(body, RespBody::None);
+        // La même réponse à un GET, elle, porte bien 4096 octets.
+        assert_eq!(parse_response_head(head, "GET").2, RespBody::Length(4096));
+    }
+
+    #[test]
+    fn codes_sans_corps() {
+        for code in ["204 No Content", "304 Not Modified", "100 Continue"] {
+            let head = format!("HTTP/1.1 {code}\r\n\r\n");
+            let head = head.as_bytes();
+            assert_eq!(parse_response_head(head, "GET").2, RespBody::None, "{code}");
+        }
+    }
+
+    #[test]
+    fn bascule_en_tunnel_sur_101() {
+        let head = b"HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n\r\n";
+        let (status, _, body) = parse_response_head(head, "GET");
+        assert_eq!(status, 101);
+        assert_eq!(body, RespBody::Upgrade);
+    }
+
+    #[test]
+    fn corps_par_morceaux_et_corps_jusqu_a_la_fermeture() {
+        let chunked = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n";
+        assert_eq!(parse_response_head(chunked, "GET").2, RespBody::Chunked);
+        // Sans indication de taille, le corps court jusqu'à ce que le serveur ferme.
+        let muet = b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n";
+        assert_eq!(parse_response_head(muet, "GET").2, RespBody::UntilClose);
+    }
+
+    /// Le masquage a lieu à la capture : ce qui n'est pas capturé ne peut pas fuir ensuite.
+    #[test]
+    fn la_capture_masque_deja_ce_qui_est_sensible() {
+        let head = b"GET /reset?token=abcdef&user=marc HTTP/1.1\r\nHost: blog.solon.local\r\nCookie: session=zzz\r\nAccept: text/html\r\n\r\n";
+        let (method, path, headers) = parse_request_head(head);
+        assert_eq!(method, "GET");
+        assert_eq!(path, "/reset?token=\u{2022}\u{2022}\u{2022}&user=marc");
+        let cookie = headers.iter().find(|h| h.name == "Cookie").unwrap();
+        assert_eq!(cookie.value, solon_core::mask::REDACTED);
+        // Un en-tête anodin reste lisible : c'est tout l'intérêt de l'écran.
+        let accept = headers.iter().find(|h| h.name == "Accept").unwrap();
+        assert_eq!(accept.value, "text/html");
+    }
+
+    #[test]
+    fn en_tete_de_reponse_sans_code_lisible() {
+        let (status, _, _) = parse_response_head(b"garbage\r\n\r\n", "GET");
+        assert_eq!(status, 0, "code illisible plutôt que panique");
     }
 
     #[test]

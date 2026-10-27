@@ -1,24 +1,26 @@
 // Radiographie : qui appelle qui, en direct, dans la machine.
 //
 // Deux lectures du même flux. La carte répond à « comment ce projet est-il branché » : un cercle
-// de services, un trait par relation, rouge quand des appels échouent. La liste répond à « que
-// s'est-il passé à 14 h 32 » : un appel par ligne, le plus récent en haut.
+// de services, un trait par relation, rouge quand des appels échouent. Le journal répond à « que
+// s'est-il passé à 14 h 32 » : un échange par ligne, le plus récent en haut, dépliable pour voir
+// les en-têtes.
 //
-// Les connexions entrantes ne sont pas rapportées séparément par les sondes : entre deux
-// conteneurs, elles sont l'autre extrémité d'une sortante déjà vue.
+// Deux sources, et elles ne voient pas la même chose. Les sondes du noyau voient toutes les
+// connexions, mais pas leur contenu. Le mandataire des domaines locaux, lui, voit le contenu en
+// clair — c'est lui qui termine le TLS — mais seulement ce qui entre par `*.solon.local`.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { trace, type TraceConnection, type TraceEvent, type TracePeer } from "../api";
+import { trace, type TraceConnection, type TraceEvent, type TraceHttp, type TracePeer } from "../api";
 import { EmptyState, hueOf, IconPulse, PageHeader } from "../components/ui";
 
-/** Appels gardés à l'écran. Le service en garde bien davantage ; inutile d'en afficher plus. */
+/** Échanges gardés à l'écran. Le service en garde bien davantage ; inutile d'en afficher plus. */
 const SHOWN = 1000;
-/** Au-delà, la carte devient un plat de spaghettis : on bascule sur la liste seule. */
+/** Au-delà, la carte devient un plat de spaghettis : on bascule sur le journal seul. */
 const MAX_NODES = 24;
+/** Nœud du navigateur sur la carte : tout ce qui entre par le mandataire part de là. */
+const BROWSER = "\u0000browser";
 
-interface Fact extends TraceConnection {
-  id: number;
-}
+type Fact = ({ id: number } & TraceConnection) | ({ id: number } & TraceHttp);
 
 /** Clé stable d'une extrémité : le conteneur s'il est connu, sinon l'adresse. */
 function keyOf(p: TracePeer): string {
@@ -29,12 +31,17 @@ function labelOf(p: TracePeer): string {
   return p.service ?? p.name ?? p.ip;
 }
 
+function projectOf(f: Fact): string | null {
+  return f.kind === "http" ? (f.dst.project ?? null) : (f.src.project ?? f.dst.project ?? null);
+}
+
 export function RadiographyView() {
   const { t } = useTranslation();
   const [status, setStatus] = useState<{ active: boolean; detail: string } | null>(null);
   const [facts, setFacts] = useState<Fact[]>([]);
   const [project, setProject] = useState<string>("");
   const [paused, setPaused] = useState(false);
+  const [open, setOpen] = useState<number | null>(null);
   // Le flux continue d'arriver pendant une pause : on l'accumule plutôt que de le perdre.
   const held = useRef<Fact[]>([]);
   const pausedRef = useRef(paused);
@@ -57,7 +64,7 @@ export function RadiographyView() {
         setStatus({ active: ev.active, detail: ev.detail });
         return;
       }
-      const fact: Fact = { ...ev, id: nextId.current++ };
+      const fact = { ...ev, id: nextId.current++ } as Fact;
       if (pausedRef.current) held.current.push(fact);
       else setFacts((prev) => [fact, ...prev].slice(0, SHOWN));
     });
@@ -70,22 +77,23 @@ export function RadiographyView() {
   const projects = useMemo(() => {
     const names = new Set<string>();
     for (const f of facts) {
-      if (f.src.project) names.add(f.src.project);
-      if (f.dst.project) names.add(f.dst.project);
+      const p = projectOf(f);
+      if (p) names.add(p);
     }
     return [...names].sort((a, b) => a.localeCompare(b));
   }, [facts]);
 
   const rows = useMemo(
-    () => (project ? facts.filter((f) => f.src.project === project || f.dst.project === project) : facts),
+    () => (project ? facts.filter((f) => projectOf(f) === project) : facts),
     [facts, project],
   );
 
-  const graph = useMemo(() => buildGraph(rows), [rows]);
+  const graph = useMemo(() => buildGraph(rows, t("radiography.browser")), [rows, t]);
 
   async function clear() {
     held.current = [];
     setFacts([]);
+    setOpen(null);
     await trace.clear();
   }
 
@@ -138,23 +146,11 @@ export function RadiographyView() {
               <CallMap graph={graph} />
             )}
           </div>
-          <div className="card list-card min-h-0 w-[26rem] shrink-0 overflow-auto">
+          <div className="card list-card min-h-0 w-[30rem] shrink-0 overflow-auto">
             <table className="w-full text-[13px]">
               <tbody>
                 {rows.slice(0, 200).map((r) => (
-                  <tr key={r.id}>
-                    <td className="w-16 px-2 py-1.5 tabular-nums align-top" style={{ color: "var(--ink-3)" }}>{clock(r.ts_ms)}</td>
-                    <td className="px-2 py-1.5">
-                      <div style={{ color: r.outcome === "failed" ? "var(--bad)" : "var(--ink)" }}>
-                        {labelOf(r.src)} <span style={{ color: "var(--ink-3)" }}>→</span> {labelOf(r.dst)}:{r.dport}
-                      </div>
-                      <div className="text-[12px]" style={{ color: "var(--ink-3)" }}>
-                        {t(`radiography.outcome.${r.outcome}`)}
-                        {" · "}<code>{r.comm}</code>
-                        {r.duration_ms != null && ` · ${formatDuration(r.duration_ms)}`}
-                      </div>
-                    </td>
-                  </tr>
+                  <Row key={r.id} fact={r} open={open === r.id} onToggle={() => setOpen(open === r.id ? null : r.id)} />
                 ))}
               </tbody>
             </table>
@@ -165,21 +161,97 @@ export function RadiographyView() {
   );
 }
 
-interface Node { key: string; label: string; inside: boolean; }
+function Row({ fact, open, onToggle }: { fact: Fact; open: boolean; onToggle: () => void }) {
+  const { t } = useTranslation();
+  if (fact.kind === "connection") {
+    return (
+      <tr>
+        <td className="w-16 px-2 py-1.5 align-top tabular-nums" style={{ color: "var(--ink-3)" }}>{clock(fact.ts_ms)}</td>
+        <td className="px-2 py-1.5">
+          <div style={{ color: fact.outcome === "failed" ? "var(--bad)" : "var(--ink)" }}>
+            {labelOf(fact.src)} <span style={{ color: "var(--ink-3)" }}>→</span> {labelOf(fact.dst)}:{fact.dport}
+          </div>
+          <div className="text-[12px]" style={{ color: "var(--ink-3)" }}>
+            {t(`radiography.outcome.${fact.outcome}`)}
+            {" · "}<code>{fact.comm}</code>
+            {fact.duration_ms != null && ` · ${formatDuration(fact.duration_ms)}`}
+          </div>
+        </td>
+      </tr>
+    );
+  }
+  const color = fact.status >= 500 ? "var(--bad)" : fact.status >= 400 ? "var(--warn)" : "var(--ok)";
+  return (
+    <>
+      <tr className="cursor-pointer" onClick={onToggle}>
+        <td className="w-16 px-2 py-1.5 align-top tabular-nums" style={{ color: "var(--ink-3)" }}>{clock(fact.ts_ms)}</td>
+        <td className="px-2 py-1.5">
+          <div className="flex items-baseline gap-2">
+            <span className="tabular-nums" style={{ color, fontWeight: 600 }}>{fact.status || "—"}</span>
+            <span style={{ color: "var(--ink-2)" }}>{fact.method}</span>
+            <span className="min-w-0 truncate" style={{ color: "var(--ink)" }}>{fact.path}</span>
+          </div>
+          <div className="text-[12px]" style={{ color: "var(--ink-3)" }}>
+            {labelOf(fact.dst)} · {formatDuration(fact.duration_ms)}
+            {fact.response_bytes > 0 && ` · ${formatBytes(fact.response_bytes)}`}
+            {" · "}{open ? t("radiography.hide_headers") : t("radiography.show_headers")}
+          </div>
+        </td>
+      </tr>
+      {open && (
+        <tr>
+          <td />
+          <td className="px-2 pb-3">
+            <Headers title={t("radiography.request")} headers={fact.request_headers} />
+            <Headers title={t("radiography.response")} headers={fact.response_headers} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function Headers({ title, headers }: { title: string; headers: { name: string; value: string }[] }) {
+  return (
+    <div className="mt-2 rounded px-2 py-1.5" style={{ background: "var(--surface-2)" }}>
+      <div className="mb-1 text-[11px] uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>{title}</div>
+      {headers.map((h, i) => (
+        <div key={`${h.name}-${i}`} className="text-[12px] leading-5">
+          <span style={{ color: "var(--ink-3)" }}>{h.name}: </span>
+          <span style={{ color: "var(--ink-2)", wordBreak: "break-all" }}>{h.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+interface Node { key: string; label: string; project: string | null; inside: boolean; }
 interface Edge { from: string; to: string; total: number; failed: number; ports: Set<number>; }
 interface Graph { nodes: Node[]; edges: Edge[]; }
 
-/** Agrège les appels en un graphe : un nœud par extrémité, une arête par relation observée. */
-function buildGraph(facts: Fact[]): Graph {
+/** Agrège les échanges en un graphe : un nœud par extrémité, une arête par relation observée. */
+function buildGraph(facts: Fact[], browserLabel: string): Graph {
   const nodes = new Map<string, Node>();
   const edges = new Map<string, Edge>();
+  const node = (key: string, label: string, project: string | null, inside: boolean) => {
+    if (!nodes.has(key)) nodes.set(key, { key, label, project, inside });
+    return key;
+  };
+  const peer = (p: TracePeer) => node(keyOf(p), labelOf(p), p.project ?? null, p.container_id != null);
   for (const f of facts) {
-    for (const p of [f.src, f.dst]) {
-      const key = keyOf(p);
-      if (!nodes.has(key)) nodes.set(key, { key, label: labelOf(p), inside: p.container_id != null });
+    let from: string;
+    let port: number;
+    let failed: boolean;
+    if (f.kind === "http") {
+      from = node(BROWSER, browserLabel, null, false);
+      port = f.scheme === "https" ? 443 : 80;
+      failed = f.status >= 500 || f.status === 0;
+    } else {
+      from = peer(f.src);
+      port = f.dport;
+      failed = f.outcome === "failed";
     }
-    const from = keyOf(f.src);
-    const to = keyOf(f.dst);
+    const to = peer(f.dst);
     if (from === to) continue; // un service qui s'appelle lui-même n'apprend rien sur la carte
     const id = `${from}\u0000${to}`;
     let edge = edges.get(id);
@@ -188,9 +260,17 @@ function buildGraph(facts: Fact[]): Graph {
       edges.set(id, edge);
     }
     // Une connexion comptée à l'ouverture puis à la fermeture compterait double.
-    if (f.outcome !== "closed") edge.total += 1;
-    if (f.outcome === "failed") edge.failed += 1;
-    edge.ports.add(f.dport);
+    if (f.kind === "http" || f.outcome !== "closed") edge.total += 1;
+    if (failed) edge.failed += 1;
+    edge.ports.add(port);
+  }
+  // Deux projets ont souvent un service du même nom — `db`, `web`, `cache`. Deux cercles
+  // identiques sur la carte ne veulent plus rien dire : on ajoute le projet, mais seulement à
+  // ceux qui se marchent dessus, pour ne pas alourdir les autres.
+  const seen = new Map<string, number>();
+  for (const n of nodes.values()) seen.set(n.label, (seen.get(n.label) ?? 0) + 1);
+  for (const n of nodes.values()) {
+    if ((seen.get(n.label) ?? 0) > 1 && n.project) n.label = `${n.label} · ${n.project}`;
   }
   // Les conteneurs d'abord : la carte garde la même forme quand un appel extérieur apparaît.
   const ordered = [...nodes.values()].sort(
@@ -261,7 +341,7 @@ function CallMap({ graph }: { graph: Graph }) {
               {initials(node.label)}
             </text>
             <text x={x} y={y + NODE_R + 18} textAnchor="middle" fontSize="12" fill="var(--ink)">
-              {node.label.length > 18 ? `${node.label.slice(0, 17)}…` : node.label}
+              {node.label.length > 24 ? `${node.label.slice(0, 23)}…` : node.label}
             </text>
           </g>
         );
@@ -301,4 +381,10 @@ function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms} ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
   return `${Math.round(ms / 60_000)} min`;
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} o`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} Ko`;
+  return `${(n / (1024 * 1024)).toFixed(1)} Mo`;
 }

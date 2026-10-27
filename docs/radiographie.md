@@ -10,7 +10,78 @@ Tout reste sur la machine. Rien n'est envoyé nulle part, rien n'est écrit en d
 
 Ce document suit les étapes. Une section par phase, écrite au moment où elle est livrée.
 
-## Phase 1 — qui appelle qui (0.1.16)
+## Phase 2a — ce qui est demandé, ce qui est répondu (0.1.16)
+
+Les échanges HTTP complets : méthode, chemin, code, durée, en-têtes des deux côtés, taille des
+corps. Dépliables ligne par ligne dans le journal.
+
+### Gratuit, parce que le déchiffrement existait déjà
+
+Solon termine déjà le TLS pour `*.solon.local`, avec son autorité locale, avant de relayer en
+clair vers le conteneur. Tout ce qui entre par un domaine local est donc **déjà lisible à
+l'endroit exact où il passe**, en `http` comme en `https`, sans sonde, sans eBPF et sans rien
+déchiffrer de plus. C'est la source la plus riche du chantier et elle ne coûte presque rien.
+
+Sa limite est nette, et elle est à dire : elle ne couvre que ce qui entre par un domaine
+`*.solon.local`. Un appel de conteneur à conteneur n'y passe pas — la phase 2b s'en chargera, par
+eBPF.
+
+### Ce qu'il a fallu changer
+
+Le mandataire recopiait les réponses à l'aveugle, d'un `tokio::io::copy` du conteneur vers le
+navigateur. Pour savoir ce qui a répondu, il faut délimiter chaque réponse, donc lire son en-tête
+avant de la relayer. Les règles ne sont pas celles d'une requête, et chacune est un piège :
+
+- une réponse à `HEAD` annonce la taille qu'aurait un `GET` **sans envoyer de corps** — la lire
+  comme un corps bloquerait la connexion jusqu'au délai d'attente ;
+- `204`, `304` et les `1xx` n'ont jamais de corps ;
+- `101` fait basculer la connexion en tunnel (WebSocket) : plus rien à analyser ensuite ;
+- sans `Content-Length` ni `chunked`, le corps court jusqu'à la fermeture.
+
+Chacune a son test. Le corps, lui, n'est jamais gardé : il est compté, pas lu.
+
+L'appariement requête/réponse n'a besoin d'aucun identifiant : HTTP/1.1 sert les réponses dans
+l'ordre des requêtes, une simple file suffit. La requête y entre **avant** d'être relayée, pour
+qu'une réponse rapide ne trouve jamais la file vide et n'ait jamais à attendre.
+
+### Le masquage
+
+Il a lieu **à la capture**, jamais à l'affichage : ce qui n'est pas capturé ne peut pas fuir, même
+si l'historique est relu ou exporté plus tard. `crates/solon-core/src/mask.rs`.
+
+Sont masqués : les en-têtes d'authentification et de session (`Authorization`, `Cookie`,
+`Set-Cookie`, `X-Api-Key`…), les paramètres d'URL dont le nom contient `pass`, `token`, `secret`,
+`key`, `auth`, `session`, `sig`, `code`, `otp` ou `credential`, les adresses de courriel, et les
+numéros de téléphone. Le **nom** de l'en-tête ou du paramètre reste visible : savoir qu'un
+`Authorization` était présent fait partie du débogage.
+
+La détection des numéros est volontairement étroite — un `+` suivi de 8 à 15 chiffres, ou un `0`
+suivi de 9. Masquer toute longue suite de chiffres avalerait les horodatages, les tailles et les
+identifiants, dont le débogage vit. Un test le vérifie explicitement.
+
+Aucune expression rationnelle : les motifs sont simples, et les écrire à la main évite une
+dépendance de plus dans une caisse que l'agent invité embarque aussi.
+
+### Sur la carte
+
+Les échanges HTTP ajoutent un nœud « Navigateur », d'où part tout ce qui entre par un domaine
+local. Et quand deux projets ont un service du même nom — `db`, `web`, `cache`, ce qui est la
+règle plutôt que l'exception — le nom du projet est ajouté, mais seulement aux cercles qui se
+marchent dessus.
+
+### Vérifié
+
+Sur l'installation réelle, contre WordPress et Odoo : les redirections suivies (`303` puis `200`),
+l'HTTPS aussi bien que l'HTTP, les durées et les tailles, et le masquage à l'œuvre —
+`/pas-cette-page?token=•••&email=•••`, `Cookie` et `Set-Cookie` remplacés.
+
+### Ce qui n'est pas encore là
+
+Les corps. La note de mission les veut désactivés par défaut et activables par projet : le
+réglage n'existe pas encore, donc rien n'est capturé. Les appels de conteneur à conteneur en
+clair, et les protocoles de bases de données, viennent ensuite.
+
+## Phase 1 — qui appelle qui
 
 Les connexions TCP ouvertes depuis la machine, avec leur issue : établie, refusée, fermée. Une
 carte des services et un journal des appels. L'événement « lancement de processus » de la phase 0

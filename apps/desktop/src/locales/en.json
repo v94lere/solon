@@ -759,7 +759,7 @@
     "clear": "Clear",
     "held": "Paused — {{count}} calls held",
     "empty": "Nothing observed yet",
-    "empty_hint": "As soon as one service calls another, the call shows up here.",
+    "empty_hint": "As soon as a service calls another, or you open a .solon.local page, it shows up here.",
     "waiting": "Waiting for the engine",
     "inactive": "Radiography is off: {{detail}}",
     "too_many": "{{count}} endpoints — too many to draw. Pick a project to narrow it down.",
@@ -771,6 +771,11 @@
       "established": "connected",
       "failed": "refused",
       "closed": "closed"
-    }
+    },
+    "browser": "Browser",
+    "request": "Request",
+    "response": "Response",
+    "show_headers": "show headers",
+    "hide_headers": "hide headers"
   }
 }

@@ -6,6 +6,7 @@
 pub mod error;
 pub mod fs;
 pub mod ipc;
+pub mod mask;
 pub mod protocol;
 pub mod vm;
 

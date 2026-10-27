@@ -294,6 +294,56 @@ pub enum TraceEvent {
     /// La charge est derrière un `Box` : c'est de loin la plus grosse variante, et l'historique
     /// en garde des dizaines de milliers. Le JSON est le même qu'avec des champs en ligne.
     Connection(Box<TraceConnection>),
+    /// Un échange HTTP complet, vu par le mandataire des domaines locaux.
+    Http(Box<TraceHttp>),
+}
+
+/// Un échange HTTP : ce qui a été demandé, ce qui a répondu, et en combien de temps.
+///
+/// Observé par le mandataire de Solon, qui voit tout en clair même en HTTPS puisque c'est lui qui
+/// termine le TLS avec son autorité locale. Ne couvre donc que ce qui entre par un domaine
+/// `*.solon.local` — c'est-à-dire l'essentiel de ce qu'on déboge depuis un navigateur.
+///
+/// Les valeurs sensibles sont masquées **avant** d'arriver ici (voir [`crate::mask`]) : ce qui
+/// n'est pas capturé ne peut pas fuir.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TraceHttp {
+    /// Début de la requête.
+    pub ts_ms: u64,
+    /// `http` ou `https`, selon le port par lequel le navigateur est entré.
+    pub scheme: String,
+    /// Domaine demandé, sans le port.
+    pub host: String,
+    pub method: String,
+    /// Chemin et paramètres, masqués.
+    pub path: String,
+    pub status: u16,
+    /// De la fin de l'en-tête de requête à la fin de l'en-tête de réponse : le temps que le
+    /// service a mis à décider, sans le téléchargement du corps.
+    pub duration_ms: u64,
+    /// Le conteneur qui a répondu.
+    pub dst: TracePeer,
+    pub request_headers: Vec<TraceHeader>,
+    pub response_headers: Vec<TraceHeader>,
+    /// Octets de corps relayés dans chaque sens.
+    pub request_bytes: u64,
+    pub response_bytes: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TraceHeader {
+    pub name: String,
+    pub value: String,
+}
+
+impl TraceHeader {
+    /// Construit un en-tête en passant sa valeur au masquage.
+    pub fn masked(name: &str, value: &str) -> Self {
+        Self {
+            name: name.trim().to_owned(),
+            value: crate::mask::header_value(name, value),
+        }
+    }
 }
 
 /// Ce qu'on retient d'une connexion observée.
