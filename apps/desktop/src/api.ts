@@ -132,6 +132,23 @@ export const engine = {
   },
 };
 
+// ---- radiographie ----
+/** Un fait observé par les sondes du noyau (voir `solon_core::protocol::TraceEvent`). */
+export type TraceEvent =
+  | { kind: "status"; active: boolean; detail: string }
+  | { kind: "exec"; ts_ms: number; pid: number; comm: string; container_id?: string | null };
+
+export const trace = {
+  /** Historique gardé par le service, puis le flux. Connexion dédiée, séparée des événements du moteur. */
+  subscribe: (onEvent: (e: TraceEvent) => void) => {
+    const channel = new Channel<TraceEvent>();
+    channel.onmessage = onEvent;
+    void invoke("trace_subscribe", { channel });
+    return channel;
+  },
+  clear: () => invoke<void>("trace_clear"),
+};
+
 // ---- conteneurs ----
 export interface ContainerPort {
   IP?: string;

@@ -58,6 +58,9 @@ struct Inner {
     /// Derniers conteneurs en marche annoncés par l'agent : ce qu'il faudra relancer si `docker ps`
     /// ne répond plus au moment de l'arrêt.
     endpoints: Mutex<Vec<solon_core::protocol::ContainerEndpoint>>,
+    /// Faits observés par les sondes eBPF. Survit aux redémarrages du moteur : l'historique
+    /// affiché n'a pas à repartir de zéro parce que la machine a redémarré.
+    trace: Arc<crate::trace::TraceHub>,
 }
 
 #[derive(Clone)]
@@ -84,6 +87,7 @@ impl Engine {
                 domains: Default::default(),
                 sleeper,
                 endpoints: Mutex::new(Vec::new()),
+                trace: crate::trace::TraceHub::new(),
             }),
         }
     }
@@ -94,6 +98,10 @@ impl Engine {
 
     pub fn subscribe(&self) -> broadcast::Receiver<ServiceEvent> {
         self.inner.events.subscribe()
+    }
+
+    pub fn trace(&self) -> Arc<crate::trace::TraceHub> {
+        self.inner.trace.clone()
     }
 
     pub fn watch(&self) -> watch::Receiver<EngineSnapshot> {
@@ -534,6 +542,10 @@ impl Engine {
             Err(e) => tracing::warn!("autorité de certification locale indisponible : {e}"),
         }
         tasks.push(self.spawn_event_loop(events, guid));
+        tasks.push(crate::trace::spawn_collector(
+            self.inner.trace.clone(),
+            guid,
+        ));
         tasks.push(self.spawn_exit_watcher(vm.clone()));
         // Le mandataire de l'API Docker (`\\.\pipe\solon`) n'est pas ici : il vit avec le service
         // (voir `main::run_core`) pour que le pipe existe avant la machine et lui survive.

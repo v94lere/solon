@@ -14,7 +14,8 @@
     "terminal": "Terminal",
     "collapse": "Replier le menu",
     "expand": "Déplier le menu",
-    "projects": "Projets"
+    "projects": "Projets",
+    "radiography": "Radiographie"
   },
   "engine": {
     "state": {
@@ -745,5 +746,20 @@
     "setup": "Configurer…",
     "add": "Ajouter {{count}} projet(s)",
     "privacy": "Recherche locale seulement. Les dossiers de dépendances, de cache et système sont ignorés."
+  },
+  "radiography": {
+    "title": "Radiographie",
+    "count_one": "{{count}} fait",
+    "count_other": "{{count}} faits",
+    "search": "Filtrer par conteneur ou processus",
+    "pause": "Pause",
+    "resume": "Reprendre",
+    "clear": "Effacer",
+    "held": "{{count}} faits retenus pendant la pause",
+    "host": "hors conteneur",
+    "empty": "Rien d'observé pour l'instant",
+    "empty_hint": "Démarrez un conteneur : chaque processus qu'il lance apparaîtra ici.",
+    "waiting": "En attente du moteur",
+    "inactive": "Radiographie inactive : {{detail}}"
   }
 }

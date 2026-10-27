@@ -67,6 +67,12 @@ pub enum ServiceCommand {
     Metrics,
     /// Cherche les projets Docker (Compose, Dockerfile, devcontainer) sur les disques internes du PC.
     ScanProjects,
+    /// Abonne la connexion à la radiographie : l'historique gardé, puis le flux des faits
+    /// observés. Connexion dédiée, pour qu'une rafale d'échanges ne retarde pas les événements
+    /// du moteur.
+    TraceSubscribe,
+    /// Oublie tout ce qui a été observé.
+    TraceClear,
 }
 
 /// Un dossier de projet trouvé sur le PC.

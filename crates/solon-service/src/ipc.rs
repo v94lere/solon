@@ -51,6 +51,7 @@ async fn handle(
     let mut reader = BufReader::new(read);
     let mut line = String::new();
     let mut subscription: Option<tokio::task::JoinHandle<()>> = None;
+    let mut trace_subscription: Option<tokio::task::JoinHandle<()>> = None;
     loop {
         line.clear();
         if reader.read_line(&mut line).await? == 0 {
@@ -170,10 +171,52 @@ async fn handle(
                 }
                 Response::ok(id, serde_json::Value::Null)
             }
+            ServiceCommand::TraceSubscribe => {
+                if trace_subscription.is_none() {
+                    let hub = engine.trace();
+                    let mut rx = hub.subscribe();
+                    // L'historique d'abord, puis le flux : l'abonnement se fait sur un `rx` ouvert
+                    // avant la lecture de l'historique, donc rien ne se perd entre les deux.
+                    let backlog = hub.backlog();
+                    let w = writer.clone();
+                    trace_subscription = Some(tokio::spawn(async move {
+                        for event in backlog {
+                            if send_line(&w, &event).await.is_err() {
+                                return;
+                            }
+                        }
+                        loop {
+                            match rx.recv().await {
+                                Ok(ev) => {
+                                    if send_line(&w, &ev).await.is_err() {
+                                        return;
+                                    }
+                                }
+                                // Un abonné en retard perd des faits : la collecte ne ralentit
+                                // jamais pour l'interface.
+                                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                                    tracing::warn!(
+                                        "radiographie : {n} faits perdus pour un abonné en retard"
+                                    );
+                                }
+                                Err(_) => return,
+                            }
+                        }
+                    }));
+                }
+                Response::ok(id, serde_json::Value::Null)
+            }
+            ServiceCommand::TraceClear => {
+                engine.trace().clear();
+                Response::ok(id, serde_json::Value::Null)
+            }
         };
         send(&writer, &response).await?;
     }
     if let Some(s) = subscription {
+        s.abort();
+    }
+    if let Some(s) = trace_subscription {
         s.abort();
     }
     Ok(())
@@ -193,6 +236,15 @@ async fn send(
 async fn send_event(
     writer: &Arc<Mutex<tokio::io::WriteHalf<NamedPipeServer>>>,
     event: &ServiceEvent,
+) -> std::io::Result<()> {
+    send_line(writer, event).await
+}
+
+/// Une valeur JSON par ligne, dans le même cadre que les réponses : l'appelant distingue un
+/// événement d'une réponse à la présence du champ `id`.
+async fn send_line<T: serde::Serialize>(
+    writer: &Arc<Mutex<tokio::io::WriteHalf<NamedPipeServer>>>,
+    event: &T,
 ) -> std::io::Result<()> {
     let mut line = serde_json::to_string(event).unwrap_or_default();
     line.push('\n');

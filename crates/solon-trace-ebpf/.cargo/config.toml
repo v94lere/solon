@@ -1,0 +1,7 @@
+[build]
+target = "bpfel-unknown-none"
+
+# bpfel-unknown-none est une cible de palier 3 : aucun `core` précompilé n'est distribué, il faut
+# le recompiler depuis les sources (composant `rust-src` de la chaîne nightly).
+[unstable]
+build-std = ["core"]

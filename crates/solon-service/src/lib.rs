@@ -24,3 +24,4 @@ pub mod ports;
 pub mod scan;
 pub mod settings;
 pub mod sleep;
+pub mod trace;

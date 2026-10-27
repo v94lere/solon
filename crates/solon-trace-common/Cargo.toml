@@ -1,0 +1,10 @@
+[package]
+name = "solon-trace-common"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Structures partagées entre les programmes eBPF de Solon et l'agent qui les lit."
+
+[dependencies]

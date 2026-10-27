@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/solon-core",
+    "crates/solon-trace-common",
     "crates/solon-vm-hcs",
     "crates/solon-hvsock",
     "crates/solon-agent",
@@ -10,6 +11,8 @@ members = [
     "crates/solon-docker-shim",
     "apps/desktop/src-tauri",
 ]
+# Cible bpfel-unknown-none, chaîne nightly figée, compilation dans un conteneur : voir son Dockerfile.
+exclude = ["crates/solon-trace-ebpf"]
 
 [workspace.package]
 version = "0.1.15"
@@ -23,6 +26,7 @@ solon-core = { path = "crates/solon-core" }
 solon-hvsock = { path = "crates/solon-hvsock" }
 solon-vm-hcs = { path = "crates/solon-vm-hcs" }
 solon-prereq = { path = "crates/solon-prereq" }
+solon-trace-common = { path = "crates/solon-trace-common" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

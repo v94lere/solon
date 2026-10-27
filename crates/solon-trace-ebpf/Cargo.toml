@@ -1,0 +1,28 @@
+# Hors de l'espace de travail (voir `exclude` dans le Cargo.toml racine) : cette caisse vise
+# bpfel-unknown-none avec une chaîne nightly figée, et ne se compile que dans le conteneur décrit
+# par le Dockerfile voisin.
+[package]
+name = "solon-trace-ebpf"
+version = "0.1.15"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/v94lere/solon"
+publish = false
+
+[dependencies]
+aya-ebpf = "0.1.1"
+solon-trace-common = { path = "../solon-trace-common" }
+
+[[bin]]
+name = "solon-trace"
+path = "src/main.rs"
+
+[profile.release]
+# Le vérificateur du noyau rejette le code non optimisé (boucles non déroulées, pile trop
+# profonde) ; `panic = "abort"` parce qu'il n'y a pas de déroulement de pile dans le noyau.
+opt-level = 2
+debug = false
+lto = true
+panic = "abort"
+codegen-units = 1
+overflow-checks = false

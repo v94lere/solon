@@ -8,6 +8,7 @@
 //! | [`PORT_DOCKER`] | hôte → invité | octets bruts relayés vers `/run/docker.sock` |
 //! | [`PORT_PORTS`] | hôte → invité | relais d'un port publié : une ligne [`PortRelayHeader`], une ligne [`PortRelayAck`], puis octets bruts |
 //! | [`PORT_EVENTS`] | hôte → invité | l'hôte se connecte, l'invité pousse des [`AgentEvent`] JSON, un par ligne |
+//! | [`PORT_TRACE`] | hôte → invité | idem, mais des [`TraceEvent`] : flux séparé car bien plus bavard |
 //!
 //! Toutes les connexions sont initiées par l'hôte. Le format JSON par lignes est volontairement
 //! simple : la latence mesurée (~0,5 ms par aller-retour) rend inutile un protocole binaire.
@@ -24,6 +25,10 @@ pub const PORT_EVENTS: u32 = 5003;
 pub const PORT_SHELL: u32 = 5004;
 /// Exécution d'une commande avec sortie en flux (Compose) : en-tête JSON puis trames agent → hôte.
 pub const PORT_EXEC: u32 = 5005;
+/// Radiographie : l'hôte se connecte, l'agent pousse des [`TraceEvent`]. Séparé de
+/// [`PORT_EVENTS`] parce qu'une rafale d'échanges observés ne doit pas retarder un changement
+/// d'état du moteur, ni être perdue avec lui si l'abonné décroche.
+pub const PORT_TRACE: u32 = 5007;
 
 /// Trames agent → hôte du canal d'exécution en flux : `[type, len_hi, len_lo, charge]`.
 pub const EXEC_FRAME_STDOUT: u8 = 0;
@@ -267,6 +272,31 @@ pub enum AgentEvent {
     /// L'ensemble des conteneurs en marche avec leur adresse et leurs ports (liste idempotente) :
     /// sert aux domaines locaux, qui n'exigent aucun port publié.
     EndpointsChanged { endpoints: Vec<ContainerEndpoint> },
+}
+
+/// Un fait observé dans le noyau de la machine par les sondes eBPF de la radiographie.
+///
+/// Le champ `kind` distingue les variantes dans le JSON. Les horodatages sont en millisecondes
+/// depuis l'époque Unix, convertis par l'agent : l'horloge du noyau compte depuis le démarrage de
+/// la machine et n'aurait aucun sens côté hôte.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum TraceEvent {
+    /// Premier message sur la connexion : les sondes sont-elles en place. `active = false` avec le
+    /// motif si le noyau les a refusées — l'interface le dit au lieu d'afficher un écran vide.
+    Status { active: bool, detail: String },
+    /// Un processus a été lancé. Premier type observé ; il vérifie la chaîne de bout en bout avant
+    /// que les sondes réseau n'arrivent.
+    Exec {
+        ts_ms: u64,
+        pid: u32,
+        /// Nom court du processus (`TASK_COMM_LEN`, 15 caractères utiles).
+        comm: String,
+        /// Identifiant court du conteneur, déduit du cgroup. Absent si le processus tourne hors
+        /// conteneur — l'agent et dockerd eux-mêmes, par exemple.
+        #[serde(default)]
+        container_id: Option<String>,
+    },
 }
 
 /// Un conteneur en marche vu du réseau : adresse dans le réseau Docker, ports TCP exposés par

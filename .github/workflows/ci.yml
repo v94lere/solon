@@ -77,3 +77,23 @@ jobs:
           if ($errors) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
           $bytes = [System.IO.File]::ReadAllBytes("installer/setup.ps1")
           if (-not ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)) { Write-Error "setup.ps1 must be UTF-8 with BOM"; exit 1 }
+
+  ebpf:
+    name: eBPF object matches its sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # L'objet BPF est versionné parce que bpf-linker ne se construit pas sous Windows, d'où la
+      # compilation croisée de l'agent ne peut pas le produire. On le reconstruit ici et on exige
+      # qu'il soit identique : personne n'a à croire sur parole le binaire du dépôt.
+      - name: Rebuild
+        run: |
+          docker build -t solon-bpf-builder crates/solon-trace-ebpf
+          docker run --rm -v "$PWD:/src" solon-bpf-builder
+      - name: Unchanged
+        run: |
+          if ! git diff --quiet -- crates/solon-agent/src/bpf/solon-trace.o; then
+            echo "L'objet BPF versionné ne correspond plus à ses sources." >&2
+            echo "Relancer crates/solon-trace-ebpf/build.ps1 et commiter le résultat." >&2
+            exit 1
+          fi

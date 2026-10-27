@@ -18,15 +18,16 @@ import { ImagesView } from "./views/ImagesView";
 import { VolumesView } from "./views/VolumesView";
 import { NetworksView } from "./views/NetworksView";
 import { ActivityView } from "./views/ActivityView";
+import { RadiographyView } from "./views/RadiographyView";
 import { SettingsView } from "./views/SettingsView";
 
-export type Section = "projects" | "containers" | "volumes" | "images" | "networks" | "activity" | "terminal" | "settings";
+export type Section = "projects" | "containers" | "volumes" | "images" | "networks" | "activity" | "radiography" | "terminal" | "settings";
 
-/** Ordre d'affichage du menu, aussi celui des raccourcis Ctrl+1 … Ctrl+8. */
-export const SECTION_KEYS: Section[] = ["projects", "containers", "volumes", "images", "networks", "activity", "terminal", "settings"];
+/** Ordre d'affichage du menu, aussi celui des raccourcis Ctrl+1 … Ctrl+9. */
+export const SECTION_KEYS: Section[] = ["projects", "containers", "volumes", "images", "networks", "activity", "radiography", "terminal", "settings"];
 const GROUPS: { id: "docker" | "general"; items: Section[] }[] = [
   { id: "docker", items: ["projects", "containers", "volumes", "images", "networks"] },
-  { id: "general", items: ["activity", "terminal", "settings"] },
+  { id: "general", items: ["activity", "radiography", "terminal", "settings"] },
 ];
 const SIDEBAR_KEY = "solon.sidebar";
 
@@ -66,6 +67,14 @@ const icons: Record<Section, JSX.Element> = {
   activity: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
       <path d="M3 12h4l3-8 4 16 3-8h4" />
+    </svg>
+  ),
+  radiography: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
+      <circle cx="6" cy="6" r="2.5" />
+      <circle cx="18" cy="6" r="2.5" />
+      <circle cx="12" cy="18" r="2.5" />
+      <path d="M8.5 6h7M7 8.2l3.7 7.6M17 8.2l-3.7 7.6" />
     </svg>
   ),
   terminal: (
@@ -229,7 +238,7 @@ function Shell() {
       } else if (k === "b") {
         e.preventDefault();
         toggleSidebar();
-      } else if (/^[1-8]$/.test(e.key)) {
+      } else if (/^[1-9]$/.test(e.key)) {
         e.preventDefault();
         go(SECTION_KEYS[Number(e.key) - 1]);
       }
@@ -253,6 +262,7 @@ function Shell() {
   } else if (section === "images") content = <ImagesView onOpenContainer={openContainer} />;
   else if (section === "volumes") content = <VolumesView />;
   else if (section === "networks") content = <NetworksView />;
+  else if (section === "radiography") content = <RadiographyView />;
   else content = <ActivityView onOpenContainer={openContainer} />;
 
   return (

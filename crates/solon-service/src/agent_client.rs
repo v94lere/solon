@@ -4,7 +4,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use solon_core::protocol::{AgentEvent, Command, PORT_CONTROL, PORT_EVENTS, Request, Response};
+use solon_core::protocol::{
+    AgentEvent, Command, PORT_CONTROL, PORT_EVENTS, PORT_TRACE, Request, Response, TraceEvent,
+};
 use solon_core::{ErrorCode, Result, SolonError};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
@@ -103,21 +105,37 @@ impl AgentClient {
     }
 }
 
-/// Flux d'événements : l'hôte se connecte, l'agent pousse des lignes JSON.
-pub struct AgentEvents {
+/// Flux poussé par l'agent : l'hôte se connecte, l'agent envoie une ligne JSON par fait.
+///
+/// Deux ports suivent cette forme — les événements du moteur et la radiographie — avec le même
+/// code à la charge utile près, d'où le paramètre de type.
+pub struct AgentStream<T> {
     reader: BufReader<TcpStream>,
+    port: u32,
+    _marker: std::marker::PhantomData<T>,
 }
 
-impl AgentEvents {
+/// Événements du moteur (vsock 5003).
+pub type AgentEvents = AgentStream<AgentEvent>;
+/// Faits observés par les sondes eBPF (vsock 5007).
+pub type AgentTrace = AgentStream<TraceEvent>;
+
+impl<T: serde::de::DeserializeOwned> AgentStream<T>
+where
+    Self: StreamPort,
+{
     pub async fn connect(vm: &GUID, timeout: Duration) -> Result<Self> {
-        let stream = connect(vm, PORT_EVENTS, timeout).await?;
+        let port = Self::PORT;
+        let stream = connect(vm, port, timeout).await?;
         Ok(Self {
             reader: BufReader::new(stream),
+            port,
+            _marker: std::marker::PhantomData,
         })
     }
 
-    /// Prochain événement ; `None` si l'agent a fermé la connexion.
-    pub async fn next(&mut self) -> Result<Option<AgentEvent>> {
+    /// Prochain fait ; `None` si l'agent a fermé la connexion.
+    pub async fn next(&mut self) -> Result<Option<T>> {
         let mut line = String::new();
         loop {
             line.clear();
@@ -129,10 +147,28 @@ impl AgentEvents {
             if n == 0 {
                 return Ok(None);
             }
-            match serde_json::from_str::<AgentEvent>(line.trim()) {
+            match serde_json::from_str::<T>(line.trim()) {
                 Ok(e) => return Ok(Some(e)),
-                Err(e) => tracing::warn!("événement agent illisible : {e} — {}", line.trim()),
+                Err(e) => tracing::warn!(
+                    port = self.port,
+                    "ligne illisible de l'agent : {e} — {}",
+                    line.trim()
+                ),
             }
         }
     }
+}
+
+/// Le port vsock sur lequel chaque flux se branche. Détail d'implémentation d'`AgentStream`,
+/// public seulement parce qu'il apparaît dans sa borne.
+pub trait StreamPort {
+    const PORT: u32;
+}
+
+impl StreamPort for AgentStream<AgentEvent> {
+    const PORT: u32 = PORT_EVENTS;
+}
+
+impl StreamPort for AgentStream<TraceEvent> {
+    const PORT: u32 = PORT_TRACE;
 }

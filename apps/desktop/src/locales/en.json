@@ -14,7 +14,8 @@
     "terminal": "Terminal",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
-    "projects": "Projects"
+    "projects": "Projects",
+    "radiography": "Radiography"
   },
   "engine": {
     "state": {
@@ -745,5 +746,20 @@
     "setup": "Set up…",
     "add": "Add {{count}} project(s)",
     "privacy": "Local search only. Dependency, cache and system folders are skipped."
+  },
+  "radiography": {
+    "title": "Radiography",
+    "count_one": "{{count}} event",
+    "count_other": "{{count}} events",
+    "search": "Filter by container or process",
+    "pause": "Pause",
+    "resume": "Resume",
+    "clear": "Clear",
+    "held": "{{count}} events held while paused",
+    "host": "outside a container",
+    "empty": "Nothing observed yet",
+    "empty_hint": "Start a container: every process it launches shows up here.",
+    "waiting": "Waiting for the engine",
+    "inactive": "Radiography is off: {{detail}}"
   }
 }

@@ -66,8 +66,18 @@ pub async fn call(command: ServiceCommand) -> Result<Value, String> {
 /// Abonnement aux événements du service. Ne rend la main que lorsque le canal Tauri est fermé
 /// (la vue s'est démontée) ; entre-temps, reconnexion toutes les 2 s si le service est absent.
 pub async fn subscribe(channel: Channel<Value>) {
+    stream(channel, ServiceCommand::Subscribe).await
+}
+
+/// Abonnement à la radiographie, sur sa propre connexion : le flux des faits observés est bien
+/// plus bavard que les événements du moteur, et la vue qui l'écoute s'ouvre et se ferme seule.
+pub async fn trace_subscribe(channel: Channel<Value>) {
+    stream(channel, ServiceCommand::TraceSubscribe).await
+}
+
+async fn stream(channel: Channel<Value>, command: ServiceCommand) {
     loop {
-        match subscribe_once(&channel).await {
+        match stream_once(&channel, &command).await {
             Ok(()) => return, // canal fermé côté interface
             Err(e) => {
                 tracing::debug!("abonnement au service interrompu : {e}");
@@ -82,13 +92,13 @@ pub async fn subscribe(channel: Channel<Value>) {
     }
 }
 
-async fn subscribe_once(channel: &Channel<Value>) -> Result<(), String> {
+async fn stream_once(channel: &Channel<Value>, command: &ServiceCommand) -> Result<(), String> {
     let pipe = open().await?;
     let (read, mut write) = tokio::io::split(pipe);
     let mut reader = BufReader::new(read);
     let mut line = serde_json::to_string(&IpcRequest {
         id: 1,
-        request: ServiceCommand::Subscribe,
+        request: command.clone(),
     })
     .map_err(|e| e.to_string())?;
     line.push('\n');
@@ -111,7 +121,7 @@ async fn subscribe_once(channel: &Channel<Value>) -> Result<(), String> {
             Err(_) => continue,
         };
         if value.get("id").is_some() {
-            continue; // réponse au Subscribe
+            continue; // réponse à la demande d'abonnement
         }
         if channel.send(value).is_err() {
             return Ok(());

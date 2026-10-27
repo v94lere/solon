@@ -18,5 +18,9 @@ serde_json = { workspace = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = { workspace = true }
+solon-trace-common = { workspace = true }
+# Chargeur eBPF en Rust pur : pas de libbpf, donc pas de chaîne C dans la compilation croisée
+# depuis Windows. Les programmes chargés, eux, sont compilés à part (crates/solon-trace-ebpf).
+aya = { version = "0.13", default-features = false }
 # Client FUSE pur Rust (sans libfuse) : montage direct par PID 1.
 fuser = { version = "0.15", default-features = false, features = ["abi-7-31"] }

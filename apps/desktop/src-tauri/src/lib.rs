@@ -55,6 +55,18 @@ async fn engine_subscribe(channel: Channel<Value>) -> Result<(), String> {
     Ok(())
 }
 
+/// Radiographie : historique puis flux des échanges observés dans la machine.
+#[tauri::command]
+async fn trace_subscribe(channel: Channel<Value>) -> Result<(), String> {
+    tokio::spawn(service::trace_subscribe(channel));
+    Ok(())
+}
+
+#[tauri::command]
+async fn trace_clear() -> Result<(), String> {
+    service::call(ServiceCommand::TraceClear).await.map(|_| ())
+}
+
 #[tauri::command]
 async fn prereq_report() -> Result<PrereqReport, String> {
     from_value(service::call(ServiceCommand::Prerequisites).await?)
@@ -252,6 +264,8 @@ pub fn run() {
             engine_stop,
             engine_restart,
             engine_subscribe,
+            trace_subscribe,
+            trace_clear,
             prereq_report,
             prereq_enable_features,
             app_is_packaged,

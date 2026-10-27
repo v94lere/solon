@@ -4,7 +4,8 @@
 //! 1. monter les systèmes de fichiers virtuels, préparer et vérifier le disque de données (ext4) ;
 //! 2. lancer `containerd` puis `dockerd`, les superviser, récolter les processus orphelins ;
 //! 3. servir les RPC de l'hôte (vsock 5000), pousser les événements (5003), relayer l'API Docker
-//!    (5001) et les ports publiés (5002). Protocole partagé : `solon_core::protocol`.
+//!    (5001) et les ports publiés (5002), radiographier les échanges (5007). Protocole partagé :
+//!    `solon_core::protocol`.
 //!
 //! Hors Linux, le binaire n'a pas de sens : il s'arrête avec un message.
 
@@ -34,6 +35,8 @@ mod shell;
 mod solonfs;
 #[cfg(target_os = "linux")]
 mod system;
+#[cfg(target_os = "linux")]
+mod trace;
 #[cfg(target_os = "linux")]
 mod vsock;
 
@@ -107,6 +110,7 @@ fn main() {
         std::thread::spawn(move || execstream::serve(st));
     }
     std::thread::spawn(solonfs::serve_pool);
+    std::thread::spawn(trace::serve);
     let ready_ms = t0.elapsed().as_millis();
     println!(
         "SOLON-AGENT-READY agent_ms={ready_ms} uptime_s={:.2}",

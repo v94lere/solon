@@ -197,6 +197,24 @@ pub fn mount_virtual_filesystems() {
     }
 }
 
+/// Monte tracefs, dont aya a besoin pour lire l'identifiant d'un tracepoint.
+///
+/// Il n'est pas dans `mount_virtual_filesystems` : rien d'autre ne s'en sert, et un montage de
+/// plus au démarrage ralentirait tout le monde pour une fonction que l'on peut ne jamais ouvrir.
+pub fn ensure_tracefs() -> Result<(), String> {
+    const TARGET: &str = "/sys/kernel/tracing";
+    if is_mounted(TARGET) {
+        return Ok(());
+    }
+    mount(
+        "tracefs",
+        TARGET,
+        "tracefs",
+        libc::MS_NOSUID | libc::MS_NOEXEC | libc::MS_NODEV,
+        "",
+    )
+}
+
 pub fn configure_network_basics() {
     let _ = fs::write("/proc/sys/net/ipv4/ip_forward", "1\n");
     let _ = fs::write("/proc/sys/net/ipv4/conf/all/forwarding", "1\n");
