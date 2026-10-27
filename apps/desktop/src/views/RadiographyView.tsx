@@ -200,7 +200,8 @@ function buildGraph(facts: Fact[]): Graph {
 }
 
 const SIZE = 520;
-const RADIUS = 190;
+const RADIUS = 185;
+const NODE_R = 22;
 
 /** Disposition en cercle : stable, sans simulation, lisible jusqu'à une vingtaine de nœuds. */
 function CallMap({ graph }: { graph: Graph }) {
@@ -216,43 +217,50 @@ function CallMap({ graph }: { graph: Graph }) {
 
   return (
     <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-full w-full" role="img" aria-label={t("radiography.map")}>
+      <defs>
+        {/* La pointe est à l'extrémité du trait (refX = largeur du dessin), et le trait s'arrête
+            déjà au bord du cercle visé : la flèche se pose exactement contre lui. */}
+        {[["arrow", "var(--accent)"], ["arrow-bad", "var(--bad)"]].map(([id, color]) => (
+          <marker key={id} id={id} viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill={color} />
+          </marker>
+        ))}
+      </defs>
       {graph.edges.map((e) => {
-        const a = at(index.get(e.from) ?? 0);
-        const b = at(index.get(e.to) ?? 0);
+        const seg = trim(at(index.get(e.from) ?? 0), at(index.get(e.to) ?? 0), NODE_R + 4);
         const failing = e.failed > 0;
+        const ports = [...e.ports].sort((x, y) => x - y).join(", ");
         return (
           <g key={`${e.from}-${e.to}`}>
-            <title>{`${e.from} → ${e.to} : ${t("radiography.calls", { count: e.total })}${failing ? ` · ${t("radiography.failed_count", { count: e.failed })}` : ""} · ${[...e.ports].sort((x, y) => x - y).join(", ")}`}</title>
+            <title>{`${e.from} → ${e.to} : ${t("radiography.calls", { count: e.total })}${failing ? ` · ${t("radiography.failed_count", { count: e.failed })}` : ""} · ${ports}`}</title>
             <line
-              x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+              x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2}
               stroke={failing ? "var(--bad)" : "var(--accent)"}
-              strokeWidth={1 + 3 * (e.total / busiest)}
-              strokeOpacity={failing ? 0.9 : 0.45}
+              strokeWidth={1.5 + 3 * (e.total / busiest)}
+              strokeOpacity={failing ? 1 : 0.5}
+              // L'échec ne se distingue pas que par la couleur : le trait est aussi discontinu.
+              strokeDasharray={failing ? "7 5" : undefined}
               markerEnd={failing ? "url(#arrow-bad)" : "url(#arrow)"}
             />
           </g>
         );
       })}
-      <defs>
-        {[["arrow", "var(--accent)"], ["arrow-bad", "var(--bad)"]].map(([id, color]) => (
-          <marker key={id} id={id} viewBox="0 0 8 8" refX="22" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0 0 L8 4 L0 8 z" fill={color} />
-          </marker>
-        ))}
-      </defs>
       {graph.nodes.map((node, i) => {
         const { x, y } = at(i);
         const hue = hueOf(node.key);
         return (
           <g key={node.key}>
             <circle
-              cx={x} cy={y} r={20}
+              cx={x} cy={y} r={NODE_R}
               fill={node.inside ? `hsl(${hue} 70% 55% / 0.22)` : "var(--surface-2)"}
               stroke={node.inside ? `hsl(${hue} 60% 50%)` : "var(--line-strong)"}
               strokeWidth={1.5}
               strokeDasharray={node.inside ? undefined : "3 3"}
             />
-            <text x={x} y={y + 38} textAnchor="middle" fontSize="12" fill="var(--ink)">
+            <text x={x} y={y + 5} textAnchor="middle" fontSize="14" fontWeight="600" fill={node.inside ? `hsl(${hue} 70% 72%)` : "var(--ink-3)"}>
+              {initials(node.label)}
+            </text>
+            <text x={x} y={y + NODE_R + 18} textAnchor="middle" fontSize="12" fill="var(--ink)">
               {node.label.length > 18 ? `${node.label.slice(0, 17)}…` : node.label}
             </text>
           </g>
@@ -260,6 +268,26 @@ function CallMap({ graph }: { graph: Graph }) {
       })}
     </svg>
   );
+}
+
+/** Raccourcit un segment aux deux bouts, pour qu'il parte du bord d'un cercle et s'arrête au bord
+ *  de l'autre au lieu de les traverser. */
+function trim(a: { x: number; y: number }, b: { x: number; y: number }, by: number) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = (dx / len) * by;
+  const uy = (dy / len) * by;
+  return { x1: a.x + ux, y1: a.y + uy, x2: b.x - ux, y2: b.y - uy };
+}
+
+/** Deux caractères au plus, pour habiller le cercle sans le surcharger. Une adresse donne son
+ *  dernier nombre, qui est ce qui distingue deux voisins. */
+function initials(label: string): string {
+  if (/^[\d.]+$/.test(label)) return label.split(".").pop() ?? "";
+  const parts = label.split(/[-_. ]/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return label.slice(0, 2).toUpperCase();
 }
 
 /** Heure à la seconde près : à cette échelle, la date n'apporte rien. */
