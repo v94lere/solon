@@ -133,10 +133,31 @@ export const engine = {
 };
 
 // ---- radiographie ----
+/** Une extrémité de connexion. Le conteneur n'est renseigné que si l'agent l'a reconnu. */
+export interface TracePeer {
+  ip: string;
+  container_id?: string | null;
+  name?: string | null;
+  project?: string | null;
+  service?: string | null;
+}
+
+/** Une connexion TCP ouverte depuis la machine, avec son issue. */
+export interface TraceConnection {
+  kind: "connection";
+  ts_ms: number;
+  outcome: "established" | "failed" | "closed";
+  src: TracePeer;
+  dst: TracePeer;
+  sport: number;
+  dport: number;
+  comm: string;
+  pid: number;
+  duration_ms?: number | null;
+}
+
 /** Un fait observé par les sondes du noyau (voir `solon_core::protocol::TraceEvent`). */
-export type TraceEvent =
-  | { kind: "status"; active: boolean; detail: string }
-  | { kind: "exec"; ts_ms: number; pid: number; comm: string; container_id?: string | null };
+export type TraceEvent = { kind: "status"; active: boolean; detail: string } | TraceConnection;
 
 export const trace = {
   /** Historique gardé par le service, puis le flux. Connexion dédiée, séparée des événements du moteur. */

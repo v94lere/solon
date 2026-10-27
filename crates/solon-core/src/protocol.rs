@@ -285,18 +285,71 @@ pub enum TraceEvent {
     /// Premier message sur la connexion : les sondes sont-elles en place. `active = false` avec le
     /// motif si le noyau les a refusées — l'interface le dit au lieu d'afficher un écran vide.
     Status { active: bool, detail: String },
-    /// Un processus a été lancé. Premier type observé ; il vérifie la chaîne de bout en bout avant
-    /// que les sondes réseau n'arrivent.
-    Exec {
-        ts_ms: u64,
-        pid: u32,
-        /// Nom court du processus (`TASK_COMM_LEN`, 15 caractères utiles).
-        comm: String,
-        /// Identifiant court du conteneur, déduit du cgroup. Absent si le processus tourne hors
-        /// conteneur — l'agent et dockerd eux-mêmes, par exemple.
-        #[serde(default)]
-        container_id: Option<String>,
-    },
+    /// Une connexion TCP ouverte depuis la machine, avec son issue.
+    ///
+    /// Les connexions entrantes ne sont pas rapportées séparément : entre deux conteneurs, elles
+    /// sont l'autre extrémité d'une sortante déjà vue. Ce qui vient de l'extérieur de la machine —
+    /// un navigateur, par exemple — passe par le mandataire de Solon, qui le rapportera lui-même.
+    ///
+    /// La charge est derrière un `Box` : c'est de loin la plus grosse variante, et l'historique
+    /// en garde des dizaines de milliers. Le JSON est le même qu'avec des champs en ligne.
+    Connection(Box<TraceConnection>),
+}
+
+/// Ce qu'on retient d'une connexion observée.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TraceConnection {
+    pub ts_ms: u64,
+    pub outcome: ConnectionOutcome,
+    pub src: TracePeer,
+    pub dst: TracePeer,
+    pub sport: u16,
+    pub dport: u16,
+    /// Nom court du programme à l'origine de l'appel.
+    pub comm: String,
+    pub pid: u32,
+    /// Durée de vie de la connexion, pour une fermeture seulement.
+    #[serde(default)]
+    pub duration_ms: Option<u64>,
+}
+
+/// Issue d'une connexion observée.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConnectionOutcome {
+    Established,
+    /// Jamais établie : refusée, filtrée, ou abandonnée avant réponse.
+    Failed,
+    /// Fermée après avoir servi.
+    Closed,
+}
+
+/// Une extrémité de connexion, nommée autant que possible.
+///
+/// L'adresse est toujours là ; le reste est renseigné quand l'agent reconnaît un conteneur de la
+/// machine. Sinon l'extrémité est hors de la machine : un service distant, ou l'hôte.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct TracePeer {
+    pub ip: String,
+    #[serde(default)]
+    pub container_id: Option<String>,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub project: Option<String>,
+    #[serde(default)]
+    pub service: Option<String>,
+}
+
+impl TracePeer {
+    /// Ce qu'il faut afficher : le nom du service dans son projet, à défaut celui du conteneur, à
+    /// défaut l'adresse.
+    pub fn label(&self) -> &str {
+        self.service
+            .as_deref()
+            .or(self.name.as_deref())
+            .unwrap_or(&self.ip)
+    }
 }
 
 /// Un conteneur en marche vu du réseau : adresse dans le réseau Docker, ports TCP exposés par
@@ -576,5 +629,53 @@ mod tests {
             serde_json::to_string(&e).unwrap(),
             r#"{"event":"ports_changed","bindings":[]}"#
         );
+    }
+
+    /// Contrat avec l'interface : `TraceConnection` est derrière un `Box`, mais ses champs
+    /// doivent rester à plat à côté de `kind`, comme le TypeScript les lit. Si le `Box` devenait
+    /// un objet imbriqué, l'écran se viderait sans la moindre erreur.
+    #[test]
+    fn un_appel_reste_plat_dans_le_json() {
+        let e = TraceEvent::Connection(Box::new(TraceConnection {
+            ts_ms: 1_700_000_000_000,
+            outcome: ConnectionOutcome::Failed,
+            src: TracePeer {
+                ip: "172.18.0.3".into(),
+                container_id: Some("abc123abc123".into()),
+                name: Some("boutique-web-1".into()),
+                project: Some("boutique".into()),
+                service: Some("web".into()),
+            },
+            dst: TracePeer {
+                ip: "172.18.0.4".into(),
+                ..Default::default()
+            },
+            sport: 51990,
+            dport: 5432,
+            comm: "python".into(),
+            pid: 42,
+            duration_ms: None,
+        }));
+        let v: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&e).unwrap()).unwrap();
+        assert_eq!(v["kind"], "connection");
+        assert_eq!(v["outcome"], "failed");
+        assert_eq!(v["dport"], 5432);
+        assert_eq!(v["src"]["service"], "web");
+        assert_eq!(v["dst"]["container_id"], serde_json::Value::Null);
+        assert_eq!(serde_json::from_value::<TraceEvent>(v).unwrap(), e);
+    }
+
+    #[test]
+    fn une_extremite_s_affiche_au_mieux() {
+        let mut p = TracePeer {
+            ip: "10.0.0.9".into(),
+            ..Default::default()
+        };
+        assert_eq!(p.label(), "10.0.0.9");
+        p.name = Some("boutique-db-1".into());
+        assert_eq!(p.label(), "boutique-db-1");
+        p.service = Some("db".into());
+        assert_eq!(p.label(), "db");
     }
 }

@@ -1,32 +1,41 @@
-// Radiographie : ce que les sondes du noyau voient se passer dans la machine.
+// Radiographie : qui appelle qui, en direct, dans la machine.
 //
-// Cet écran est la première marche d'une fonction plus large — la carte des échanges entre
-// services, avec sa barre de lecture. Pour l'instant il ne montre qu'un type de fait, le
-// lancement d'un processus : de quoi vérifier que la chaîne noyau → agent → service → interface
-// tient debout avant d'y faire passer du trafic réseau.
+// Deux lectures du même flux. La carte répond à « comment ce projet est-il branché » : un cercle
+// de services, un trait par relation, rouge quand des appels échouent. La liste répond à « que
+// s'est-il passé à 14 h 32 » : un appel par ligne, le plus récent en haut.
+//
+// Les connexions entrantes ne sont pas rapportées séparément par les sondes : entre deux
+// conteneurs, elles sont l'autre extrémité d'une sortante déjà vue.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { trace, type TraceEvent } from "../api";
-import { Avatar, EmptyState, IconPulse, PageHeader } from "../components/ui";
+import { trace, type TraceConnection, type TraceEvent, type TracePeer } from "../api";
+import { EmptyState, hueOf, IconPulse, PageHeader } from "../components/ui";
 
-/** Faits gardés à l'écran. Le service en garde bien davantage ; inutile d'en afficher plus. */
-const SHOWN = 500;
+/** Appels gardés à l'écran. Le service en garde bien davantage ; inutile d'en afficher plus. */
+const SHOWN = 1000;
+/** Au-delà, la carte devient un plat de spaghettis : on bascule sur la liste seule. */
+const MAX_NODES = 24;
 
-interface Fact {
+interface Fact extends TraceConnection {
   id: number;
-  ts: number;
-  comm: string;
-  container: string | null;
-  pid: number;
+}
+
+/** Clé stable d'une extrémité : le conteneur s'il est connu, sinon l'adresse. */
+function keyOf(p: TracePeer): string {
+  return p.container_id ?? p.ip;
+}
+
+function labelOf(p: TracePeer): string {
+  return p.service ?? p.name ?? p.ip;
 }
 
 export function RadiographyView() {
   const { t } = useTranslation();
   const [status, setStatus] = useState<{ active: boolean; detail: string } | null>(null);
   const [facts, setFacts] = useState<Fact[]>([]);
-  const [filter, setFilter] = useState("");
+  const [project, setProject] = useState<string>("");
   const [paused, setPaused] = useState(false);
-  // Le flux continue d'arriver pendant une pause : on l'accumule ici plutôt que de le perdre.
+  // Le flux continue d'arriver pendant une pause : on l'accumule plutôt que de le perdre.
   const held = useRef<Fact[]>([]);
   const pausedRef = useRef(paused);
   const nextId = useRef(0);
@@ -34,9 +43,9 @@ export function RadiographyView() {
   useEffect(() => {
     pausedRef.current = paused;
     if (!paused && held.current.length > 0) {
-      const pending = held.current;
+      const pending = held.current.reverse();
       held.current = [];
-      setFacts((prev) => [...pending.reverse(), ...prev].slice(0, SHOWN));
+      setFacts((prev) => [...pending, ...prev].slice(0, SHOWN));
     }
   }, [paused]);
 
@@ -48,13 +57,7 @@ export function RadiographyView() {
         setStatus({ active: ev.active, detail: ev.detail });
         return;
       }
-      const fact: Fact = {
-        id: nextId.current++,
-        ts: ev.ts_ms,
-        comm: ev.comm,
-        container: ev.container_id ?? null,
-        pid: ev.pid,
-      };
+      const fact: Fact = { ...ev, id: nextId.current++ };
       if (pausedRef.current) held.current.push(fact);
       else setFacts((prev) => [fact, ...prev].slice(0, SHOWN));
     });
@@ -64,11 +67,21 @@ export function RadiographyView() {
     };
   }, []);
 
-  const rows = useMemo(() => {
-    const f = filter.trim().toLowerCase();
-    if (!f) return facts;
-    return facts.filter((x) => x.comm.toLowerCase().includes(f) || (x.container ?? "").includes(f));
-  }, [facts, filter]);
+  const projects = useMemo(() => {
+    const names = new Set<string>();
+    for (const f of facts) {
+      if (f.src.project) names.add(f.src.project);
+      if (f.dst.project) names.add(f.dst.project);
+    }
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [facts]);
+
+  const rows = useMemo(
+    () => (project ? facts.filter((f) => f.src.project === project || f.dst.project === project) : facts),
+    [facts, project],
+  );
+
+  const graph = useMemo(() => buildGraph(rows), [rows]);
 
   async function clear() {
     held.current = [];
@@ -89,56 +102,175 @@ export function RadiographyView() {
             <button type="button" className="btn btn-sm" onClick={() => void clear()}>{t("radiography.clear")}</button>
           </div>
         }
-        search={<input type="search" className="input w-56" placeholder={t("radiography.search")} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label={t("radiography.search")} />}
+        search={
+          <select className="input w-56" value={project} onChange={(e) => setProject(e.target.value)} aria-label={t("radiography.project")}>
+            <option value="">{t("radiography.all_projects")}</option>
+            {projects.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        }
       />
       {status && !status.active && (
         <div className="mx-4 mb-2 rounded px-3 py-2" role="status" style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>
           {t("radiography.inactive", { detail: status.detail })}
         </div>
       )}
-      {paused && held.current.length > 0 && (
-        <div className="mx-4 mb-2 rounded px-3 py-2 text-[13px]" style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}>
+      {paused && (
+        <div className="mx-4 mb-2 rounded px-3 py-2 text-[13px]" role="status" style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}>
           {t("radiography.held", { count: held.current.length })}
         </div>
       )}
-      <div className="card list-card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
-        {rows.length === 0 ? (
+      {rows.length === 0 ? (
+        <div className="card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
           <EmptyState
             icon={<IconPulse />}
             title={status?.active ? t("radiography.empty") : t("radiography.waiting")}
             hint={status?.active ? t("radiography.empty_hint") : undefined}
           />
-        ) : (
-          <table className="w-full text-[13px]">
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td className="w-24 px-3 py-1.5 tabular-nums" style={{ color: "var(--ink-3)" }}>{clock(r.ts)}</td>
-                  <td className="w-44 px-3 py-1.5">
-                    {r.container ? (
-                      <span className="flex items-center gap-2">
-                        <Avatar label={r.container} seed={r.container} size={20} />
-                        <code>{r.container}</code>
-                      </span>
-                    ) : (
-                      <span style={{ color: "var(--ink-3)" }}>{t("radiography.host")}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-1.5"><code>{r.comm}</code></td>
-                  <td className="w-20 px-3 py-1.5 tabular-nums" style={{ color: "var(--ink-3)" }}>{r.pid}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="mx-4 mb-4 flex min-h-0 flex-1 gap-4">
+          <div className="card flex min-w-0 flex-1 items-center justify-center overflow-hidden p-2">
+            {graph.nodes.length > MAX_NODES ? (
+              <p className="px-6 text-center text-[13px]" style={{ color: "var(--ink-2)" }}>
+                {t("radiography.too_many", { count: graph.nodes.length })}
+              </p>
+            ) : (
+              <CallMap graph={graph} />
+            )}
+          </div>
+          <div className="card list-card min-h-0 w-[26rem] shrink-0 overflow-auto">
+            <table className="w-full text-[13px]">
+              <tbody>
+                {rows.slice(0, 200).map((r) => (
+                  <tr key={r.id}>
+                    <td className="w-16 px-2 py-1.5 tabular-nums align-top" style={{ color: "var(--ink-3)" }}>{clock(r.ts_ms)}</td>
+                    <td className="px-2 py-1.5">
+                      <div style={{ color: r.outcome === "failed" ? "var(--bad)" : "var(--ink)" }}>
+                        {labelOf(r.src)} <span style={{ color: "var(--ink-3)" }}>→</span> {labelOf(r.dst)}:{r.dport}
+                      </div>
+                      <div className="text-[12px]" style={{ color: "var(--ink-3)" }}>
+                        {t(`radiography.outcome.${r.outcome}`)}
+                        {" · "}<code>{r.comm}</code>
+                        {r.duration_ms != null && ` · ${formatDuration(r.duration_ms)}`}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+interface Node { key: string; label: string; inside: boolean; }
+interface Edge { from: string; to: string; total: number; failed: number; ports: Set<number>; }
+interface Graph { nodes: Node[]; edges: Edge[]; }
+
+/** Agrège les appels en un graphe : un nœud par extrémité, une arête par relation observée. */
+function buildGraph(facts: Fact[]): Graph {
+  const nodes = new Map<string, Node>();
+  const edges = new Map<string, Edge>();
+  for (const f of facts) {
+    for (const p of [f.src, f.dst]) {
+      const key = keyOf(p);
+      if (!nodes.has(key)) nodes.set(key, { key, label: labelOf(p), inside: p.container_id != null });
+    }
+    const from = keyOf(f.src);
+    const to = keyOf(f.dst);
+    if (from === to) continue; // un service qui s'appelle lui-même n'apprend rien sur la carte
+    const id = `${from}\u0000${to}`;
+    let edge = edges.get(id);
+    if (!edge) {
+      edge = { from, to, total: 0, failed: 0, ports: new Set() };
+      edges.set(id, edge);
+    }
+    // Une connexion comptée à l'ouverture puis à la fermeture compterait double.
+    if (f.outcome !== "closed") edge.total += 1;
+    if (f.outcome === "failed") edge.failed += 1;
+    edge.ports.add(f.dport);
+  }
+  // Les conteneurs d'abord : la carte garde la même forme quand un appel extérieur apparaît.
+  const ordered = [...nodes.values()].sort(
+    (a, b) => Number(b.inside) - Number(a.inside) || a.label.localeCompare(b.label),
+  );
+  return { nodes: ordered, edges: [...edges.values()] };
+}
+
+const SIZE = 520;
+const RADIUS = 190;
+
+/** Disposition en cercle : stable, sans simulation, lisible jusqu'à une vingtaine de nœuds. */
+function CallMap({ graph }: { graph: Graph }) {
+  const { t } = useTranslation();
+  const n = graph.nodes.length;
+  const at = (i: number) => {
+    // Le premier nœud en haut, puis dans le sens horaire.
+    const angle = (i / Math.max(n, 1)) * 2 * Math.PI - Math.PI / 2;
+    return { x: SIZE / 2 + RADIUS * Math.cos(angle), y: SIZE / 2 + RADIUS * Math.sin(angle) };
+  };
+  const index = new Map(graph.nodes.map((node, i) => [node.key, i]));
+  const busiest = Math.max(1, ...graph.edges.map((e) => e.total));
+
+  return (
+    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-full w-full" role="img" aria-label={t("radiography.map")}>
+      {graph.edges.map((e) => {
+        const a = at(index.get(e.from) ?? 0);
+        const b = at(index.get(e.to) ?? 0);
+        const failing = e.failed > 0;
+        return (
+          <g key={`${e.from}-${e.to}`}>
+            <title>{`${e.from} → ${e.to} : ${t("radiography.calls", { count: e.total })}${failing ? ` · ${t("radiography.failed_count", { count: e.failed })}` : ""} · ${[...e.ports].sort((x, y) => x - y).join(", ")}`}</title>
+            <line
+              x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+              stroke={failing ? "var(--bad)" : "var(--accent)"}
+              strokeWidth={1 + 3 * (e.total / busiest)}
+              strokeOpacity={failing ? 0.9 : 0.45}
+              markerEnd={failing ? "url(#arrow-bad)" : "url(#arrow)"}
+            />
+          </g>
+        );
+      })}
+      <defs>
+        {[["arrow", "var(--accent)"], ["arrow-bad", "var(--bad)"]].map(([id, color]) => (
+          <marker key={id} id={id} viewBox="0 0 8 8" refX="22" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L8 4 L0 8 z" fill={color} />
+          </marker>
+        ))}
+      </defs>
+      {graph.nodes.map((node, i) => {
+        const { x, y } = at(i);
+        const hue = hueOf(node.key);
+        return (
+          <g key={node.key}>
+            <circle
+              cx={x} cy={y} r={20}
+              fill={node.inside ? `hsl(${hue} 70% 55% / 0.22)` : "var(--surface-2)"}
+              stroke={node.inside ? `hsl(${hue} 60% 50%)` : "var(--line-strong)"}
+              strokeWidth={1.5}
+              strokeDasharray={node.inside ? undefined : "3 3"}
+            />
+            <text x={x} y={y + 38} textAnchor="middle" fontSize="12" fill="var(--ink)">
+              {node.label.length > 18 ? `${node.label.slice(0, 17)}…` : node.label}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
 /** Heure à la seconde près : à cette échelle, la date n'apporte rien. */
 function clock(ms: number): string {
   const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, "0");
+  const pad = (x: number) => String(x).padStart(2, "0");
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms} ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
+  return `${Math.round(ms / 60_000)} min`;
 }

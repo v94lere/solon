@@ -122,38 +122,48 @@ pub fn spawn_collector(hub: Arc<TraceHub>, guid: GUID) -> JoinHandle<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use solon_core::protocol::{ConnectionOutcome, TraceConnection, TracePeer};
 
-    fn exec(pid: u32) -> TraceEvent {
-        TraceEvent::Exec {
+    fn connection(pid: u32) -> TraceEvent {
+        TraceEvent::Connection(Box::new(TraceConnection {
             ts_ms: 0,
+            outcome: ConnectionOutcome::Established,
+            src: TracePeer::default(),
+            dst: TracePeer::default(),
+            sport: 1,
+            dport: 2,
+            comm: "curl".to_owned(),
             pid,
-            comm: "sh".to_owned(),
-            container_id: None,
+            duration_ms: None,
+        }))
+    }
+
+    fn en_place() -> TraceEvent {
+        TraceEvent::Status {
+            active: true,
+            detail: "sondes en place".to_owned(),
         }
     }
 
     #[test]
     fn l_etat_ne_remplit_pas_l_historique() {
         let hub = TraceHub::new();
-        hub.push(TraceEvent::Status {
-            active: true,
-            detail: "sondes en place".to_owned(),
-        });
-        hub.push(exec(1));
+        hub.push(en_place());
+        hub.push(connection(1));
         let backlog = hub.backlog();
         assert_eq!(backlog.len(), 2);
         assert!(matches!(
             backlog[0],
             TraceEvent::Status { active: true, .. }
         ));
-        assert!(matches!(backlog[1], TraceEvent::Exec { pid: 1, .. }));
+        assert!(matches!(&backlog[1], TraceEvent::Connection(c) if c.pid == 1));
     }
 
     #[test]
     fn l_historique_oublie_les_plus_anciens() {
         let hub = TraceHub::new();
         for pid in 0..(HISTORY as u32 + 10) {
-            hub.push(exec(pid));
+            hub.push(connection(pid));
         }
         let backlog = hub.backlog();
         assert_eq!(
@@ -161,17 +171,14 @@ mod tests {
             HISTORY + 1,
             "l'état en tête, puis le plafond"
         );
-        assert!(matches!(backlog[1], TraceEvent::Exec { pid: 10, .. }));
+        assert!(matches!(&backlog[1], TraceEvent::Connection(c) if c.pid == 10));
     }
 
     #[test]
     fn effacer_garde_l_etat_des_sondes() {
         let hub = TraceHub::new();
-        hub.push(TraceEvent::Status {
-            active: true,
-            detail: "sondes en place".to_owned(),
-        });
-        hub.push(exec(1));
+        hub.push(en_place());
+        hub.push(connection(1));
         hub.clear();
         let backlog = hub.backlog();
         assert_eq!(backlog.len(), 1);

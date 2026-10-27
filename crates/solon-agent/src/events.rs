@@ -63,6 +63,12 @@ pub fn current_ports() -> Vec<PortBinding> {
     hub().ports.lock().unwrap().clone()
 }
 
+/// Conteneurs en marche avec leur adresse, au dernier relevé. La radiographie s'en sert pour
+/// mettre un nom sur les deux extrémités d'une connexion.
+pub fn current_endpoints() -> Vec<solon_core::protocol::ContainerEndpoint> {
+    hub().endpoints.lock().unwrap().clone()
+}
+
 pub fn serve(state: Arc<State>) {
     {
         let st = state.clone();

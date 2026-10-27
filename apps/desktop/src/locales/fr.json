@@ -749,17 +749,28 @@
   },
   "radiography": {
     "title": "Radiographie",
-    "count_one": "{{count}} fait",
-    "count_other": "{{count}} faits",
-    "search": "Filtrer par conteneur ou processus",
+    "count_one": "{{count}} appel",
+    "count_other": "{{count}} appels",
+    "project": "Projet",
+    "all_projects": "Tous les projets",
+    "map": "Carte des appels entre services",
     "pause": "Pause",
     "resume": "Reprendre",
     "clear": "Effacer",
-    "held": "{{count}} faits retenus pendant la pause",
-    "host": "hors conteneur",
+    "held": "En pause — {{count}} appels retenus",
     "empty": "Rien d'observé pour l'instant",
-    "empty_hint": "Démarrez un conteneur : chaque processus qu'il lance apparaîtra ici.",
+    "empty_hint": "Dès qu'un service en appelle un autre, l'appel apparaît ici.",
     "waiting": "En attente du moteur",
-    "inactive": "Radiographie inactive : {{detail}}"
+    "inactive": "Radiographie inactive : {{detail}}",
+    "too_many": "{{count}} extrémités — trop pour une carte lisible. Choisissez un projet.",
+    "calls_one": "{{count}} appel",
+    "calls_other": "{{count}} appels",
+    "failed_count_one": "{{count}} en échec",
+    "failed_count_other": "{{count}} en échec",
+    "outcome": {
+      "established": "connecté",
+      "failed": "refusé",
+      "closed": "fermé"
+    }
   }
 }

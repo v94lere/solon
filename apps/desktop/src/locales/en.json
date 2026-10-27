@@ -749,17 +749,28 @@
   },
   "radiography": {
     "title": "Radiography",
-    "count_one": "{{count}} event",
-    "count_other": "{{count}} events",
-    "search": "Filter by container or process",
+    "count_one": "{{count}} call",
+    "count_other": "{{count}} calls",
+    "project": "Project",
+    "all_projects": "All projects",
+    "map": "Map of calls between services",
     "pause": "Pause",
     "resume": "Resume",
     "clear": "Clear",
-    "held": "{{count}} events held while paused",
-    "host": "outside a container",
+    "held": "Paused — {{count}} calls held",
     "empty": "Nothing observed yet",
-    "empty_hint": "Start a container: every process it launches shows up here.",
+    "empty_hint": "As soon as one service calls another, the call shows up here.",
     "waiting": "Waiting for the engine",
-    "inactive": "Radiography is off: {{detail}}"
+    "inactive": "Radiography is off: {{detail}}",
+    "too_many": "{{count}} endpoints — too many to draw. Pick a project to narrow it down.",
+    "calls_one": "{{count}} call",
+    "calls_other": "{{count}} calls",
+    "failed_count_one": "{{count}} failed",
+    "failed_count_other": "{{count}} failed",
+    "outcome": {
+      "established": "connected",
+      "failed": "refused",
+      "closed": "closed"
+    }
   }
 }
