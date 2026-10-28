@@ -47,7 +47,24 @@ pub fn configure(cfg: &NetworkConfig) -> Result<(), String> {
     let _ = ip(&["route", "del", "default"]);
     ip(&["route", "add", "default", "via", &cfg.gateway, "dev", dev])?;
 
+    // Le relais DNS de la machine en premier — il note les noms pour la radiographie — puis les
+    // serveurs de l'hôte en repli : la bibliothèque de résolution passe au suivant sur délai. Au
+    // second passage (service relancé), le port est déjà pris par notre propre relais : on garde
+    // la même configuration.
     let mut resolv = String::new();
+    let relay = match crate::dns::start(&cfg.address, &cfg.dns) {
+        Ok(()) => true,
+        Err(e) if e.contains("in use") => true,
+        Err(e) => {
+            log(&format!(
+                "relais DNS indisponible ({e}), résolution directe"
+            ));
+            false
+        }
+    };
+    if relay {
+        resolv.push_str(&format!("nameserver {}\n", cfg.address));
+    }
     for d in &cfg.dns {
         resolv.push_str(&format!("nameserver {d}\n"));
     }

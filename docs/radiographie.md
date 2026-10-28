@@ -10,10 +10,10 @@ Tout reste sur la machine. Rien n'est envoyé nulle part, rien n'est écrit en d
 
 Ce document suit les étapes. Une section par phase, écrite au moment où elle est livrée.
 
-## Les corps, et effacer par projet
+## Les corps, effacer par projet, et les noms de domaine
 
-Deux restes de la note de mission, livrés ensemble le 28 octobre 2026 parce qu'ils tiennent tous
-les deux au même mot : **par projet**.
+Les restes de la note de mission, livrés le 28 octobre 2026. Les deux premiers tiennent au même
+mot : **par projet**.
 
 ### Les corps de requêtes et de réponses
 
@@ -61,11 +61,36 @@ l'appelé. Sans filtre, le bouton efface tout, comme avant. Une application d'av
 envoie encore la commande sans projet : le service la comprend comme « tout effacer », un test le
 garantit.
 
-### Ce qui n'est pas encore là
+### Les noms de domaine
 
-Les noms de domaine : une adresse extérieure s'affiche toujours en chiffres. Les requêtes DNS des
-conteneurs partent directement vers les serveurs de l'hôte, sans passer par Solon ; les observer
-demande soit de les faire transiter par l'agent, soit une sonde. C'est un choix à faire à deux.
+Une adresse extérieure s'affichait en chiffres : les conteneurs interrogeaient directement les
+serveurs DNS de l'hôte Windows, personne dans Solon ne voyait passer les réponses. Depuis l'image
+dev.22, l'agent tient un **relais DNS** sur l'adresse de la machine. Il transmet chaque question
+aux serveurs de l'hôte, rend la réponse telle quelle, et note « cette adresse, c'est ce nom ». La
+radiographie s'en sert pour nommer tout ce qui est hors de la machine : `api.stripe.com` au lieu
+de `54.187.x.x`.
+
+Pourquoi un relais et pas une sonde : une sonde sur le port 53 verrait la même chose, mais
+demanderait un programme noyau de plus à maintenir, pour un trafic qui ne compte pas en
+performance. Le relais tient en deux cents lignes de bibliothèque standard, sans dépendance.
+
+Ce qui a été fait pour qu'il ne soit pas un point de défaillance :
+
+- `resolv.conf` le cite **en premier, et les serveurs de l'hôte ensuite**. Si le relais ne répond
+  pas, la bibliothèque de résolution passe au suivant au bout de deux secondes, comme avant.
+- S'il ne peut pas démarrer (port pris), l'agent le dit dans son journal et écrit la configuration
+  d'avant, telle quelle.
+- Chaque question est servie dans son propre fil : un serveur amont lent ne retient pas les autres.
+- Pas de cache, pas de filtrage, pas de réécriture. Rien ne part ailleurs que vers les serveurs que
+  l'hôte utilisait déjà.
+
+Les adresses sont rattachées au **nom demandé**, pas à la cible d'un éventuel `CNAME` : c'est
+`api.stripe.com` que le développeur reconnaît, pas le nom du répartiteur derrière. La table garde
+au plus 4 096 adresses ; au-delà, la moitié la plus ancienne s'en va d'un coup.
+
+Une limite à connaître : Docker copie la liste des serveurs au démarrage de chaque conteneur. Les
+conteneurs lancés **avant** cette image gardent la résolution directe tant qu'ils ne sont pas
+recréés ; leurs adresses extérieures restent en chiffres.
 
 ## La barre de lecture
 

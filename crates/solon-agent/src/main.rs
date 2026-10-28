@@ -17,6 +17,7 @@ fn main() {
 
 #[cfg(target_os = "linux")]
 mod bench;
+mod dns;
 #[cfg(target_os = "linux")]
 mod events;
 #[cfg(target_os = "linux")]

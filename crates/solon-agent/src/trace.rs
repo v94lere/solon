@@ -290,7 +290,9 @@ impl Names {
                 project: e.compose_project.clone(),
                 service: e.compose_service.clone(),
             },
+            // Hors de la machine : le relais DNS connaît peut-être le nom qui a été demandé.
             None => TracePeer {
+                name: crate::dns::name_of(&ip),
                 ip,
                 container_id: by_cgroup,
                 ..Default::default()
