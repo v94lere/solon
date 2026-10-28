@@ -36,6 +36,9 @@ const SECRET_HEADERS: &[&str] = &[
 /// `key` attrape `keyword` au passage, et c'est le bon côté sur lequel se tromper.
 const SECRET_PARAMS: &[&str] = &[
     "pass",
+    // WordPress envoie son mot de passe sous `pwd`, et des formulaires français sous `mdp`.
+    "pwd",
+    "mdp",
     "token",
     "secret",
     "key",
@@ -389,6 +392,11 @@ mod tests {
             "/login?user=marc&password=•••&next=/accueil"
         );
         assert_eq!(path("/api?api_key=zzz&page=2"), "/api?api_key=•••&page=2");
+        // Vu sur l'installation réelle : WordPress appelle son mot de passe `pwd`.
+        assert_eq!(
+            form("log=marc&pwd=hunter2&redirect_to=%2Fwp-admin%2F"),
+            "log=marc&pwd=•••&redirect_to=%2Fwp-admin%2F"
+        );
         // Pas de chaîne de paramètres : rien à découper.
         assert_eq!(path("/produits/42"), "/produits/42");
         // Un paramètre sans valeur reste tel quel.

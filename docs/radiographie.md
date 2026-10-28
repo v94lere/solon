@@ -92,6 +92,19 @@ Une limite à connaître : Docker copie la liste des serveurs au démarrage de c
 conteneurs lancés **avant** cette image gardent la résolution directe tant qu'ils ne sont pas
 recréés ; leurs adresses extérieures restent en chiffres.
 
+### Vérifié
+
+Sur l'installation réelle, le 28 octobre 2026 :
+
+- un conteneur neuf reçoit `nameserver 172.30.0.2` puis le serveur de la box ; `example.com` se
+  résout, se télécharge, et la connexion sortante s'affiche « → example.com » dans le journal, un
+  appel vers un port fermé reste « refusé » ;
+- capture des corps activée pour `wordpress`, un `POST /wp-login.php` envoyé avec un formulaire :
+  la réponse `302` est appariée, le corps de requête est là, le courriel est masqué… et le mot de
+  passe ne l'était pas. WordPress appelle son champ `pwd`, qui n'était pas dans la liste des noms
+  suspects. Ajouté, avec `mdp` pour les formulaires français, et un test qui reprend la requête
+  exacte. C'est précisément pour ce genre de trou que l'essai sur de vrais projets ne se saute pas.
+
 ## La barre de lecture
 
 Ce qui fait de l'écran un débogueur plutôt qu'un journal : figer, reculer, rejouer au ralenti ou
