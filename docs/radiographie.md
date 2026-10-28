@@ -10,6 +10,45 @@ Tout reste sur la machine. Rien n'est envoyé nulle part, rien n'est écrit en d
 
 Ce document suit les étapes. Une section par phase, écrite au moment où elle est livrée.
 
+## La barre de lecture
+
+Ce qui fait de l'écran un débogueur plutôt qu'un journal : figer, reculer, rejouer au ralenti ou
+en accéléré, avancer d'un échange à l'autre. Pendant la relecture, **tout l'écran** — carte comme
+journal — montre la machine telle qu'elle était à l'instant du curseur. Rien n'est perdu pendant
+ce temps : les échanges continuent d'arriver, simplement dans le « futur » du curseur, et le bouton
+*Direct* y ramène.
+
+Les commandes : reculer de 10 s, échange précédent et suivant (le pas à pas), lecture ou pause,
+trois vitesses (×0,25, ×1, ×4). Au clavier, la barre prend Espace et les flèches. Un clic ou un
+glissé sur la chronologie déplace le curseur.
+
+Quelques choix qui ne vont pas de soi :
+
+- **La chronologie est un histogramme**, pas un trait par échange. Une heure d'historique en
+  compte des milliers, et ce qu'on y cherche d'un coup d'œil, ce sont les rafales et les échecs.
+  Chaque barre prend la couleur du pire échange qu'elle contient — une erreur au milieu de cent
+  succès doit rester visible — et la hauteur suit une échelle logarithmique, pour qu'une rafale de
+  cinq cents appels n'écrase pas un appel isolé.
+- **Les cercles gardent leur place.** Leur position est calculée sur tout l'historique, pas sur ce
+  qui est déjà apparu à l'instant du curseur. En relecture, un service qui entre en scène prend la
+  place qui l'attendait au lieu de bousculer les autres — sinon la carte se réorganiserait sous les
+  yeux et on perdrait ses repères au moment précis où on cherche à comprendre.
+- **Ce qui vient de se passer s'allume.** Un trait dont le dernier échange date de moins de deux
+  secondes, en temps de la relecture, est épaissi et pleinement opaque. Au ralenti ×0,25, un appel
+  brille donc huit vraies secondes : c'est ce qui rend le ralenti utile.
+- **Rattraper le présent rend la main au direct.** À ×4, on finirait sinon par rejouer un futur
+  qui n'existe pas encore. À ×1, le retard reste constant ; à ×0,25, il se creuse.
+- **Le journal est trié par heure réelle**, pas par ordre d'arrivée. Un échange HTTP est daté de sa
+  requête mais n'est connu qu'à sa réponse, donc après des connexions plus récentes que lui. Le
+  pas à pas, lui, a besoin de l'ordre réel.
+
+Tout se passe dans l'interface : le service gardait déjà l'historique horodaté, rien n'a changé
+de son côté. L'interface garde désormais jusqu'à 5 000 échanges, au lieu de 1 000, pour que la
+relecture remonte assez loin.
+
+Vérifié sur l'installation réelle : figée 22 s en arrière, puis au ralenti ×0,25, le curseur
+avance de 0,8 s en 3 vraies secondes et le retard sur le direct passe de 22 à 24 s.
+
 ## Phase 2a — ce qui est demandé, ce qui est répondu (0.1.16)
 
 Les échanges HTTP complets : méthode, chemin, code, durée, en-têtes des deux côtés, taille des

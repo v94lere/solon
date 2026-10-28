@@ -755,9 +755,7 @@
     "all_projects": "All projects",
     "map": "Map of calls between services",
     "pause": "Pause",
-    "resume": "Resume",
     "clear": "Clear",
-    "held": "Paused — {{count}} calls held",
     "empty": "Nothing observed yet",
     "empty_hint": "As soon as a service calls another, or you open a .solon.local page, it shows up here.",
     "waiting": "Waiting for the engine",
@@ -776,6 +774,14 @@
     "request": "Request",
     "response": "Response",
     "show_headers": "show headers",
-    "hide_headers": "hide headers"
+    "hide_headers": "hide headers",
+    "play": "Play",
+    "live": "Live",
+    "timeline": "Timeline — Space plays or pauses, arrows step from one exchange to the next",
+    "back_10s": "Go back 10 seconds",
+    "prev_event": "Previous exchange",
+    "next_event": "Next exchange",
+    "speed": "Playback speed",
+    "behind": "{{s}} s behind live"
   }
 }

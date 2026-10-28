@@ -755,9 +755,7 @@
     "all_projects": "Tous les projets",
     "map": "Carte des appels entre services",
     "pause": "Pause",
-    "resume": "Reprendre",
     "clear": "Effacer",
-    "held": "En pause — {{count}} appels retenus",
     "empty": "Rien d'observé pour l'instant",
     "empty_hint": "Dès qu'un service en appelle un autre, ou que vous ouvrez une page .solon.local, cela apparaît ici.",
     "waiting": "En attente du moteur",
@@ -776,6 +774,14 @@
     "request": "Requête",
     "response": "Réponse",
     "show_headers": "voir les en-têtes",
-    "hide_headers": "masquer les en-têtes"
+    "hide_headers": "masquer les en-têtes",
+    "play": "Lecture",
+    "live": "Direct",
+    "timeline": "Chronologie — Espace lance ou fige, les flèches passent d'un échange à l'autre",
+    "back_10s": "Reculer de 10 secondes",
+    "prev_event": "Échange précédent",
+    "next_event": "Échange suivant",
+    "speed": "Vitesse de lecture",
+    "behind": "{{s}} s de retard sur le direct"
   }
 }

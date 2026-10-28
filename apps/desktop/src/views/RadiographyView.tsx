@@ -8,13 +8,24 @@
 // Deux sources, et elles ne voient pas la même chose. Les sondes du noyau voient toutes les
 // connexions, mais pas leur contenu. Le mandataire des domaines locaux, lui, voit le contenu en
 // clair — c'est lui qui termine le TLS — mais seulement ce qui entre par `*.solon.local`.
+//
+// La barre de lecture fait de l'écran un magnétoscope : on fige, on recule, on rejoue au ralenti.
+// Tout l'écran — carte comme journal — montre alors la machine telle qu'elle était à l'instant du
+// curseur. Rien n'est perdu pendant ce temps : les échanges continuent d'arriver, simplement
+// « dans le futur » du curseur.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { trace, type TraceConnection, type TraceEvent, type TraceHttp, type TracePeer } from "../api";
 import { EmptyState, hueOf, IconPulse, PageHeader } from "../components/ui";
+import { TraceTimeline, type Speed, type TimelinePoint } from "../components/TraceTimeline";
 
-/** Échanges gardés à l'écran. Le service en garde bien davantage ; inutile d'en afficher plus. */
-const SHOWN = 1000;
+/** Échanges gardés à l'écran. Plus qu'il n'en faut pour afficher : la relecture remonte loin. */
+const SHOWN = 5000;
+/** Un trait reste « allumé » sur la carte tant que son dernier échange date de moins que ça, en
+ *  temps de la relecture : au ralenti ×0,25, un appel brille donc huit vraies secondes. */
+const HOT_MS = 2000;
+/** Pas de la relecture. 20 images par seconde suffisent pour une carte et un journal. */
+const TICK_MS = 50;
 /** Au-delà, la carte devient un plat de spaghettis : on bascule sur le journal seul. */
 const MAX_NODES = 24;
 /** Nœud du navigateur sur la carte : tout ce qui entre par le mandataire part de là. */
@@ -40,21 +51,14 @@ export function RadiographyView() {
   const [status, setStatus] = useState<{ active: boolean; detail: string } | null>(null);
   const [facts, setFacts] = useState<Fact[]>([]);
   const [project, setProject] = useState<string>("");
-  const [paused, setPaused] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
-  // Le flux continue d'arriver pendant une pause : on l'accumule plutôt que de le perdre.
-  const held = useRef<Fact[]>([]);
-  const pausedRef = useRef(paused);
+  // Lecture : en direct, ou figée / rejouée à partir d'un instant du passé.
+  const [live, setLive] = useState(true);
+  const [cursor, setCursor] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState<Speed>(1);
+  const now = useNow(500);
   const nextId = useRef(0);
-
-  useEffect(() => {
-    pausedRef.current = paused;
-    if (!paused && held.current.length > 0) {
-      const pending = held.current.reverse();
-      held.current = [];
-      setFacts((prev) => [...pending, ...prev].slice(0, SHOWN));
-    }
-  }, [paused]);
 
   useEffect(() => {
     let alive = true;
@@ -65,14 +69,37 @@ export function RadiographyView() {
         return;
       }
       const fact = { ...ev, id: nextId.current++ } as Fact;
-      if (pausedRef.current) held.current.push(fact);
-      else setFacts((prev) => [fact, ...prev].slice(0, SHOWN));
+      setFacts((prev) => insertByTime(prev, fact).slice(0, SHOWN));
     });
     return () => {
       alive = false;
       channel.onmessage = () => {};
     };
   }, []);
+
+  // Relecture : le curseur avance à la vitesse choisie. Rattraper le présent rend la main au
+  // direct — sinon, à ×4, on finirait par rejouer un futur qui n'existe pas encore.
+  useEffect(() => {
+    if (live || !playing) return;
+    const id = setInterval(() => {
+      setCursor((c) => {
+        const next = c + TICK_MS * speed;
+        if (next >= Date.now()) {
+          setLive(true);
+          setPlaying(false);
+        }
+        return next;
+      });
+    }, TICK_MS);
+    return () => clearInterval(id);
+  }, [live, playing, speed]);
+
+  const at = live ? now : cursor;
+
+  function seek(ts: number) {
+    setLive(false);
+    setCursor(Math.min(ts, Date.now()));
+  }
 
   const projects = useMemo(() => {
     const names = new Set<string>();
@@ -87,13 +114,51 @@ export function RadiographyView() {
     () => (project ? facts.filter((f) => projectOf(f) === project) : facts),
     [facts, project],
   );
+  // Ce qui « a déjà eu lieu » à l'instant du curseur. En direct, tout.
+  const visible = useMemo(() => (live ? rows : rows.filter((f) => f.ts_ms <= cursor)), [rows, live, cursor]);
 
-  const graph = useMemo(() => buildGraph(rows, t("radiography.browser")), [rows, t]);
+  const graph = useMemo(() => buildGraph(visible, t("radiography.browser")), [visible, t]);
+  const order = useMemo(() => buildGraph(rows, "").nodes.map((n) => n.key), [rows]);
+
+  const points = useMemo<TimelinePoint[]>(
+    () => rows.filter((f) => f.kind === "http" || f.outcome !== "closed").map((f) => ({ ts: f.ts_ms, severity: severity(f) })),
+    [rows],
+  );
+  // La chronologie couvre tout l'historique gardé, et au moins une minute pour rester lisible.
+  const start = Math.min(rows.length > 0 ? rows[rows.length - 1].ts_ms : now, now - 60_000);
+
+  function playPause() {
+    if (live) {
+      // Mettre en pause le direct, c'est figer l'écran à cet instant.
+      seek(Date.now());
+      setPlaying(false);
+    } else {
+      setPlaying((p) => !p);
+    }
+  }
+
+  /** Saute à l'échange précédent ou suivant : le pas à pas d'un débogueur. */
+  function step(direction: -1 | 1) {
+    // `rows` va du plus récent au plus ancien.
+    const target =
+      direction < 0
+        ? rows.find((f) => f.ts_ms < at - 1)?.ts_ms
+        : [...rows].reverse().find((f) => f.ts_ms > at + 1)?.ts_ms;
+    if (target != null) {
+      seek(target);
+      setPlaying(false);
+    }
+  }
+
+  function goLive() {
+    setLive(true);
+    setPlaying(false);
+  }
 
   async function clear() {
-    held.current = [];
     setFacts([]);
     setOpen(null);
+    goLive();
     await trace.clear();
   }
 
@@ -101,15 +166,8 @@ export function RadiographyView() {
     <div className="flex h-full flex-col">
       <PageHeader
         title={t("radiography.title")}
-        count={t("radiography.count", { count: rows.length })}
-        actions={
-          <div className="flex gap-2">
-            <button type="button" className="btn btn-sm" onClick={() => setPaused((p) => !p)}>
-              {paused ? t("radiography.resume") : t("radiography.pause")}
-            </button>
-            <button type="button" className="btn btn-sm" onClick={() => void clear()}>{t("radiography.clear")}</button>
-          </div>
-        }
+        count={t("radiography.count", { count: visible.length })}
+        actions={<button type="button" className="btn btn-sm" onClick={() => void clear()}>{t("radiography.clear")}</button>}
         search={
           <select className="input w-56" value={project} onChange={(e) => setProject(e.target.value)} aria-label={t("radiography.project")}>
             <option value="">{t("radiography.all_projects")}</option>
@@ -122,10 +180,25 @@ export function RadiographyView() {
           {t("radiography.inactive", { detail: status.detail })}
         </div>
       )}
-      {paused && (
-        <div className="mx-4 mb-2 rounded px-3 py-2 text-[13px]" role="status" style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}>
-          {t("radiography.held", { count: held.current.length })}
-        </div>
+      {rows.length > 0 && (
+        <TraceTimeline
+          points={points}
+          start={start}
+          end={now}
+          at={at}
+          live={live}
+          playing={playing}
+          speed={speed}
+          onSeek={(ts) => {
+            seek(ts);
+            setPlaying(false);
+          }}
+          onPlayPause={playPause}
+          onSpeed={setSpeed}
+          onLive={goLive}
+          onStep={step}
+          onBack={(ms) => seek(at - ms)}
+        />
       )}
       {rows.length === 0 ? (
         <div className="card mx-4 mb-4 min-h-0 flex-1 overflow-auto">
@@ -138,18 +211,18 @@ export function RadiographyView() {
       ) : (
         <div className="mx-4 mb-4 flex min-h-0 flex-1 gap-4">
           <div className="card flex min-w-0 flex-1 items-center justify-center overflow-hidden p-2">
-            {graph.nodes.length > MAX_NODES ? (
+            {order.length > MAX_NODES ? (
               <p className="px-6 text-center text-[13px]" style={{ color: "var(--ink-2)" }}>
-                {t("radiography.too_many", { count: graph.nodes.length })}
+                {t("radiography.too_many", { count: order.length })}
               </p>
             ) : (
-              <CallMap graph={graph} />
+              <CallMap graph={graph} order={order} at={at} />
             )}
           </div>
           <div className="card list-card min-h-0 w-[30rem] shrink-0 overflow-auto">
             <table className="w-full text-[13px]">
               <tbody>
-                {rows.slice(0, 200).map((r) => (
+                {visible.slice(0, 200).map((r) => (
                   <Row key={r.id} fact={r} open={open === r.id} onToggle={() => setOpen(open === r.id ? null : r.id)} />
                 ))}
               </tbody>
@@ -226,7 +299,7 @@ function Headers({ title, headers }: { title: string; headers: { name: string; v
 }
 
 interface Node { key: string; label: string; project: string | null; inside: boolean; }
-interface Edge { from: string; to: string; total: number; failed: number; ports: Set<number>; }
+interface Edge { from: string; to: string; total: number; failed: number; ports: Set<number>; last: number; }
 interface Graph { nodes: Node[]; edges: Edge[]; }
 
 /** Agrège les échanges en un graphe : un nœud par extrémité, une arête par relation observée. */
@@ -256,13 +329,14 @@ function buildGraph(facts: Fact[], browserLabel: string): Graph {
     const id = `${from}\u0000${to}`;
     let edge = edges.get(id);
     if (!edge) {
-      edge = { from, to, total: 0, failed: 0, ports: new Set() };
+      edge = { from, to, total: 0, failed: 0, ports: new Set(), last: 0 };
       edges.set(id, edge);
     }
     // Une connexion comptée à l'ouverture puis à la fermeture compterait double.
     if (f.kind === "http" || f.outcome !== "closed") edge.total += 1;
     if (failed) edge.failed += 1;
     edge.ports.add(port);
+    edge.last = Math.max(edge.last, f.ts_ms);
   }
   // Deux projets ont souvent un service du même nom — `db`, `web`, `cache`. Deux cercles
   // identiques sur la carte ne veulent plus rien dire : on ajoute le projet, mais seulement à
@@ -283,17 +357,25 @@ const SIZE = 520;
 const RADIUS = 185;
 const NODE_R = 22;
 
-/** Disposition en cercle : stable, sans simulation, lisible jusqu'à une vingtaine de nœuds. */
-function CallMap({ graph }: { graph: Graph }) {
+/** Disposition en cercle : stable, sans simulation, lisible jusqu'à une vingtaine de nœuds.
+ *
+ *  Les places sont attribuées d'après `order` — tous les nœuds de l'historique, pas seulement
+ *  ceux déjà apparus à l'instant du curseur. En relecture, un service qui entre en scène prend la
+ *  place qui l'attendait au lieu de bousculer les autres. */
+function CallMap({ graph, order, at }: { graph: Graph; order: string[]; at: number }) {
   const { t } = useTranslation();
-  const n = graph.nodes.length;
-  const at = (i: number) => {
+  const n = order.length;
+  const pos = (key: string) => {
     // Le premier nœud en haut, puis dans le sens horaire.
+    const i = Math.max(0, order.indexOf(key));
     const angle = (i / Math.max(n, 1)) * 2 * Math.PI - Math.PI / 2;
     return { x: SIZE / 2 + RADIUS * Math.cos(angle), y: SIZE / 2 + RADIUS * Math.sin(angle) };
   };
-  const index = new Map(graph.nodes.map((node, i) => [node.key, i]));
   const busiest = Math.max(1, ...graph.edges.map((e) => e.total));
+  const labels = new Map(graph.nodes.map((node) => [node.key, node.label]));
+  // Ce qui vient de se passer à l'instant du curseur : c'est ce qui s'allume en relecture.
+  const hot = (e: Edge) => e.last <= at && at - e.last < HOT_MS;
+  const hotNodes = new Set(graph.edges.filter(hot).flatMap((e) => [e.from, e.to]));
 
   return (
     <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-full w-full" role="img" aria-label={t("radiography.map")}>
@@ -307,17 +389,18 @@ function CallMap({ graph }: { graph: Graph }) {
         ))}
       </defs>
       {graph.edges.map((e) => {
-        const seg = trim(at(index.get(e.from) ?? 0), at(index.get(e.to) ?? 0), NODE_R + 4);
+        const seg = trim(pos(e.from), pos(e.to), NODE_R + 4);
         const failing = e.failed > 0;
+        const lit = hot(e);
         const ports = [...e.ports].sort((x, y) => x - y).join(", ");
         return (
           <g key={`${e.from}-${e.to}`}>
-            <title>{`${e.from} → ${e.to} : ${t("radiography.calls", { count: e.total })}${failing ? ` · ${t("radiography.failed_count", { count: e.failed })}` : ""} · ${ports}`}</title>
+            <title>{`${labels.get(e.from) ?? e.from} → ${labels.get(e.to) ?? e.to} : ${t("radiography.calls", { count: e.total })}${failing ? ` · ${t("radiography.failed_count", { count: e.failed })}` : ""} · ${ports}`}</title>
             <line
               x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2}
               stroke={failing ? "var(--bad)" : "var(--accent)"}
-              strokeWidth={1.5 + 3 * (e.total / busiest)}
-              strokeOpacity={failing ? 1 : 0.5}
+              strokeWidth={1.5 + 3 * (e.total / busiest) + (lit ? 2 : 0)}
+              strokeOpacity={failing || lit ? 1 : 0.35}
               // L'échec ne se distingue pas que par la couleur : le trait est aussi discontinu.
               strokeDasharray={failing ? "7 5" : undefined}
               markerEnd={failing ? "url(#arrow-bad)" : "url(#arrow)"}
@@ -325,8 +408,8 @@ function CallMap({ graph }: { graph: Graph }) {
           </g>
         );
       })}
-      {graph.nodes.map((node, i) => {
-        const { x, y } = at(i);
+      {graph.nodes.map((node) => {
+        const { x, y } = pos(node.key);
         const hue = hueOf(node.key);
         return (
           <g key={node.key}>
@@ -334,7 +417,7 @@ function CallMap({ graph }: { graph: Graph }) {
               cx={x} cy={y} r={NODE_R}
               fill={node.inside ? `hsl(${hue} 70% 55% / 0.22)` : "var(--surface-2)"}
               stroke={node.inside ? `hsl(${hue} 60% 50%)` : "var(--line-strong)"}
-              strokeWidth={1.5}
+              strokeWidth={hotNodes.has(node.key) ? 3.5 : 1.5}
               strokeDasharray={node.inside ? undefined : "3 3"}
             />
             <text x={x} y={y + 5} textAnchor="middle" fontSize="14" fontWeight="600" fill={node.inside ? `hsl(${hue} 70% 72%)` : "var(--ink-3)"}>
@@ -363,11 +446,43 @@ function trim(a: { x: number; y: number }, b: { x: number; y: number }, by: numb
 
 /** Deux caractères au plus, pour habiller le cercle sans le surcharger. Une adresse donne son
  *  dernier nombre, qui est ce qui distingue deux voisins. */
-function initials(label: string): string {
+function initials(full: string): string {
+  // Le projet ajouté pour départager deux homonymes (« db · odoo18 ») n'entre pas dans les
+  // initiales : le cercle reste celui du service.
+  const label = full.split(" · ")[0];
   if (/^[\d.]+$/.test(label)) return label.split(".").pop() ?? "";
   const parts = label.split(/[-_. ]/).filter(Boolean);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return label.slice(0, 2).toUpperCase();
+}
+
+/** Range un échange à sa place, du plus récent au plus ancien.
+ *
+ *  L'ordre d'arrivée ne suffit pas : un échange HTTP est daté de sa requête mais n'est connu
+ *  qu'à sa réponse, donc après des connexions plus récentes que lui. La relecture, elle, a besoin
+ *  de l'ordre réel. Presque tout arrive en tête : la recherche part de là. */
+function insertByTime(list: Fact[], fact: Fact): Fact[] {
+  let i = 0;
+  while (i < list.length && list[i].ts_ms > fact.ts_ms) i++;
+  return [...list.slice(0, i), fact, ...list.slice(i)];
+}
+
+/** Gravité d'un échange pour la chronologie : 2 échec, 1 à surveiller, 0 rien à signaler. */
+function severity(f: Fact): 0 | 1 | 2 {
+  if (f.kind === "connection") return f.outcome === "failed" ? 2 : 0;
+  if (f.status >= 500 || f.status === 0) return 2;
+  return f.status >= 400 ? 1 : 0;
+}
+
+/** L'heure courante, rafraîchie à intervalle fixe : la carte éteint les traits refroidis et la
+ *  chronologie avance, même quand rien n'arrive. */
+function useNow(period: number): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), period);
+    return () => clearInterval(id);
+  }, [period]);
+  return now;
 }
 
 /** Heure à la seconde près : à cette échelle, la date n'apporte rien. */
