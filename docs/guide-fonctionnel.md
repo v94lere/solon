@@ -1,6 +1,6 @@
 # Solon — guide fonctionnel
 
-*Version 0.1.15, 22 octobre 2026. Ce guide décrit ce que fait l'application, écran par écran, du point de vue de
+*Version 0.1.16, 28 octobre 2026. Ce guide décrit ce que fait l'application, écran par écran, du point de vue de
 la personne qui l'utilise. Les choix techniques sont dans `ARCHITECTURE.md`, les mesures dans
 `docs/measurements.md`.*
 
@@ -188,6 +188,42 @@ réseau par conteneur sur 1 min, 10 min ou 1 h. Survol pour les valeurs exactes,
 clic sur sa couleur pour le masquer ; la courbe « Moteur » donne le total. En bas, chaque conteneur en marche
 avec CPU, mémoire, débits réseau et sa courbe de la dernière minute.
 
+## 9 bis. Radiographie
+
+Un débogueur de ce que vos services se disent, pas un outil de supervision : on ne cherche pas à savoir si tout
+va bien, on cherche pourquoi un appel a échoué. Deux lectures du même flux :
+
+- **La carte** : un cercle par service, un trait par relation, rouge quand des appels échouent, épaissi quand
+  un échange vient d'avoir lieu. Quand deux projets ont un service du même nom (`db`, `web`), le nom du projet
+  est ajouté aux cercles qui se marchent dessus. Au-delà de 24 extrémités, la carte s'efface et propose de
+  choisir un projet.
+- **Le journal** : un échange par ligne, le plus récent en haut. Une connexion TCP montre qui appelle qui, sur
+  quel port, avec son issue (connecté, refusé, fermé) et le programme à l'origine de l'appel. Un échange HTTP
+  — tout ce qui entre par une adresse `*.solon.local` — montre la méthode, le chemin, le code, la durée et la
+  taille ; un clic déplie les en-têtes des deux côtés, et les corps si leur capture est activée.
+
+**La barre de lecture** fait de l'écran un magnétoscope : Espace fige ou relance, les flèches passent d'un
+échange à l'autre, « −10 s » recule, trois vitesses (×0,25, ×1, ×4), « Direct » revient au présent. Pendant la
+relecture, carte et journal montrent le moteur tel qu'il était à l'instant du curseur. La chronologie est un
+histogramme : chaque barre prend la couleur du pire échange qu'elle contient.
+
+**Filtre par projet** en haut. Avec un projet choisi, « Effacer » n'efface que lui, et une case **« Capturer
+les corps »** apparaît : Solon garde alors les 4 premiers Ko des corps de requêtes et de réponses de ce projet,
+seulement pour du texte (JSON, HTML, formulaires, XML), jamais pour une image ou une réponse compressée. C'est
+désactivé par défaut ; l'écran Réglages rappelle les projets concernés.
+
+**Ce qui est masqué, avant d'être gardé** : les en-têtes d'authentification et de session (le nom reste, la
+valeur devient `•••`), les paramètres d'URL, champs de formulaire et clés JSON dont le nom évoque un mot de
+passe, un jeton ou une clé, les adresses de courriel et les numéros de téléphone. Ce qui n'a pas été capturé
+ne peut pas fuir.
+
+**Les adresses extérieures portent un nom** (`api.stripe.com` plutôt qu'un numéro) grâce à un relais DNS dans
+le moteur, qui transmet les questions aux serveurs de votre PC et retient les réponses. Les conteneurs lancés
+avant la version 0.1.16 gardent l'ancienne résolution tant qu'ils ne sont pas recréés.
+
+Tout reste sur votre PC. Rien n'est envoyé nulle part, rien n'est écrit en dehors de `%ProgramData%\Solon`.
+Les appels de conteneur à conteneur montrent la connexion mais pas encore son contenu.
+
 ## 10. Terminal
 
 Un shell **dans la machine du moteur** (`docker`, `ps`, `df`, `dmesg`…), pour les curieux et le dépannage. Ctrl+`
@@ -233,7 +269,7 @@ l'ouvre et le referme depuis n'importe quelle vue ; la session reste vivante en 
 |---|---|
 | Ctrl+K | Recherche : sections, actions du moteur, conteneurs, images, volumes, réseaux, projets |
 | Ctrl+Alt+S | Depuis n'importe quelle application : Solon au premier plan avec la recherche ouverte |
-| Ctrl+1 … Ctrl+8 | Projets, Conteneurs, Volumes, Images, Réseaux, Activité, Terminal, Réglages |
+| Ctrl+1 … Ctrl+9 | Projets, Conteneurs, Volumes, Images, Réseaux, Activité, Radiographie, Terminal, Réglages |
 | Ctrl+` | Terminal de la machine |
 | Ctrl+B | Replier ou déplier le menu |
 | Ctrl+S | Enregistrer (onglet Compose) |

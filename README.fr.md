@@ -35,6 +35,11 @@ moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une ic
 - **Import depuis Docker Desktop** : s'il est installé et démarré, Solon liste ses volumes et ses images
   avec leur taille et copie ceux que vous cochez dans son propre moteur. Rien n'est modifié ni supprimé
   du côté de Docker Desktop, et ce qui porte déjà le même nom dans Solon n'est pas touché.
+- **Radiographie** : une carte en direct de qui appelle qui dans vos projets, et un journal de chaque
+  échange — connexions TCP avec leur issue (un appel refusé apparaît en rouge), échanges HTTP complets pour ce
+  qui entre par une adresse `*.solon.local`, noms sur les adresses extérieures. Une barre de lecture pour
+  figer, avancer pas à pas, rejouer. Les valeurs sensibles sont masquées avant d'être gardées ; les corps
+  sont désactivés par défaut et s'activent par projet.
 - Mémoire au repos (moteur + service) : **430 à 520 Mo** mesurés pour 2 Go alloués.
 - **Aucune télémétrie, aucune requête réseau sortante** en dehors de ce que vos conteneurs et vos
   `docker pull` demandent.
@@ -170,7 +175,7 @@ L'icône de la barre des tâches porte un point vert, orange, rouge ou gris selo
 fenêtre sont mémorisées.
 
 Le menu de gauche a deux parties : **Docker** (Projects, Containers, Volumes, Images, Networks) et **General** (Activity,
-Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icônes seules ; le choix est mémorisé.
+Radiography, Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icônes seules ; le choix est mémorisé.
 
 - **Projets** (accueil) : une carte par projet Compose avec son état, son **adresse principale**
   (`https://web.blog.solon.local`, copiable, avec le cadenas), ses services, Ouvrir / Up / Arrêter / Détails. Les dossiers ouverts auparavant mais arrêtés sont listés aussi ; les
@@ -243,10 +248,18 @@ Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icône
 - **Activity** : performances en temps réel. En haut, le moteur : processeur, mémoire (utilisée / totale, réservée),
   stockage des données, réseau, avec les courbes de la dernière minute. En dessous, chaque conteneur en marche :
   processeur, mémoire, débit réseau, courbe du processeur ; colonnes triables. Rien n'est installé dans les conteneurs.
+- **Radiography** (`Ctrl+7`) : qui appelle qui, en temps réel. Une carte (un cercle par service, un trait par
+  relation, rouge quand des appels échouent) et un journal (un échange par ligne, dépliable pour voir les
+  en-têtes). Ce qui entre par une adresse `*.solon.local` est montré comme l'échange HTTP complet ; les appels
+  entre conteneurs montrent la connexion et son issue ; les adresses extérieures portent le nom qui a été
+  résolu. La barre de lecture fige, passe d'un échange à l'autre et rejoue à ×0,25, ×1 ou ×4. « Capturer les
+  corps », par projet, garde les 4 premiers Ko des corps texte. En-têtes, paramètres d'URL, champs de
+  formulaire et clés JSON au nom sensible, courriels et téléphones sont masqués à la capture. Tout reste sur
+  votre PC.
 - **Terminal** (section, ou `Ctrl+\``) : un shell root dans le moteur Linux lui-même, pour `docker`, `ps`, `df`,
   `dmesg`… La session reste ouverte quand on change de section ; « Nouvelle session » en relance une.
 - **Recherche globale `Ctrl+K`** : conteneurs, images, volumes, réseaux, projets, actions du moteur, sections.
-  `Ctrl+1` à `Ctrl+8` changent de section dans l'ordre du menu.
+  `Ctrl+1` à `Ctrl+9` changent de section dans l'ordre du menu.
 - **Réglages** : langue (anglais par défaut, français), apparence (clair, sombre, Windows), couleur d'accent (bleu
   Solon ou couleur de Windows), mémoire et processeurs du moteur (par défaut
   tous les cœurs moins deux), limite de stockage, démarrage à l'ouverture de session.

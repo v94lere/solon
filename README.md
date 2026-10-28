@@ -49,6 +49,10 @@ volumes, networks, terminal, logs, a system-tray icon, and a few things nothing 
 - **Debug shell** into any container, including "distroless" images with no shell: a toolbox (bash, curl, dig,
   ps, strace, tcpdump, jq, vim…) that shares the container's processes, network and volumes.
 - **Activity**: live CPU, memory, storage and network of the engine and of each container.
+- **Radiography**: a live map of who calls whom inside your projects, and a journal of every exchange — TCP
+  connections with their outcome (a refused call shows in red), full HTTP exchanges for anything coming in
+  through a `*.solon.local` address, names on outside addresses. A playback bar to pause, step and replay.
+  Sensitive values are masked before they are stored; bodies are off by default and enabled per project.
 - Compose projects: services, merged logs, Up / Down / Rebuild with live output, open in Explorer or VS Code.
 - Idle memory (engine + service): **430 to 520 MB** measured for 2 GB allocated; unused memory is returned
   to Windows automatically.
@@ -177,7 +181,7 @@ Development mode without installing: `solon-service.exe console` in an administr
 ## Using Solon
 
 The left menu has two groups: **Docker** (Projects, Containers, Volumes, Images, Networks) and **General**
-(Activity, Terminal, Settings). The button at the top (or `Ctrl+B`) collapses it to icons. The block at the bottom shows
+(Activity, Radiography, Terminal, Settings). The button at the top (or `Ctrl+B`) collapses it to icons. The block at the bottom shows
 the engine state, its uptime and two mini gauges (CPU, RAM). The tray icon carries a green, orange, red or grey
 dot depending on the engine state.
 
@@ -221,9 +225,16 @@ dot depending on the engine state.
   Files browser.
 - **Activity**: the engine's CPU, memory, storage and network with one-minute curves, then each running
   container with CPU, memory, network rates and a CPU curve.
+- **Radiography** (`Ctrl+7`): who calls whom, in real time. A map (one circle per service, one line per
+  relationship, red when calls fail) and a journal (one exchange per line, unfolding to show headers). What
+  comes in through a `*.solon.local` address is shown as the complete HTTP exchange; calls between containers
+  show the connection and its outcome; outside addresses carry the name that was resolved. The playback bar
+  pauses, steps from one exchange to the next and replays at ×0.25, ×1 or ×4. *Capture bodies*, per project,
+  keeps the first 4 KB of text bodies. Headers, URL parameters, form fields and JSON keys with sensitive
+  names, e-mail addresses and phone numbers are masked at capture time. Everything stays on your PC.
 - **Terminal** (`Ctrl+\``): a root shell inside the Linux engine itself, for `docker`, `ps`, `df`, `dmesg`…
 - **Search `Ctrl+K`**: containers, images, volumes, networks, projects, engine actions, sections.
-  `Ctrl+1` to `Ctrl+8` switch sections. **`Ctrl+Alt+S` from any application** brings Solon to the front
+  `Ctrl+1` to `Ctrl+9` switch sections. **`Ctrl+Alt+S` from any application** brings Solon to the front
   with the search open.
 - **Settings**: language (English by default, French), appearance (light, dark, follow Windows), accent
   colour (Solon blue or the Windows accent), engine memory and processors (all cores minus two by default),

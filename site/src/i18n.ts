@@ -38,6 +38,7 @@ const en = {
       { title: "Ready-made stacks", body: "WordPress, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Jupyter Lab, Mailpit… and starter kits for Django, Flask, FastAPI and Next.js that generate a project on first start." },
       { title: "Compose, all of it", body: "Open a folder, Solon detects the stack or proposes one. Services, merged logs, Up / Down / Rebuild, and the compose file editable in place with Save and Up." },
       { title: "See inside", body: "Files tab with drag-and-drop, terminal, debug shell that works even in images without a shell, live CPU, memory and network charts per container. VS Code Dev Containers work as is." },
+      { title: "Radiography", body: "Who calls whom, live: a map of your services and a journal of every exchange, refused calls in red, full HTTP for what comes through a local address, names on outside hosts. Pause, step, replay. Sensitive values masked before they are stored; everything stays on your PC." },
     ],
   },
   compare: {
@@ -304,6 +305,7 @@ const fr: typeof en = {
       { title: "Piles prêtes", body: "WordPress, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Jupyter Lab, Mailpit… et des kits de démarrage Django, Flask, FastAPI et Next.js qui génèrent un projet au premier lancement." },
       { title: "Compose, en entier", body: "Ouvrez un dossier, Solon reconnaît la pile ou en propose une. Services, journaux mêlés, Up / Down / Rebuild, et le fichier Compose modifiable sur place avec Save and Up." },
       { title: "Voir dedans", body: "Onglet Fichiers avec glisser-déposer, terminal, shell de débogage même dans les images sans shell, courbes CPU, mémoire et réseau par conteneur. VS Code Dev Containers fonctionne tel quel." },
+      { title: "Radiographie", body: "Qui appelle qui, en direct : une carte de vos services et un journal de chaque échange, appels refusés en rouge, HTTP complet pour ce qui entre par une adresse locale, des noms sur les hôtes extérieurs. Pause, pas à pas, relecture. Valeurs sensibles masquées avant d'être gardées ; tout reste sur votre PC." },
     ],
   },
   compare: {
