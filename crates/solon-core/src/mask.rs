@@ -94,6 +94,153 @@ fn is_secret_param(name: &str) -> bool {
     SECRET_PARAMS.iter().any(|f| lower.contains(f))
 }
 
+/// Types de contenu dont le corps vaut la peine d'être montré. Tout le reste — images, archives,
+/// polices, flux binaires — n'apprend rien à l'écran et n'est pas capturé du tout.
+pub fn is_text_content(content_type: &str) -> bool {
+    let mime = mime_of(content_type);
+    mime.starts_with("text/")
+        || mime.ends_with("+json")
+        || mime.ends_with("+xml")
+        || matches!(
+            mime.as_str(),
+            "application/json"
+                | "application/xml"
+                | "application/x-www-form-urlencoded"
+                | "application/javascript"
+                | "application/x-ndjson"
+                | "application/graphql"
+        )
+}
+
+fn mime_of(content_type: &str) -> String {
+    content_type
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase()
+}
+
+/// Un corps tel qu'il sera gardé : décodé en texte, puis masqué selon sa forme.
+///
+/// Un formulaire (`application/x-www-form-urlencoded`) est traité comme une chaîne de paramètres :
+/// les champs au nom suspect perdent leur valeur. Un document JSON perd les valeurs des clés au
+/// nom suspect, à quelque profondeur qu'elles soient. Le reste passe par le masquage du texte
+/// libre. Dans tous les cas, courriels et téléphones disparaissent.
+pub fn body(content_type: &str, bytes: &[u8]) -> String {
+    let raw = String::from_utf8_lossy(bytes);
+    let mime = mime_of(content_type);
+    if mime == "application/x-www-form-urlencoded" {
+        return form(&raw);
+    }
+    if mime == "application/json" || mime.ends_with("+json") || mime == "application/x-ndjson" {
+        return text(&json_values(&raw));
+    }
+    text(&raw)
+}
+
+/// Une chaîne `a=1&password=x` : même règle que les paramètres d'URL.
+fn form(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for (i, pair) in s.split('&').enumerate() {
+        if i > 0 {
+            out.push('&');
+        }
+        match pair.split_once('=') {
+            Some((name, value)) => {
+                out.push_str(name);
+                out.push('=');
+                if is_secret_param(name) {
+                    out.push_str(REDACTED);
+                } else {
+                    out.push_str(&text(value));
+                }
+            }
+            None => out.push_str(pair),
+        }
+    }
+    out
+}
+
+/// Dans un texte JSON, remplace la valeur (chaîne, nombre ou mot-clé) de toute clé au nom suspect.
+///
+/// Pas d'analyse JSON complète : un balayage des chaînes suffit. Une chaîne suivie de `:` est une
+/// clé ; si son nom est suspect, la valeur qui suit est remplacée — une chaîne en entier, virgules
+/// et deux-points compris, un nombre ou un mot-clé jusqu'au séparateur. Un objet ou un tableau en
+/// valeur n'est pas touché : ses propres clés passent au balayage.
+fn json_values(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0usize;
+    while i < b.len() {
+        if b[i] != b'"' {
+            let start = i;
+            while i < b.len() && b[i] != b'"' {
+                i += 1;
+            }
+            out.push_str(&s[start..i]);
+            continue;
+        }
+        let Some(close) = json_string_end(b, i) else {
+            out.push_str(&s[i..]);
+            break;
+        };
+        let key = &s[i + 1..close];
+        out.push_str(&s[i..=close]);
+        i = close + 1;
+        // Une clé est suivie de `:` (espaces permis).
+        let mut j = i;
+        while j < b.len() && b[j].is_ascii_whitespace() {
+            j += 1;
+        }
+        if j >= b.len() || b[j] != b':' || !is_secret_param(key) {
+            continue;
+        }
+        out.push_str(&s[i..=j]);
+        i = j + 1;
+        while i < b.len() && b[i].is_ascii_whitespace() {
+            out.push(' ');
+            i += 1;
+        }
+        if i >= b.len() {
+            break;
+        }
+        match b[i] {
+            b'"' => {
+                let end = json_string_end(b, i).unwrap_or(b.len() - 1);
+                out.push('"');
+                out.push_str(REDACTED);
+                out.push('"');
+                i = end + 1;
+            }
+            b'{' | b'[' => {}
+            _ => {
+                while i < b.len()
+                    && !matches!(b[i], b',' | b'}' | b']')
+                    && !b[i].is_ascii_whitespace()
+                {
+                    i += 1;
+                }
+                out.push_str(REDACTED);
+            }
+        }
+    }
+    out
+}
+
+/// Indice du guillemet qui ferme la chaîne JSON ouverte en `open`, en sautant les échappements.
+fn json_string_end(b: &[u8], open: usize) -> Option<usize> {
+    let mut i = open + 1;
+    while i < b.len() {
+        match b[i] {
+            b'\\' => i += 2,
+            b'"' => return Some(i),
+            _ => i += 1,
+        }
+    }
+    None
+}
+
 /// Remplace dans un texte libre ce qui désigne une personne : adresses de courriel et numéros de
 /// téléphone.
 pub fn text(s: &str) -> String {
@@ -295,6 +442,70 @@ mod tests {
     fn le_masquage_preserve_les_caracteres_accentues() {
         assert_eq!(text("héllo wörld ✓"), "héllo wörld ✓");
         assert_eq!(text("é 0612345678 è"), "é ••• è");
+    }
+
+    #[test]
+    fn seuls_les_corps_texte_sont_captures() {
+        for ct in [
+            "application/json",
+            "application/json; charset=utf-8",
+            "text/html",
+            "application/problem+json",
+            "application/x-www-form-urlencoded",
+            "Text/Plain",
+        ] {
+            assert!(is_text_content(ct), "{ct}");
+        }
+        for ct in [
+            "image/png",
+            "application/octet-stream",
+            "application/zip",
+            "",
+        ] {
+            assert!(!is_text_content(ct), "{ct}");
+        }
+    }
+
+    #[test]
+    fn un_formulaire_perd_ses_champs_suspects() {
+        assert_eq!(
+            body(
+                "application/x-www-form-urlencoded",
+                b"login=marc&password=hunter2&remember=1"
+            ),
+            "login=marc&password=•••&remember=1"
+        );
+    }
+
+    #[test]
+    fn un_json_perd_les_valeurs_des_cles_suspectes() {
+        let json = br#"{"user":"marc","password":"hunter2","profile":{"api_key": "k1", "age": 42},"tokens":["a","b"],"otp":123456,"ok":true}"#;
+        assert_eq!(
+            body("application/json", json),
+            r#"{"user":"marc","password":"•••","profile":{"api_key": "•••", "age": 42},"tokens":["a","b"],"otp":•••,"ok":true}"#
+        );
+        // Une chaîne avec des guillemets échappés et un deux-points, qui n'est pas une clé.
+        assert_eq!(
+            body("application/json", br#"{"msg":"a \"token\": b","n":1}"#),
+            r#"{"msg":"a \"token\": b","n":1}"#
+        );
+        // Un JSON tronqué au milieu d'une chaîne ne fait pas paniquer.
+        assert_eq!(
+            body("application/json", br#"{"password":"hun"#),
+            r#"{"password":"•••""#
+        );
+        assert_eq!(body("application/json", br#"{"pass"#), r#"{"pass"#);
+    }
+
+    #[test]
+    fn un_corps_texte_libre_perd_les_courriels() {
+        assert_eq!(
+            body(
+                "text/plain; charset=utf-8",
+                "Bonjour marc@example.com".as_bytes()
+            ),
+            "Bonjour •••"
+        );
     }
 
     #[test]

@@ -19,7 +19,7 @@ use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use solon_core::protocol::{ContainerEndpoint, TraceHeader, TraceHttp, TracePeer};
+use solon_core::protocol::{ContainerEndpoint, TraceBody, TraceHeader, TraceHttp, TracePeer};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
@@ -559,14 +559,74 @@ fn rewrite_head(head: &[u8], scheme: &str) -> (Vec<u8>, Body) {
     (out.into_bytes(), body)
 }
 
+/// Octets d'un corps gardés pour la radiographie, quand la capture est activée pour le projet.
+/// Assez pour lire un formulaire, une réponse JSON ou une page d'erreur ; pas de quoi retenir un
+/// téléchargement. Le reste du corps est relayé sans être gardé.
+const BODY_CAPTURE: usize = 4096;
+
+/// Recueille le début d'un corps au passage, sans jamais ralentir le relais : `feed` ne fait
+/// qu'une copie bornée en mémoire.
+#[derive(Default)]
+struct Tee {
+    data: Vec<u8>,
+    truncated: bool,
+}
+
+impl Tee {
+    fn feed(&mut self, chunk: &[u8]) {
+        let room = BODY_CAPTURE - self.data.len();
+        if chunk.len() > room {
+            self.data.extend_from_slice(&chunk[..room]);
+            self.truncated = true;
+        } else {
+            self.data.extend_from_slice(chunk);
+        }
+    }
+
+    /// Le corps masqué, ou rien s'il était vide.
+    fn into_body(self, content_type: &str) -> Option<TraceBody> {
+        (!self.data.is_empty()).then(|| TraceBody {
+            text: solon_core::mask::body(content_type, &self.data),
+            truncated: self.truncated,
+        })
+    }
+}
+
+/// Le type de contenu d'un corps qui vaut d'être capturé : du texte, et pas compressé — un corps
+/// `gzip` serait du bruit à l'écran, et le décompresser n'est pas le travail d'un relais.
+fn capturable(headers: &[TraceHeader]) -> Option<String> {
+    let find = |name: &str| {
+        headers
+            .iter()
+            .find(|h| h.name.eq_ignore_ascii_case(name))
+            .map(|h| h.value.as_str())
+    };
+    let encoding = find("content-encoding").unwrap_or("identity").trim();
+    if !encoding.eq_ignore_ascii_case("identity") && !encoding.is_empty() {
+        return None;
+    }
+    let ct = find("content-type")?;
+    solon_core::mask::is_text_content(ct).then(|| ct.to_owned())
+}
+
 /// Relaie exactement `n` octets de `r` vers `w`, en commençant par ce que `buf` contient déjà.
-async fn forward_exact<R, W>(r: &mut R, w: &mut W, buf: &mut Vec<u8>, mut n: u64) -> io::Result<()>
+/// Avec un `tee`, le début de ce qui passe est gardé.
+async fn forward_exact<R, W>(
+    r: &mut R,
+    w: &mut W,
+    buf: &mut Vec<u8>,
+    mut n: u64,
+    mut tee: Option<&mut Tee>,
+) -> io::Result<()>
 where
     R: tokio::io::AsyncRead + Unpin,
     W: tokio::io::AsyncWrite + Unpin,
 {
     let take = (buf.len() as u64).min(n) as usize;
     if take > 0 {
+        if let Some(t) = tee.as_deref_mut() {
+            t.feed(&buf[..take]);
+        }
         w.write_all(&buf[..take]).await?;
         buf.drain(..take);
         n -= take as u64;
@@ -577,6 +637,9 @@ where
         let got = r.read(&mut chunk[..want]).await?;
         if got == 0 {
             return Err(io::ErrorKind::UnexpectedEof.into());
+        }
+        if let Some(t) = tee.as_deref_mut() {
+            t.feed(&chunk[..got]);
         }
         w.write_all(&chunk[..got]).await?;
         n -= got as u64;
@@ -610,7 +673,12 @@ async fn read_line<R: tokio::io::AsyncRead + Unpin>(
 /// Relaie un corps `Transfer-Encoding: chunked` : chaque morceau (taille en hexadécimal, données,
 /// `\r\n`), puis le morceau vide et les éventuels en-têtes de fin.
 /// Renvoie le nombre d'octets de contenu relayés, hors enrobage des morceaux.
-async fn forward_chunked<R, W>(r: &mut R, w: &mut W, buf: &mut Vec<u8>) -> io::Result<u64>
+async fn forward_chunked<R, W>(
+    r: &mut R,
+    w: &mut W,
+    buf: &mut Vec<u8>,
+    mut tee: Option<&mut Tee>,
+) -> io::Result<u64>
 where
     R: tokio::io::AsyncRead + Unpin,
     W: tokio::io::AsyncWrite + Unpin,
@@ -634,7 +702,9 @@ where
                 }
             }
         }
-        forward_exact(r, w, buf, size + 2).await?;
+        // Les données du morceau sont capturées, pas le `\r\n` qui les termine.
+        forward_exact(r, w, buf, size, tee.as_deref_mut()).await?;
+        forward_exact(r, w, buf, 2, None).await?;
         total += size;
     }
 }
@@ -652,6 +722,10 @@ struct Pending {
     /// Corps annoncé par `Content-Length`. Zéro quand l'envoi est par morceaux : la requête part
     /// dans la file avant d'être relayée, pour ne jamais retarder la réponse.
     request_bytes: u64,
+    /// Début du corps de requête, déposé une fois le corps relayé — donc après la mise en file.
+    /// Vide si la capture n'est pas activée pour le projet, ou si la réponse est arrivée avant
+    /// la fin de l'envoi (rare : `100 Continue` refusé, erreur précoce).
+    body: Arc<std::sync::Mutex<Option<TraceBody>>>,
 }
 
 /// Découpe un en-tête en lignes, la première à part.
@@ -805,6 +879,9 @@ where
     let (pending_tx, mut pending_rx) = tokio::sync::mpsc::unbounded_channel::<Pending>();
     let trace_dst = target.peer.clone();
     let trace_host = host.clone();
+    // Décidé une fois par connexion : le réglage qui change en cours de route s'appliquera aux
+    // connexions suivantes, ce qui est le cas de toute façon au prochain clic.
+    let capture = trace.captures_bodies(target.peer.project.as_deref());
     let pump = tokio::spawn(async move {
         let mut buf = Vec::with_capacity(8192);
         loop {
@@ -824,12 +901,22 @@ where
                 break;
             }
             buf.drain(..head_end);
+            let resp_ct = if capture {
+                capturable(&response_headers)
+            } else {
+                None
+            };
+            let mut tee = resp_ct.as_ref().map(|_| Tee::default());
             let relayed = match body {
                 RespBody::None => Ok(0),
-                RespBody::Length(n) => forward_exact(&mut upstream_rx, &mut client, &mut buf, n)
-                    .await
-                    .map(|()| n),
-                RespBody::Chunked => forward_chunked(&mut upstream_rx, &mut client, &mut buf).await,
+                RespBody::Length(n) => {
+                    forward_exact(&mut upstream_rx, &mut client, &mut buf, n, tee.as_mut())
+                        .await
+                        .map(|()| n)
+                }
+                RespBody::Chunked => {
+                    forward_chunked(&mut upstream_rx, &mut client, &mut buf, tee.as_mut()).await
+                }
                 RespBody::Upgrade | RespBody::UntilClose => {
                     let head = std::mem::take(&mut buf);
                     match client.write_all(&head).await {
@@ -857,6 +944,11 @@ where
                         response_headers,
                         request_bytes: p.request_bytes,
                         response_bytes: relayed.as_ref().copied().unwrap_or(0),
+                        request_body: p.body.lock().unwrap().take(),
+                        response_body: match (tee, resp_ct) {
+                            (Some(t), Some(ct)) => t.into_body(&ct),
+                            _ => None,
+                        },
                     },
                 )));
             }
@@ -873,6 +965,8 @@ where
             let (method, path, headers) = parse_request_head(&buf[..head_end]);
             let (head, body) = rewrite_head(&buf[..head_end], scheme);
             buf.drain(..head_end);
+            let req_ct = if capture { capturable(&headers) } else { None };
+            let body_slot = Arc::new(std::sync::Mutex::new(None));
             let _ = pending_tx.send(Pending {
                 ts_ms: now_ms(),
                 started: std::time::Instant::now(),
@@ -883,8 +977,10 @@ where
                     Body::Length(n) => n,
                     _ => 0,
                 },
+                body: body_slot.clone(),
             });
             upstream.write_all(&head).await?;
+            let mut tee = req_ct.as_ref().map(|_| Tee::default());
             match body {
                 Body::Upgrade => {
                     upstream.write_all(&buf).await?;
@@ -893,11 +989,14 @@ where
                     return Ok(());
                 }
                 Body::Length(n) => {
-                    forward_exact(&mut client_rx, &mut upstream, &mut buf, n).await?
+                    forward_exact(&mut client_rx, &mut upstream, &mut buf, n, tee.as_mut()).await?
                 }
                 Body::Chunked => {
-                    forward_chunked(&mut client_rx, &mut upstream, &mut buf).await?;
+                    forward_chunked(&mut client_rx, &mut upstream, &mut buf, tee.as_mut()).await?;
                 }
+            }
+            if let (Some(t), Some(ct)) = (tee, req_ct) {
+                *body_slot.lock().unwrap() = t.into_body(&ct);
             }
             match read_head(&mut client_rx, &mut buf).await? {
                 Some(n) => head_end = n,
@@ -1084,21 +1183,77 @@ mod tests {
         let mut input = std::io::Cursor::new(b"cd\r\nefgh".to_vec());
         let mut out = Vec::new();
         let mut buf = b"ab".to_vec();
-        forward_exact(&mut input, &mut out, &mut buf, 4)
+        let mut tee = Tee::default();
+        forward_exact(&mut input, &mut out, &mut buf, 4, Some(&mut tee))
             .await
             .unwrap();
         assert_eq!(out, b"abcd");
         assert!(buf.is_empty());
+        assert_eq!(tee.data, b"abcd");
 
         let mut input = std::io::Cursor::new(b"3\r\nabc\r\n0\r\n\r\nSUITE".to_vec());
         let mut out = Vec::new();
         let mut buf = Vec::new();
-        forward_chunked(&mut input, &mut out, &mut buf)
+        let mut tee = Tee::default();
+        forward_chunked(&mut input, &mut out, &mut buf, Some(&mut tee))
             .await
             .unwrap();
         assert_eq!(out, b"3\r\nabc\r\n0\r\n\r\n");
         // Ce qui suit le corps reste dans le tampon pour la requête suivante.
         assert_eq!(buf, b"SUITE");
+        // La capture ne garde que les données, pas l'enrobage des morceaux.
+        assert_eq!(tee.data, b"abc");
+    }
+
+    #[test]
+    fn la_capture_d_un_corps_est_bornee_et_masquee() {
+        let mut tee = Tee::default();
+        tee.feed(b"login=marc&password=hunter2");
+        let body = tee.into_body("application/x-www-form-urlencoded").unwrap();
+        assert_eq!(body.text, "login=marc&password=•••");
+        assert!(!body.truncated);
+
+        let mut tee = Tee::default();
+        tee.feed(&vec![b'x'; BODY_CAPTURE + 10]);
+        tee.feed(b"plus");
+        assert_eq!(tee.data.len(), BODY_CAPTURE);
+        let body = tee.into_body("text/plain").unwrap();
+        assert!(body.truncated);
+        assert_eq!(body.text.len(), BODY_CAPTURE);
+
+        // Un corps vide ne donne rien.
+        assert!(Tee::default().into_body("text/plain").is_none());
+    }
+
+    #[test]
+    fn seuls_les_corps_texte_non_compresses_sont_capturables() {
+        let h = |pairs: &[(&str, &str)]| -> Vec<TraceHeader> {
+            pairs
+                .iter()
+                .map(|(k, v)| TraceHeader::masked(k, v))
+                .collect()
+        };
+        assert_eq!(
+            capturable(&h(&[("Content-Type", "application/json; charset=utf-8")])),
+            Some("application/json; charset=utf-8".to_owned())
+        );
+        assert_eq!(capturable(&h(&[("Content-Type", "image/png")])), None);
+        assert_eq!(
+            capturable(&h(&[
+                ("Content-Type", "text/html"),
+                ("Content-Encoding", "gzip")
+            ])),
+            None
+        );
+        assert_eq!(
+            capturable(&h(&[
+                ("Content-Type", "text/html"),
+                ("Content-Encoding", "identity")
+            ])),
+            Some("text/html".to_owned())
+        );
+        // Sans type de contenu, on ne devine pas.
+        assert_eq!(capturable(&h(&[("Content-Length", "12")])), None);
     }
 
     #[test]

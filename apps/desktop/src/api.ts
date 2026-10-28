@@ -83,7 +83,8 @@ export interface Settings {
   sleep_never?: string[];
   /** Relancer au démarrage du moteur les projets et conteneurs qui tournaient à son arrêt. */
   resume_running?: boolean;
-  /** Projets Compose (noms) démarrés à chaque démarrage du moteur. */
+  /** Projets (noms Compose) dont la radiographie garde le début des corps de requêtes et de réponses. */
+  trace_bodies?: string[];
 }
 
 // ---- moteur / service ----
@@ -157,6 +158,8 @@ export interface TraceConnection {
 }
 
 export interface TraceHeader { name: string; value: string }
+/** Le début d'un corps, masqué ; présent seulement si la capture est activée pour le projet. */
+export interface TraceBody { text: string; truncated: boolean }
 
 /** Un échange HTTP complet, vu par le mandataire des domaines locaux — en clair même en HTTPS,
  *  puisque c'est lui qui termine le TLS. Les valeurs sensibles sont déjà masquées à la capture. */
@@ -172,6 +175,8 @@ export interface TraceHttp {
   dst: TracePeer;
   request_headers: TraceHeader[];
   response_headers: TraceHeader[];
+  request_body?: TraceBody;
+  response_body?: TraceBody;
   request_bytes: number;
   response_bytes: number;
 }
@@ -190,7 +195,8 @@ export const trace = {
     void invoke("trace_subscribe", { channel });
     return channel;
   },
-  clear: () => invoke<void>("trace_clear"),
+  /** Oublie ce qui a été observé : tout, ou seulement ce qui touche un projet. */
+  clear: (project?: string) => invoke<void>("trace_clear", { project: project ?? null }),
 };
 
 // ---- conteneurs ----

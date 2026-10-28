@@ -76,6 +76,8 @@ impl Engine {
             ..Default::default()
         });
         let (events, _) = broadcast::channel(256);
+        let trace = crate::trace::TraceHub::new();
+        trace.set_body_projects(&cfg.settings.trace_bodies);
         Self {
             inner: Arc::new(Inner {
                 cfg,
@@ -87,7 +89,7 @@ impl Engine {
                 domains: Default::default(),
                 sleeper,
                 endpoints: Mutex::new(Vec::new()),
-                trace: crate::trace::TraceHub::new(),
+                trace,
             }),
         }
     }

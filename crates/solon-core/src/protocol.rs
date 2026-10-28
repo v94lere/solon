@@ -328,6 +328,35 @@ pub struct TraceHttp {
     /// Octets de corps relayés dans chaque sens.
     pub request_bytes: u64,
     pub response_bytes: u64,
+    /// Début des corps, masqués, quand la capture est activée pour le projet (voir
+    /// `Settings::trace_bodies`). Absents sinon, et absents aussi pour tout ce qui n'est pas du
+    /// texte : une image ou une archive n'apprennent rien à l'écran.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_body: Option<TraceBody>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_body: Option<TraceBody>,
+}
+
+/// Le début d'un corps de requête ou de réponse, masqué.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TraceBody {
+    pub text: String,
+    /// Le corps dépassait la limite de capture : seul le début est là.
+    #[serde(default)]
+    pub truncated: bool,
+}
+
+impl TraceEvent {
+    /// Le projet auquel le fait se rattache : celui du conteneur qui a répondu pour un échange
+    /// HTTP, celui de l'appelant (à défaut de l'appelé) pour une connexion. `None` pour l'état des
+    /// sondes et pour ce qui ne touche aucun projet.
+    pub fn project(&self) -> Option<&str> {
+        match self {
+            TraceEvent::Status { .. } => None,
+            TraceEvent::Http(h) => h.dst.project.as_deref(),
+            TraceEvent::Connection(c) => c.src.project.as_deref().or(c.dst.project.as_deref()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -714,6 +743,36 @@ mod tests {
         assert_eq!(v["src"]["service"], "web");
         assert_eq!(v["dst"]["container_id"], serde_json::Value::Null);
         assert_eq!(serde_json::from_value::<TraceEvent>(v).unwrap(), e);
+    }
+
+    #[test]
+    fn un_fait_se_rattache_a_son_projet() {
+        let peer = |project: Option<&str>| TracePeer {
+            ip: "10.0.0.1".into(),
+            project: project.map(str::to_owned),
+            ..Default::default()
+        };
+        let conn = |src: Option<&str>, dst: Option<&str>| {
+            TraceEvent::Connection(Box::new(TraceConnection {
+                ts_ms: 0,
+                outcome: ConnectionOutcome::Closed,
+                src: peer(src),
+                dst: peer(dst),
+                sport: 1,
+                dport: 2,
+                comm: String::new(),
+                pid: 0,
+                duration_ms: None,
+            }))
+        };
+        assert_eq!(conn(Some("a"), Some("b")).project(), Some("a"));
+        assert_eq!(conn(None, Some("b")).project(), Some("b"));
+        assert_eq!(conn(None, None).project(), None);
+        let status = TraceEvent::Status {
+            active: true,
+            detail: String::new(),
+        };
+        assert_eq!(status.project(), None);
     }
 
     #[test]

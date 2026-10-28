@@ -10,6 +10,63 @@ Tout reste sur la machine. Rien n'est envoyé nulle part, rien n'est écrit en d
 
 Ce document suit les étapes. Une section par phase, écrite au moment où elle est livrée.
 
+## Les corps, et effacer par projet
+
+Deux restes de la note de mission, livrés ensemble le 28 octobre 2026 parce qu'ils tiennent tous
+les deux au même mot : **par projet**.
+
+### Les corps de requêtes et de réponses
+
+Désactivés par défaut, activables projet par projet, depuis l'écran lui-même : on choisit un
+projet dans le filtre, et une case « Capturer les corps » apparaît. Le réglage est enregistré
+avec les autres (`trace_bodies` dans `settings.json`) et s'applique aux connexions suivantes
+sans redémarrer le moteur. L'écran Réglages rappelle la liste des projets concernés, pour qu'on
+ne l'oublie pas.
+
+Ce qui est gardé : **les 4 premiers kilooctets** de chaque corps, et seulement quand le type de
+contenu est du texte — JSON, HTML, formulaire, XML, texte brut. Une image, une archive, une police,
+un corps compressé en `gzip` ne sont pas capturés du tout : ils n'apprendraient rien à l'écran, et
+les décompresser n'est pas le travail d'un relais. Quatre kilooctets suffisent à lire un formulaire,
+une réponse d'API ou une page d'erreur ; ils ne suffisent pas à retenir un téléchargement, et c'est
+voulu.
+
+Le masquage s'étend aux corps, toujours à la capture :
+
+- un formulaire (`application/x-www-form-urlencoded`) suit la règle des paramètres d'URL — les
+  champs dont le nom contient `pass`, `token`, `secret`, `key`… perdent leur valeur ;
+- un document JSON perd la valeur de toute clé au nom suspect, à quelque profondeur qu'elle soit :
+  `{"password":"•••"}`. Pas d'analyse JSON complète — un balayage des chaînes suffit, et il ne
+  panique pas sur un document tronqué par la limite de capture ;
+- tout le reste passe par le masquage du texte libre : courriels et téléphones disparaissent.
+
+Comment le corps est attrapé sans ralentir le relais : les deux fonctions qui recopient un corps
+(`Content-Length` ou morcelé) acceptent un « tee » facultatif, une copie bornée en mémoire de ce qui
+passe. Pour un corps morcelé, seules les données sont gardées, pas l'enrobage des morceaux. Le
+corps de requête pose une petite difficulté d'ordre : la requête entre dans la file d'appariement
+**avant** d'être relayée (pour qu'une réponse rapide ne trouve jamais la file vide), donc avant
+qu'on sache ce qu'elle contenait. Elle emporte un emplacement partagé, rempli une fois le corps
+relayé, que la réponse vient lire. Si la réponse arrive avant la fin de l'envoi — `100 Continue`
+refusé, erreur précoce — l'emplacement est vide et l'échange s'affiche sans corps de requête :
+c'est rare, et c'est juste.
+
+Quand le conteneur qui répond n'appartient à aucun projet Compose, rien n'est capturé : il n'y a
+pas d'endroit où l'avoir demandé.
+
+### Effacer par projet
+
+Le bouton « Effacer » suit le filtre. Un projet choisi, et il devient « Effacer boutique » : le
+service oublie les échanges qui se rattachent à ce projet et garde les autres. Un échange HTTP se
+rattache au projet du conteneur qui a répondu ; une connexion, à celui de l'appelant, à défaut de
+l'appelé. Sans filtre, le bouton efface tout, comme avant. Une application d'avant ce changement
+envoie encore la commande sans projet : le service la comprend comme « tout effacer », un test le
+garantit.
+
+### Ce qui n'est pas encore là
+
+Les noms de domaine : une adresse extérieure s'affiche toujours en chiffres. Les requêtes DNS des
+conteneurs partent directement vers les serveurs de l'hôte, sans passer par Solon ; les observer
+demande soit de les faire transiter par l'agent, soit une sonde. C'est un choix à faire à deux.
+
 ## La barre de lecture
 
 Ce qui fait de l'écran un débogueur plutôt qu'un journal : figer, reculer, rejouer au ralenti ou

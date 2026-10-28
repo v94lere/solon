@@ -138,8 +138,10 @@ async fn handle(
             }
             ServiceCommand::SetSettings(s) => match settings::save_settings(&settings_path, &s) {
                 Ok(()) => {
-                    // Le réveil à la demande s'applique tout de suite ; le reste au prochain démarrage.
+                    // Le réveil à la demande et la capture des corps s'appliquent tout de
+                    // suite ; le reste au prochain démarrage.
                     engine.apply_sleep_settings(&s).await;
+                    engine.trace().set_body_projects(&s.trace_bodies);
                     Response::ok(id, serde_json::json!({ "applied_on_next_start": true }))
                 }
                 Err(e) => Response::err(id, e.to_string()),
@@ -206,8 +208,8 @@ async fn handle(
                 }
                 Response::ok(id, serde_json::Value::Null)
             }
-            ServiceCommand::TraceClear => {
-                engine.trace().clear();
+            ServiceCommand::TraceClear { project } => {
+                engine.trace().clear(project.as_deref());
                 Response::ok(id, serde_json::Value::Null)
             }
         };

@@ -63,8 +63,10 @@ async fn trace_subscribe(channel: Channel<Value>) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn trace_clear() -> Result<(), String> {
-    service::call(ServiceCommand::TraceClear).await.map(|_| ())
+async fn trace_clear(project: Option<String>) -> Result<(), String> {
+    service::call(ServiceCommand::TraceClear { project })
+        .await
+        .map(|_| ())
 }
 
 #[tauri::command]

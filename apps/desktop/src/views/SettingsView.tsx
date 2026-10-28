@@ -139,6 +139,9 @@ export function SettingsView() {
               </label>
               <p className="mt-1" style={{ color: "var(--ink-2)" }}>{t("settings.resume_help")}</p>
             </div>
+            {(settings.trace_bodies ?? []).length > 0 && (
+              <p className="col-span-2 kbd-hint">{t("settings.trace_bodies", { names: (settings.trace_bodies ?? []).join(", ") })}</p>
+            )}
             <label className="col-span-2 flex items-center gap-2" title={t("settings.legacy_fs_help")}>
               <input type="checkbox" checked={settings.legacy_file_sharing ?? false} onChange={(e) => setSettings({ ...settings, legacy_file_sharing: e.target.checked })} />
               {t("settings.legacy_fs")}

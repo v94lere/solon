@@ -15,7 +15,8 @@
 // « dans le futur » du curseur.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { trace, type TraceConnection, type TraceEvent, type TraceHttp, type TracePeer } from "../api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { engine, trace, type TraceBody, type TraceConnection, type TraceEvent, type TraceHttp, type TracePeer } from "../api";
 import { EmptyState, hueOf, IconPulse, PageHeader } from "../components/ui";
 import { TraceTimeline, type Speed, type TimelinePoint } from "../components/TraceTimeline";
 
@@ -59,6 +60,19 @@ export function RadiographyView() {
   const [speed, setSpeed] = useState<Speed>(1);
   const now = useNow(500);
   const nextId = useRef(0);
+  // Capture des corps : un réglage par projet, désactivé tant qu'on ne l'a pas demandé.
+  const queryClient = useQueryClient();
+  const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: () => engine.settingsGet() });
+  const bodiesOn = project !== "" && (settingsQuery.data?.trace_bodies ?? []).includes(project);
+  async function toggleBodies() {
+    if (!project) return;
+    const current = settingsQuery.data ?? (await engine.settingsGet());
+    const on = new Set(current.trace_bodies ?? []);
+    if (on.has(project)) on.delete(project);
+    else on.add(project);
+    await engine.settingsSet({ ...current, trace_bodies: [...on].sort() });
+    await queryClient.invalidateQueries({ queryKey: ["settings"] });
+  }
 
   useEffect(() => {
     let alive = true;
@@ -155,11 +169,13 @@ export function RadiographyView() {
     setPlaying(false);
   }
 
+  /** Efface ce qui est affiché : le projet choisi, ou tout. Le service suit le même filtre. */
   async function clear() {
-    setFacts([]);
+    if (project) setFacts((prev) => prev.filter((f) => projectOf(f) !== project));
+    else setFacts([]);
     setOpen(null);
     goLive();
-    await trace.clear();
+    await trace.clear(project || undefined);
   }
 
   return (
@@ -167,7 +183,19 @@ export function RadiographyView() {
       <PageHeader
         title={t("radiography.title")}
         count={t("radiography.count", { count: visible.length })}
-        actions={<button type="button" className="btn btn-sm" onClick={() => void clear()}>{t("radiography.clear")}</button>}
+        actions={
+          <>
+            {project && (
+              <label className="flex items-center gap-2 text-[13px]" title={t("radiography.capture_bodies_help", { project })}>
+                <input type="checkbox" checked={bodiesOn} onChange={() => void toggleBodies()} />
+                {t("radiography.capture_bodies")}
+              </label>
+            )}
+            <button type="button" className="btn btn-sm" onClick={() => void clear()}>
+              {project ? t("radiography.clear_project", { project }) : t("radiography.clear")}
+            </button>
+          </>
+        }
         search={
           <select className="input w-56" value={project} onChange={(e) => setProject(e.target.value)} aria-label={t("radiography.project")}>
             <option value="">{t("radiography.all_projects")}</option>
@@ -276,11 +304,28 @@ function Row({ fact, open, onToggle }: { fact: Fact; open: boolean; onToggle: ()
           <td />
           <td className="px-2 pb-3">
             <Headers title={t("radiography.request")} headers={fact.request_headers} />
+            {fact.request_body && <BodyBlock title={t("radiography.body_request")} body={fact.request_body} />}
             <Headers title={t("radiography.response")} headers={fact.response_headers} />
+            {fact.response_body && <BodyBlock title={t("radiography.body_response")} body={fact.response_body} />}
           </td>
         </tr>
       )}
     </>
+  );
+}
+
+function BodyBlock({ title, body }: { title: string; body: TraceBody }) {
+  const { t } = useTranslation();
+  return (
+    <div className="mt-2 rounded px-2 py-1.5" style={{ background: "var(--surface-2)" }}>
+      <div className="mb-1 text-[11px] uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+        {title}
+        {body.truncated && <span className="ml-2 normal-case tracking-normal">{t("radiography.truncated")}</span>}
+      </div>
+      <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-[12px] leading-5" style={{ color: "var(--ink-2)", wordBreak: "break-all" }}>
+        {body.text}
+      </pre>
+    </div>
   );
 }
 

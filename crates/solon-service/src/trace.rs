@@ -8,7 +8,7 @@
 //!
 //! Rien ne quitte la machine : ces faits ne sont ni envoyés ni écrits ailleurs qu'ici.
 
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -33,6 +33,10 @@ pub struct TraceHub {
     /// Dernier état connu des sondes, renvoyé en tête à chaque nouvel abonné pour qu'il sache
     /// tout de suite si le silence vient d'un calme plat ou d'un chargement raté.
     status: Mutex<TraceEvent>,
+    /// Projets pour lesquels le mandataire garde le début des corps (réglage `trace_bodies`).
+    /// Tenu ici parce que c'est ici que le mandataire vient demander ; mis à jour dès que le
+    /// réglage change, sans redémarrer le moteur.
+    body_projects: Mutex<HashSet<String>>,
 }
 
 impl TraceHub {
@@ -42,6 +46,7 @@ impl TraceHub {
             tx,
             recent: Mutex::new(VecDeque::with_capacity(1024)),
             status: Mutex::new(unavailable("moteur arrêté")),
+            body_projects: Mutex::new(HashSet::new()),
         })
     }
 
@@ -73,9 +78,29 @@ impl TraceHub {
         self.tx.subscribe()
     }
 
-    /// Oublie tout ce qui a été observé (bouton « effacer » de l'interface).
-    pub fn clear(&self) {
-        self.recent.lock().unwrap().clear();
+    /// Oublie ce qui a été observé : tout, ou seulement ce qui se rattache à un projet (bouton
+    /// « effacer » de l'interface, qui suit le filtre affiché).
+    pub fn clear(&self, project: Option<&str>) {
+        let mut recent = self.recent.lock().unwrap();
+        match project {
+            None => recent.clear(),
+            Some(p) => recent.retain(|e| e.project() != Some(p)),
+        }
+    }
+
+    /// Les projets dont on capture les corps. Remplace la liste entière : c'est le réglage tel
+    /// qu'il est enregistré.
+    pub fn set_body_projects(&self, projects: &[String]) {
+        *self.body_projects.lock().unwrap() = projects.iter().cloned().collect();
+    }
+
+    /// Le mandataire doit-il garder les corps des échanges de ce projet ? Sans projet connu
+    /// (conteneur hors Compose), jamais : il n'y a pas d'endroit où l'avoir demandé.
+    pub fn captures_bodies(&self, project: Option<&str>) -> bool {
+        match project {
+            Some(p) => self.body_projects.lock().unwrap().contains(p),
+            None => false,
+        }
     }
 
     fn set_unavailable(&self, reason: &str) {
@@ -125,10 +150,17 @@ mod tests {
     use solon_core::protocol::{ConnectionOutcome, TraceConnection, TracePeer};
 
     fn connection(pid: u32) -> TraceEvent {
+        connection_of(pid, None)
+    }
+
+    fn connection_of(pid: u32, project: Option<&str>) -> TraceEvent {
         TraceEvent::Connection(Box::new(TraceConnection {
             ts_ms: 0,
             outcome: ConnectionOutcome::Established,
-            src: TracePeer::default(),
+            src: TracePeer {
+                project: project.map(str::to_owned),
+                ..Default::default()
+            },
             dst: TracePeer::default(),
             sport: 1,
             dport: 2,
@@ -179,12 +211,42 @@ mod tests {
         let hub = TraceHub::new();
         hub.push(en_place());
         hub.push(connection(1));
-        hub.clear();
+        hub.clear(None);
         let backlog = hub.backlog();
         assert_eq!(backlog.len(), 1);
         assert!(matches!(
             backlog[0],
             TraceEvent::Status { active: true, .. }
         ));
+    }
+
+    #[test]
+    fn effacer_un_projet_laisse_les_autres() {
+        let hub = TraceHub::new();
+        hub.push(connection_of(1, Some("boutique")));
+        hub.push(connection_of(2, Some("blog")));
+        hub.push(connection_of(3, None));
+        hub.clear(Some("boutique"));
+        let pids: Vec<u32> = hub
+            .backlog()
+            .into_iter()
+            .filter_map(|e| match e {
+                TraceEvent::Connection(c) => Some(c.pid),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(pids, vec![2, 3]);
+    }
+
+    #[test]
+    fn les_corps_ne_sont_captures_que_la_ou_c_est_demande() {
+        let hub = TraceHub::new();
+        assert!(!hub.captures_bodies(Some("boutique")));
+        hub.set_body_projects(&["boutique".to_owned()]);
+        assert!(hub.captures_bodies(Some("boutique")));
+        assert!(!hub.captures_bodies(Some("blog")));
+        assert!(!hub.captures_bodies(None));
+        hub.set_body_projects(&[]);
+        assert!(!hub.captures_bodies(Some("boutique")));
     }
 }

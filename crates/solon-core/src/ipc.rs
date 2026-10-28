@@ -71,8 +71,11 @@ pub enum ServiceCommand {
     /// observés. Connexion dédiée, pour qu'une rafale d'échanges ne retarde pas les événements
     /// du moteur.
     TraceSubscribe,
-    /// Oublie tout ce qui a été observé.
-    TraceClear,
+    /// Oublie ce qui a été observé : tout, ou seulement ce qui touche un projet.
+    TraceClear {
+        #[serde(default)]
+        project: Option<String>,
+    },
 }
 
 /// Un dossier de projet trouvé sur le PC.
@@ -119,6 +122,22 @@ pub fn guest_path_for(host_path: &str) -> Option<(String, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Une application d'avant l'effacement par projet envoie `trace_clear` sans champ : le
+    /// service doit encore la comprendre comme « tout effacer ».
+    #[test]
+    fn effacer_sans_projet_reste_compris() {
+        let cmd: ServiceCommand = serde_json::from_str(r#"{"cmd":"trace_clear"}"#).unwrap();
+        assert_eq!(cmd, ServiceCommand::TraceClear { project: None });
+        let cmd: ServiceCommand =
+            serde_json::from_str(r#"{"cmd":"trace_clear","project":"boutique"}"#).unwrap();
+        assert_eq!(
+            cmd,
+            ServiceCommand::TraceClear {
+                project: Some("boutique".into())
+            }
+        );
+    }
 
     #[test]
     fn traduction_des_chemins_windows() {
@@ -217,6 +236,11 @@ pub struct Settings {
     /// (installation, redémarrage de Windows, arrêt depuis l'application).
     #[serde(default = "default_true")]
     pub resume_running: bool,
+    /// Projets (noms Compose) pour lesquels la radiographie garde le début des corps de requêtes
+    /// et de réponses. Vide par défaut : les corps sont ce qu'il y a de plus personnel dans un
+    /// échange, on ne les capture que là où on l'a demandé.
+    #[serde(default)]
+    pub trace_bodies: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -239,6 +263,7 @@ impl Default for Settings {
             sleep_idle_minutes: 10,
             sleep_never: Vec::new(),
             resume_running: true,
+            trace_bodies: Vec::new(),
         }
     }
 }
