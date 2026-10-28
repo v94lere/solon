@@ -25,3 +25,6 @@ apps/desktop/src-tauri/gen/schemas/
 .idea/
 Thumbs.db
 *.swp
+
+# Configuration personnelle de Claude Code
+.claude/
