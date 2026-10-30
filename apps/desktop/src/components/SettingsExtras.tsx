@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { getVersion } from "@tauri-apps/api/app";
 import { containers, engine, formatBytes, host, images, type HostDiskInfo, type MachineMetrics, type ReclaimReport } from "../api";
 import { reclaimSpace } from "../reclaim";
 import { useEngine } from "../engine";
@@ -23,6 +24,9 @@ export function UpdatesCard() {
   const [packaged, setPackaged] = useState(false);
   useEffect(() => {
     void isPackaged().then(setPackaged);
+    // Le dernier contrôle a été fait par une autre version (on vient de se mettre à jour) : il ne
+    // vaut plus rien, sinon la carte proposerait d'installer ce qui tourne déjà.
+    void getVersion().then((v) => setInfo((cur) => (cur && cur.current !== v ? null : cur)));
   }, []);
 
   async function check() {

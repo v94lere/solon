@@ -67,7 +67,7 @@ pub async fn diagnostic_export(app: tauri::AppHandle, dest: String) -> Result<u3
     } else {
         "moteur arrêté : pas de docker info".to_owned()
     };
-    let windows = std::process::Command::new("cmd")
+    let windows = crate::hidden_command("cmd")
         .args(["/C", "ver"])
         .output()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())

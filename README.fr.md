@@ -16,7 +16,7 @@ en quelques secondes dans une machine minuscule et invisible, gérée entièreme
 Solon **n'est pas** une interface pour un Docker Desktop déjà installé. Il remplace Docker Desktop :
 moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une icône dans la barre des tâches.
 
-> État du projet (26 septembre 2026) : **0.1.13**, treize versions en trois semaines, écrit par une seule
+> État du projet (28 octobre 2026) : **0.1.16**, seize versions en deux mois, écrit par une seule
 > personne. Solon fait tourner mes propres projets tous les jours, et n'a été testé que sur deux machines :
 > un PC Windows 11 Pro et une machine virtuelle Windows 11 Famille neuve. L'installeur n'est **pas encore
 > signé** (avertissement SmartScreen ; empreinte SHA-256 publiée avec chaque version). Il reste sûrement des
@@ -24,23 +24,46 @@ moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une ic
 > [dites-moi ce qui casse chez vous](https://github.com/v94lere/solon/issues/1). Les idées et les
 > contributions sont tout aussi bienvenues.
 
+![Liste des conteneurs](docs/screenshots/containers.png)
+
 ## Ce que Solon fait
 
-- Démarre un moteur Docker (dockerd, containerd, runc, Compose) prêt en **~2,5 s** après l'ordre de démarrage.
-- Expose l'API Docker sur `\\.\pipe\solon` : l'interface Solon et le CLI `docker` que vous avez déjà
-  fonctionnent (`docker -H npipe:////./pipe/solon ps`, ou un contexte `docker context create`).
+- Démarre un moteur Docker (dockerd, containerd, runc, Compose) prêt en **~3 s** après l'ordre de démarrage.
+- Expose l'API Docker sur `\\.\pipe\solon` ; les commandes `docker` et `docker compose` livrées avec Solon
+  sont déjà dans votre `PATH` et pointent vers Solon, et tout autre CLI Docker fonctionne avec un
+  `docker context`.
 - Relaie les ports publiés vers `localhost` sans configuration.
 - Partage vos dossiers Windows à la demande : `docker run -v C:\...`, `--mount`, projets Compose, exactement
-  comme avec Docker Desktop (le lecteur est partagé à la volée et remonté à chaque démarrage).
+  comme avec Docker Desktop, par **solonfs**, le partage de fichiers de Solon, mesuré 3,6 à 94× plus rapide
+  que le partage 9P de WSL2 et de Docker Desktop selon l'opération (`docs/measurements.md`).
 - **Import depuis Docker Desktop** : s'il est installé et démarré, Solon liste ses volumes et ses images
   avec leur taille et copie ceux que vous cochez dans son propre moteur. Rien n'est modifié ni supprimé
   du côté de Docker Desktop, et ce qui porte déjà le même nom dans Solon n'est pas touché.
+- **Des adresses qui marchent toujours** : chaque conteneur en marche est joignable sur
+  `https://<nom>.solon.local` (et `https://<service>.<projet>.solon.local` pour Compose), **qu'il publie un
+  port ou non**, avec un certificat reconnu par le navigateur (une autorité de certification locale créée à
+  la première utilisation). Les adresses des conteneurs (`10.90.x.y`) sont aussi joignables directement
+  depuis Windows.
+- **Réveil à la demande** : un conteneur joint via Solon qui ne reçoit plus rien pendant dix minutes est mis
+  en pause (zéro processeur, mémoire conservée) ; la requête suivante le réveille en une fraction de seconde
+  avant d'être servie. Les bases de données et les tâches de fond qui ne parlent qu'en interne ne sont jamais
+  concernées.
+- Onglet **Fichiers** pour les conteneurs et les volumes : parcourir, copier vers Windows, envoyer des
+  fichiers ou des dossiers (boutons ou glisser-déposer depuis l'Explorateur), créer un dossier, supprimer.
+  Fonctionne même quand l'image n'a pas de shell.
+- **Debug shell** dans n'importe quel conteneur, y compris les images « distroless » sans shell : une boîte à
+  outils (bash, curl, dig, ps, strace, tcpdump, jq, vim…) qui partage les processus, le réseau et les volumes
+  du conteneur.
+- **Activity** : processeur, mémoire, stockage et réseau du moteur et de chaque conteneur, en direct.
 - **Radiographie** : une carte en direct de qui appelle qui dans vos projets, et un journal de chaque
   échange — connexions TCP avec leur issue (un appel refusé apparaît en rouge), échanges HTTP complets pour ce
   qui entre par une adresse `*.solon.local`, noms sur les adresses extérieures. Une barre de lecture pour
   figer, avancer pas à pas, rejouer. Les valeurs sensibles sont masquées avant d'être gardées ; les corps
   sont désactivés par défaut et s'activent par projet.
-- Mémoire au repos (moteur + service) : **430 à 520 Mo** mesurés pour 2 Go alloués.
+- Projets Compose : services, journaux mêlés, Up / Down / Reconstruire avec la sortie en direct, ouverture
+  dans l'Explorateur ou VS Code.
+- Mémoire au repos (moteur + service) : **430 à 520 Mo** mesurés pour 2 Go alloués ; la mémoire inutilisée
+  est rendue à Windows automatiquement.
 - **Aucune télémétrie, aucune requête réseau sortante** en dehors de ce que vos conteneurs et vos
   `docker pull` demandent.
 
@@ -78,7 +101,7 @@ projet Compose nommé `solon-bench` sur le port 18069 et le supprime à la fin.
 
 ### Empreinte
 
-Solon mesuré le 13 septembre 2026 (0.1.11, trois conteneurs en marche) ; Docker Desktop mesuré sur la même machine
+Solon mesuré le 13 septembre 2026 (0.1.10, trois conteneurs en marche) ; Docker Desktop mesuré sur la même machine
 le 3 septembre ; les deux autres d'après leur documentation (marqués *publié*).
 
 | | Solon | Docker Desktop | Podman Desktop | Rancher Desktop |
@@ -91,7 +114,7 @@ le 3 septembre ; les deux autres d'après leur documentation (marqués *publié*
 
 ### Fonctionnalités comparées
 
-Solon en 0.1.12 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.
+Solon en 0.1.16 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.
 
 | | Solon | Docker Desktop | Podman Desktop | Rancher Desktop |
 |---|---|---|---|---|
@@ -103,7 +126,7 @@ Solon en 0.1.12 ; les autres d'après leur documentation en septembre 2026. « P
 | Un environnement par branche Git, volumes copiés | oui | non | non | non |
 | Sauvegarde et restauration d'un projet, volumes compris | oui | partiel : extension tierce | non | non |
 | Conteneurs inactifs mis en veille, réveil à la demande | oui | partiel : Resource Saver met toute la machine en pause | non | non |
-| Dossiers Windows partagés par solonfs (4 à 94× plus rapide que 9P) | oui | non : 9P via WSL 2 | non : 9P | non : 9P |
+| Dossiers Windows partagés par solonfs (3,6 à 94× plus rapide que 9P selon l'opération) | oui | non : 9P via WSL 2 | non : 9P | non : 9P |
 | Recherche des projets Compose sur le disque (7 s sur 928 Go) | oui | non | non | non |
 | Projets relancés après un redémarrage de Windows ou une mise à jour | oui | partiel : politique `restart` de Docker | partiel | partiel |
 | VS Code Dev Containers | oui, vérifié | oui | partiel : réglage du chemin docker | oui |
@@ -130,14 +153,15 @@ contexte `docker` par défaut.
 
 ### Installeur
 
-`Solon_0.1.0_x64-setup.exe` (80 Mo, produit par `npm run tauri build` dans `apps/desktop`, sorti dans
-`target/release/bundle/nsis/`). Il demande l'élévation une fois, puis : active les composants Windows
-nécessaires (un redémarrage peut être demandé), installe le service `SolonService`, copie l'image Linux et
-crée le raccourci. Installation silencieuse : `Solon_0.1.0_x64-setup.exe /S`.
+Téléchargez `Solon_<version>_x64-setup.exe` depuis les [releases](https://github.com/v94lere/solon/releases)
+et vérifiez son empreinte SHA-256 avec la valeur publiée avec la version. L'installeur demande l'élévation une
+fois, puis : active les composants Windows nécessaires (un redémarrage peut être demandé), installe le service
+`SolonService`, copie l'image Linux et crée le raccourci. Installation silencieuse :
+`Solon_<version>_x64-setup.exe /S`.
 
-La version de développement **n'est pas signée** : Windows SmartScreen affichera « Windows a protégé votre
-ordinateur » ; cliquez « Informations complémentaires » puis « Exécuter quand même ». La chaîne de signature
-est prête (`installer/sign.ps1`, `tauri.signed.conf.json`) et s'active dès qu'un certificat est disponible.
+L'installeur **n'est pas encore signé** : SmartScreen affiche « Windows a protégé votre ordinateur » ; cliquez
+« Informations complémentaires » puis « Exécuter quand même ». La chaîne de signature est prête
+(`installer/sign.ps1`, `tauri.signed.conf.json`) et s'activera dès qu'un certificat sera disponible.
 
 Désinstallation : Paramètres → Applications → Solon. Le désinstalleur arrête le moteur, retire le service et
 **demande** avant de supprimer vos images et volumes (`%ProgramData%\Solon`) ; par défaut ils sont conservés.

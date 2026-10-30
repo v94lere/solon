@@ -39,7 +39,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
           setServiceDetail(String(e));
         }
       });
-    const channel = engine.subscribe((ev: ServiceEvent) => {
+    const subscription = engine.subscribe((ev: ServiceEvent) => {
       if (!alive) return;
       switch (ev.event) {
         case "state": {
@@ -82,7 +82,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     });
     return () => {
       alive = false;
-      channel.onmessage = () => {};
+      subscription.close();
     };
   }, [queryClient]);
 

@@ -5,7 +5,7 @@
 
 mod backup;
 mod compose;
-mod diagnostic;
+mod diag;
 mod docker;
 mod files;
 mod git;
@@ -49,17 +49,21 @@ async fn engine_restart() -> Result<(), String> {
     service::call(ServiceCommand::Restart).await.map(|_| ())
 }
 
+/// Rend l'identifiant du flux, à passer à `stream_close` quand la vue se démonte : un canal
+/// Tauri dont plus personne n'écoute accepte toujours les messages, donc sans fermeture explicite
+/// la connexion au service resterait ouverte pour toute la session.
 #[tauri::command]
-async fn engine_subscribe(channel: Channel<Value>) -> Result<(), String> {
-    tokio::spawn(service::subscribe(channel));
-    Ok(())
+async fn engine_subscribe(state: docker::State<'_>, channel: Channel<Value>) -> Result<u64, String> {
+    let task = tokio::spawn(service::subscribe(channel));
+    Ok(state.register(task.abort_handle()).await)
 }
 
-/// Radiographie : historique puis flux des échanges observés dans la machine.
+/// Radiographie : historique puis flux des échanges observés dans la machine. Même règle de
+/// fermeture que `engine_subscribe`.
 #[tauri::command]
-async fn trace_subscribe(channel: Channel<Value>) -> Result<(), String> {
-    tokio::spawn(service::trace_subscribe(channel));
-    Ok(())
+async fn trace_subscribe(state: docker::State<'_>, channel: Channel<Value>) -> Result<u64, String> {
+    let task = tokio::spawn(service::trace_subscribe(channel));
+    Ok(state.register(task.abort_handle()).await)
 }
 
 #[tauri::command]
@@ -89,7 +93,7 @@ async fn settings_set(settings: Settings) -> Result<(), String> {
 /// Couleur d'accent de Windows (`#rrggbb`), lue dans le registre (DWM\AccentColor, ABGR).
 #[tauri::command]
 fn system_accent_color() -> Option<String> {
-    let out = std::process::Command::new("reg.exe")
+    let out = hidden_command("reg.exe")
         .args([
             "query",
             r"HKCU\Software\Microsoft\Windows\DWM",
@@ -135,14 +139,20 @@ fn set_language(app: tauri::AppHandle, lang: String) {
 }
 
 /// Ouvre un dossier dans VS Code : la commande `code` si elle est dans le PATH, sinon l'URL `vscode://`.
-#[tauri::command]
-fn open_in_vscode(dir: String) -> Result<(), String> {
+/// Un processus enfant lancé sans console : l'application n'en a pas (`windows_subsystem =
+/// "windows"`), et sans ce drapeau chaque `tar.exe`, `reg.exe` ou `cmd` ferait clignoter une
+/// fenêtre noire.
+pub(crate) fn hidden_command(program: impl AsRef<std::ffi::OsStr>) -> std::process::Command {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    let status = std::process::Command::new("cmd")
-        .args(["/C", "code", &dir])
-        .creation_flags(CREATE_NO_WINDOW)
-        .status();
+    let mut cmd = std::process::Command::new(program);
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
+
+#[tauri::command]
+fn open_in_vscode(dir: String) -> Result<(), String> {
+    let status = hidden_command("cmd").args(["/C", "code", &dir]).status();
     if matches!(status, Ok(s) if s.success()) {
         return Ok(());
     }
@@ -280,7 +290,7 @@ pub fn run() {
             shell::machine_shell_input,
             shell::machine_shell_resize,
             shell::machine_shell_close,
-            diagnostic::diagnostic_export,
+            diag::diagnostic_export,
             update::update_download,
             update::update_install,
             host::ports_probe,

@@ -257,6 +257,7 @@
     "disk": "Storage limit (GB)",
     "autostart": "Start the engine at sign-in",
     "save": "Save",
+    "invalid_numbers": "Memory, processors and disk size must be numbers greater than zero.",
     "saved": "Saved. Changes apply at the next engine start.",
     "theme": "Appearance",
     "theme_light": "Light",

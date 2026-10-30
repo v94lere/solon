@@ -125,12 +125,8 @@ export const engine = {
   settingsGet: () => invoke<Settings>("settings_get"),
   settingsSet: (settings: Settings) => invoke<void>("settings_set", { settings }),
   logsDir: () => invoke<string>("paths_logs_dir"),
-  subscribe: (onEvent: (e: ServiceEvent) => void) => {
-    const channel = new Channel<ServiceEvent>();
-    channel.onmessage = onEvent;
-    void invoke("engine_subscribe", { channel });
-    return channel;
-  },
+  /** Flux des événements du service ; appeler `close()` au démontage. */
+  subscribe: (onEvent: (e: ServiceEvent) => void) => subscription<ServiceEvent>("engine_subscribe", onEvent),
 };
 
 // ---- radiographie ----
@@ -189,12 +185,7 @@ export type TraceEvent =
 
 export const trace = {
   /** Historique gardé par le service, puis le flux. Connexion dédiée, séparée des événements du moteur. */
-  subscribe: (onEvent: (e: TraceEvent) => void) => {
-    const channel = new Channel<TraceEvent>();
-    channel.onmessage = onEvent;
-    void invoke("trace_subscribe", { channel });
-    return channel;
-  },
+  subscribe: (onEvent: (e: TraceEvent) => void) => subscription<TraceEvent>("trace_subscribe", onEvent),
   /** Oublie ce qui a été observé : tout, ou seulement ce qui touche un projet. */
   clear: (project?: string) => invoke<void>("trace_clear", { project: project ?? null }),
 };
@@ -611,4 +602,26 @@ export function formatBytes(n: number): string {
     i++;
   }
   return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`;
+}
+
+/** Un abonnement à un flux du service (événements du moteur, radiographie). Un canal Tauri dont plus
+ *  personne n'écoute accepte toujours les messages : sans `close()`, la connexion au service et sa
+ *  tâche survivraient à la vue. */
+export interface Subscription {
+  close: () => void;
+}
+
+function subscription<T>(command: string, onEvent: (e: T) => void): Subscription {
+  const channel = new Channel<T>();
+  channel.onmessage = onEvent;
+  const id = invoke<number>(command, { channel }).then(trackStream);
+  return {
+    close: () => {
+      channel.onmessage = () => {};
+      void id.then((streamId) => {
+        untrackStream(streamId);
+        return invoke<void>("stream_close", { streamId });
+      }).catch(() => {});
+    },
+  };
 }

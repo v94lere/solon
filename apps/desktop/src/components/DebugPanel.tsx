@@ -29,7 +29,7 @@ export function DebugPanel({ id, running }: { id: string; running: boolean }) {
     term.attachCustomKeyEventHandler((e) => {
       if (!e.ctrlKey || e.altKey) return true;
       const k = e.key.toLowerCase();
-      return !(k === "k" || k === "b" || e.key === "`" || e.code === "Backquote" || /^[1-8]$/.test(e.key));
+      return !(k === "k" || k === "b" || e.key === "`" || e.code === "Backquote" || /^[1-9]$/.test(e.key));
     });
     term.open(hostRef.current);
     fit.fit();

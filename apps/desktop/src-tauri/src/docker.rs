@@ -111,7 +111,7 @@ impl DockerState {
         self.next_id.fetch_add(1, Ordering::Relaxed) + 1
     }
 
-    async fn register(&self, handle: AbortHandle) -> u64 {
+    pub(crate) async fn register(&self, handle: AbortHandle) -> u64 {
         let id = self.next();
         self.streams.lock().await.insert(id, handle);
         id
@@ -324,7 +324,18 @@ pub struct StatSample {
 pub async fn stats_open(state: State<'_>, channel: Channel<StatSample>) -> Result<u64, String> {
     let docker = state.docker().await?;
     let task = tokio::spawn(async move {
-        let mut per_container: HashMap<String, AbortHandle> = HashMap::new();
+        // Annuler le parent (`stream_close`) ne fait que lâcher les poignées des enfants, et lâcher
+        // un `AbortHandle` n'annule rien : sans ce garde, chaque `docker stats` survivrait à la vue.
+        struct Children(HashMap<String, AbortHandle>);
+        impl Drop for Children {
+            fn drop(&mut self) {
+                for h in self.0.values() {
+                    h.abort();
+                }
+            }
+        }
+        let mut children = Children(HashMap::new());
+        let per_container = &mut children.0;
         loop {
             let running = match docker
                 .list_containers(Some(
@@ -860,7 +871,7 @@ pub async fn container_copy_from(
         .map_err(|e| e.to_string())?;
     let (tmp2, dest2) = (tmp.clone(), dest_dir.clone());
     let out = tokio::task::spawn_blocking(move || {
-        std::process::Command::new(windows_tar())
+        crate::hidden_command(windows_tar())
             .arg("-xf")
             .arg(&tmp2)
             .arg("-C")
@@ -896,7 +907,7 @@ pub async fn container_copy_to(
     let tmp = temp_tar();
     let tmp2 = tmp.clone();
     let out = tokio::task::spawn_blocking(move || {
-        std::process::Command::new(windows_tar())
+        crate::hidden_command(windows_tar())
             .arg("-cf")
             .arg(&tmp2)
             .arg("-C")

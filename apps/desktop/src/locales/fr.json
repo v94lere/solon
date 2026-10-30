@@ -257,6 +257,7 @@
     "disk": "Limite de stockage (Go)",
     "autostart": "Démarrer le moteur à l'ouverture de session",
     "save": "Enregistrer",
+    "invalid_numbers": "La mémoire, les processeurs et la taille du disque doivent être des nombres supérieurs à zéro.",
     "saved": "Enregistré. Les changements s'appliquent au prochain démarrage du moteur.",
     "theme": "Apparence",
     "theme_light": "Clair",

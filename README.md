@@ -16,7 +16,7 @@ tiny, invisible Linux machine managed entirely by Solon.
 Solon **is not** a front-end for an existing Docker Desktop. It replaces it: Docker engine, Compose, images,
 volumes, networks, terminal, logs, a system-tray icon, and a few things nothing else does on Windows.
 
-> Project status (26 September 2026): **0.1.13**, thirteen releases in three weeks, written by one person.
+> Project status (28 October 2026): **0.1.16**, sixteen releases in two months, written by one person.
 > It runs my own projects every day, and it has been tested on exactly two machines: a Windows 11 Pro PC and a
 > fresh Windows 11 Home VM. The installer is **not code-signed yet** (SmartScreen warning; SHA-256 published
 > with every release). Expect rough edges on hardware I do not have — and please
@@ -27,13 +27,13 @@ volumes, networks, terminal, logs, a system-tray icon, and a few things nothing 
 
 ## What Solon does
 
-- Starts a Docker engine (dockerd, containerd, runc, Compose) ready **~2.5 s** after you ask for it.
+- Starts a Docker engine (dockerd, containerd, runc, Compose) ready **~3 s** after you ask for it.
 - Exposes the Docker API on `\\.\pipe\solon`; the bundled `docker` and `docker compose` commands are already
   on your `PATH` and point at Solon, and any other Docker CLI works with a `docker context`.
 - Relays published ports to `localhost` with no configuration.
 - Shares your Windows folders on demand: `docker run -v C:\...`, `--mount`, Compose projects, exactly like
-  Docker Desktop, through **solonfs**, Solon's own file sharing, measured 4 to 94 times faster than the 9P
-  sharing used by WSL2 and Docker Desktop.
+  Docker Desktop, through **solonfs**, Solon's own file sharing, measured 3.6 to 94× faster than the 9P
+  sharing used by WSL2 and Docker Desktop, depending on the operation (`docs/measurements.md`).
 - **Import from Docker Desktop**: if it is installed and running, Solon lists its volumes and images
   with their sizes and copies the ones you tick into its own engine. Nothing is changed or removed on
   the Docker Desktop side, and anything already in Solon under the same name is left alone.
@@ -91,7 +91,7 @@ project named `solon-bench` on port 18069 and removes it when done.
 
 ### Footprint
 
-Solon measured on 13 September 2026 (0.1.11, three containers running); Docker Desktop measured on the same machine
+Solon measured on 13 September 2026 (0.1.10, three containers running); Docker Desktop measured on the same machine
 on 3 September; the other two from their documentation (marked *published*).
 
 | | Solon | Docker Desktop | Podman Desktop | Rancher Desktop |
@@ -104,7 +104,7 @@ on 3 September; the other two from their documentation (marked *published*).
 
 ### Features compared
 
-Solon as of 0.1.12; the others as documented in September 2026. "Partial" means it exists with a caveat.
+Solon as of 0.1.16; the others as documented in September 2026. "Partial" means it exists with a caveat.
 
 | | Solon | Docker Desktop | Podman Desktop | Rancher Desktop |
 |---|---|---|---|---|
@@ -116,7 +116,7 @@ Solon as of 0.1.12; the others as documented in September 2026. "Partial" means 
 | One environment per Git branch, volumes copied | yes | no | no | no |
 | Project backup and restore, volumes included | yes | partial: third-party extension | no | no |
 | Idle containers paused, woken on demand | yes | partial: Resource Saver pauses the whole machine | no | no |
-| Windows folders shared with solonfs (4 to 94× faster than 9P) | yes | no: 9P through WSL 2 | no: 9P | no: 9P |
+| Windows folders shared with solonfs (3.6 to 94× faster than 9P, depending on the operation) | yes | no: 9P through WSL 2 | no: 9P | no: 9P |
 | Find Compose projects on the disk (7 s on 928 GB) | yes | no | no | no |
 | Projects restarted after a Windows restart or an update | yes | partial: Docker `restart` policy | partial | partial |
 | VS Code Dev Containers | yes, verified | yes | partial: docker path setting | yes |
@@ -175,7 +175,9 @@ cargo build --release -p solon-service
 cd apps\desktop && npm install && npm run tauri build
 ```
 
-Development mode without installing: `solon-service.exe console` in an administrator terminal, then
+Development mode without installing: start the service in console mode, either by hand
+(`solon-service.exe console --start` in an administrator terminal) or with
+`.\tests\e2e\start-console.ps1 -ImageDir .\image\out\<version> -Release` (one UAC prompt), then
 `cd apps\desktop; npm run tauri dev`.
 
 ## Using Solon
@@ -187,8 +189,8 @@ dot depending on the engine state.
 
 - **Projects** (home): one card per Compose project with its state, its **main address**
   (`https://web.blog.solon.local`, copyable, with the lock), its services, Open / Up / Stop / Details. Folders opened before but not running are listed too; containers started
-  outside a project sit in "Other containers". With nothing yet, the page offers three ways to start: open a
-  folder, choose a stack, try hello-world. The project page adds an **Environment** tab: the `.env` and the
+  outside a project sit in "Other containers". With nothing yet, the page offers four ways to start: open a
+  folder, choose a stack, find the projects already on this PC, try hello-world. The project page adds an **Environment** tab: the `.env` and the
   `environment:` blocks of `compose.yaml`, plus the published ports, editable without touching the YAML.
 - **Back up and restore a project**: "Back up…" on a project page writes one zip with the Compose files,
   the `.env` and the data of every volume (taken directly from the engine, running or not); "Restore a
@@ -211,8 +213,8 @@ dot depending on the engine state.
   project screen (services, merged logs, Up / Down / Rebuild with live output, Explorer, VS Code).
 - **Ready-made stacks and project detection**: "New stack…" opens a gallery: starter kits that
   generate a project on first start (Django + PostgreSQL, Flask + Redis, FastAPI + PostgreSQL, Next.js), ready-made
-  apps (WordPress, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Uptime Kuma, Jupyter Lab,
-  static Nginx site) and developer tools (Mailpit): pick one, choose a folder, review the generated
+  apps (WordPress, Odoo 18, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Uptime Kuma,
+  Jupyter Lab, static Nginx site) and developer tools (Mailpit): pick one, choose a folder, review the generated
   `compose.yaml`, "Create and start". Opening a folder that has no Compose file
   makes Solon look at what it contains (package.json, requirements.txt, Dockerfile, composer.json, go.mod,
   Cargo.toml, pom.xml, .csproj, Gemfile…) and propose an environment for it, editable before
@@ -223,8 +225,8 @@ dot depending on the engine state.
   remove and "Keep awake" in the header.
 - **Images, Volumes, Networks**: list, create, inspect, remove (always with confirmation). Volumes have a
   Files browser.
-- **Activity**: the engine's CPU, memory, storage and network with one-minute curves, then each running
-  container with CPU, memory, network rates and a CPU curve.
+- **Activity**: the engine's CPU, memory, storage and network as curves over the last 1 min, 10 min or 1 h
+  (your choice), then each running container with CPU, memory, network rates and a CPU curve.
 - **Radiography** (`Ctrl+7`): who calls whom, in real time. A map (one circle per service, one line per
   relationship, red when calls fail) and a journal (one exchange per line, unfolding to show headers). What
   comes in through a `*.solon.local` address is shown as the complete HTTP exchange; calls between containers
@@ -237,7 +239,7 @@ dot depending on the engine state.
   `Ctrl+1` to `Ctrl+9` switch sections. **`Ctrl+Alt+S` from any application** brings Solon to the front
   with the search open.
 - **Settings**: language (English by default, French), appearance (light, dark, follow Windows), accent
-  colour (Solon blue or the Windows accent), engine memory and processors (all cores minus two by default),
+  colour (Solon pink or the Windows accent), engine memory and processors (all cores minus two by default),
   storage limit, start at sign-in, sleep of idle containers, legacy file sharing fallback, diagnostic export.
 - **Windows notifications**: container exited with an error (outside actions you made in Solon), engine
   failed or restarting, engine disk 90 % full.
@@ -291,8 +293,8 @@ few seconds and that window falls back to a refresh every minute and the Refresh
 Windows folders mounted into containers (`-v C:\...`, Compose projects) go through **solonfs**, Solon's file
 system: a server on the Windows side, a client on the Linux side, and a protocol that fetches a whole folder in
 one question instead of one per file. Measured on 5,000 files against Windows 9P sharing (the one used by WSL2
-and Docker Desktop): listing 6.6× faster, attributes 94× faster, reads 3.6 to 9× faster, writes 4× faster.
-Details and method: `docs/measurements.md`.
+and Docker Desktop): 3.6 to 94× faster depending on the operation (listing 6.6×, attributes 94×, reads 3.6 to
+9×, writes 4×). Details and method: `docs/measurements.md`.
 
 - Files appear as owned by `root` with `0777` / `0666`; `chmod` and `chown` are accepted and ignored
   (Windows has no POSIX permissions), as with Docker Desktop.

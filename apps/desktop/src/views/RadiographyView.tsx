@@ -78,7 +78,7 @@ export function RadiographyView() {
 
   useEffect(() => {
     let alive = true;
-    const channel = trace.subscribe((ev: TraceEvent) => {
+    const subscription = trace.subscribe((ev: TraceEvent) => {
       if (!alive) return;
       if (ev.kind === "status") {
         setStatus({ active: ev.active, detail: ev.detail });
@@ -89,7 +89,7 @@ export function RadiographyView() {
     });
     return () => {
       alive = false;
-      channel.onmessage = () => {};
+      subscription.close();
     };
   }, []);
 

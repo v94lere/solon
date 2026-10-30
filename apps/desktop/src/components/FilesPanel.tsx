@@ -33,7 +33,8 @@ export function FilesPanel({ target }: { target: FilesTarget }) {
   const [segments, setSegments] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string; open?: string } | null>(null);
-  const [deleting, setDeleting] = useState<FileEntry | null>(null);
+  // Le chemin est figé au clic : si la vue change de dossier entre-temps, c'est bien ce fichier-là qu'on supprime.
+  const [deleting, setDeleting] = useState<{ name: string; path: string } | null>(null);
   const [newFolder, setNewFolder] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const path = segments.join("/");
@@ -174,7 +175,7 @@ export function FilesPanel({ target }: { target: FilesTarget }) {
                   key={e.name}
                   tabIndex={0}
                   onDoubleClick={() => { if (e.kind === "dir") setSegments([...segments, e.name]); }}
-                  onKeyDown={(ev) => { if (ev.key === "Enter" && e.kind === "dir") setSegments([...segments, e.name]); }}
+                  onKeyDown={(ev) => { if (ev.key === "Enter" && ev.target === ev.currentTarget && e.kind === "dir") setSegments([...segments, e.name]); }}
                 >
                   <td>
                     <span className="flex items-center gap-2">
@@ -194,7 +195,7 @@ export function FilesPanel({ target }: { target: FilesTarget }) {
                       <button type="button" className="icon-btn" title={t("files.download")} aria-label={t("files.download")} disabled={!!busy} onClick={() => void download(e)}>
                         <IconDownload />
                       </button>
-                      <button type="button" className="icon-btn icon-btn-danger" title={t("files.delete")} aria-label={t("files.delete")} disabled={!!busy} onClick={() => setDeleting(e)}>
+                      <button type="button" className="icon-btn icon-btn-danger" title={t("files.delete")} aria-label={t("files.delete")} disabled={!!busy} onClick={() => setDeleting({ name: e.name, path: [...segments, e.name].join("/") })}>
                         <IconTrash />
                       </button>
                     </div>
@@ -225,7 +226,7 @@ export function FilesPanel({ target }: { target: FilesTarget }) {
         onConfirm={() => {
           const e = deleting;
           setDeleting(null);
-          if (e) void run("delete", () => files.remove(target, [...segments, e.name].join("/")));
+          if (e) void run("delete", () => files.remove(target, e.path));
         }}
       >
         <p>{t("files.delete_confirm.body")}</p>

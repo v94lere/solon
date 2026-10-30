@@ -224,7 +224,7 @@ function Shell() {
   }, []);
   const paletteActions = useMemo(() => ({ go, openContainer, openProject, openTerminal: toggleTerminal }), [go, openContainer, openProject, toggleTerminal]);
 
-  // Raccourcis globaux : Ctrl+K recherche, Ctrl+` terminal, Ctrl+B barre latérale, Ctrl+1…8 sections.
+  // Raccourcis globaux : Ctrl+K recherche, Ctrl+` terminal, Ctrl+B barre latérale, Ctrl+1…9 sections.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.ctrlKey || e.altKey) return;
@@ -253,11 +253,11 @@ function Shell() {
   else if (section === "terminal") content = null; // rendu à part, pour rester monté
   else if (section === "projects") {
     if (selected) content = <ContainerDetail key={selected} id={selected} initialTab={selectedTab} onBack={() => setSelected(null)} onOpenProject={(d) => { setSelected(null); openProject(d); }} />;
-    else if (project) content = <ProjectView dir={project} autoUp={projectAutoUp} onBack={() => setProject(null)} onOpenContainer={openContainer} />;
+    else if (project) content = <ProjectView key={project} dir={project} autoUp={projectAutoUp} onBack={() => setProject(null)} onOpenContainer={openContainer} />;
     else content = <ProjectsView onOpenProject={openProject} onOpenContainer={openContainer} />;
   } else if (section === "containers") {
     if (selected) content = <ContainerDetail key={selected} id={selected} initialTab={selectedTab} onBack={() => setSelected(null)} onOpenProject={(d) => { setSelected(null); openProject(d); }} />;
-    else if (project) content = <ProjectView dir={project} autoUp={projectAutoUp} onBack={() => setProject(null)} onOpenContainer={openContainer} />;
+    else if (project) content = <ProjectView key={project} dir={project} autoUp={projectAutoUp} onBack={() => setProject(null)} onOpenContainer={openContainer} />;
     else content = <ContainersView onOpen={(id, tab) => { setSelectedTab(tab ?? "overview"); setSelected(id); }} onOpenProject={openProject} />;
   } else if (section === "images") content = <ImagesView onOpenContainer={openContainer} />;
   else if (section === "volumes") content = <VolumesView />;

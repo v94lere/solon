@@ -98,7 +98,8 @@ export function ContainerDetail({ id, onBack, onOpenProject, initialTab }: { id:
     await queryClient.invalidateQueries({ queryKey: ["settings"] });
   }
 
-  async function act(action: () => Promise<void>) {
+  /** Exécute une action et dit si elle a réussi ; l'erreur reste affichée sur la fiche. */
+  async function act(action: () => Promise<void>): Promise<boolean> {
     markUserAction(id);
     setBusy(true);
     setError(null);
@@ -106,8 +107,10 @@ export function ContainerDetail({ id, onBack, onOpenProject, initialTab }: { id:
       await action();
       await queryClient.invalidateQueries({ queryKey: ["container", id] });
       await queryClient.invalidateQueries({ queryKey: ["containers"] });
+      return true;
     } catch (e) {
       setError(String(e));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -197,7 +200,9 @@ export function ContainerDetail({ id, onBack, onOpenProject, initialTab }: { id:
         onCancel={() => setRemoving(false)}
         onConfirm={() => {
           setRemoving(false);
-          void act(() => containers.remove(id, true, false)).then(onBack);
+          void act(() => containers.remove(id, true, false)).then((ok) => {
+            if (ok) onBack();
+          });
         }}
       >
         <p>{t("containers.remove_confirm.body")}</p>

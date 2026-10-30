@@ -281,7 +281,7 @@ async fn archive_to_dir(
         .map_err(|e| e.to_string())?;
     let (tmp2, dest2) = (tmp.clone(), dest_dir.to_owned());
     let out = tokio::task::spawn_blocking(move || {
-        std::process::Command::new(windows_tar())
+        crate::hidden_command(windows_tar())
             .arg("-xf")
             .arg(&tmp2)
             .arg("-C")
@@ -315,7 +315,7 @@ async fn dir_to_container(
     let tmp = temp_tar();
     let tmp2 = tmp.clone();
     let out = tokio::task::spawn_blocking(move || {
-        std::process::Command::new(windows_tar())
+        crate::hidden_command(windows_tar())
             .arg("-cf")
             .arg(&tmp2)
             .arg("-C")

@@ -368,7 +368,8 @@ function GroupRows({
             tabIndex={0}
             onDoubleClick={() => onOpen(c.Id)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") onOpen(c.Id);
+              // Entrée sur un bouton de la ligne remonte jusqu'ici : ne pas ouvrir la fiche en plus.
+              if (e.key === "Enter" && e.target === e.currentTarget) onOpen(c.Id);
             }}
           >
             <td>

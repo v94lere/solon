@@ -26,15 +26,24 @@ export function SettingsView() {
       .catch((e: unknown) => setError(String(e)));
   }, []);
 
+  const [saving, setSaving] = useState(false);
   async function save() {
-    if (!settings) return;
+    if (!settings || saving) return;
     setError(null);
+    // Un champ vidé donne NaN : ne pas l'envoyer au service.
+    if (![settings.memory_mb, settings.processors, settings.data_disk_gib].every((n) => Number.isFinite(n) && n > 0)) {
+      setError(t("settings.invalid_numbers"));
+      return;
+    }
+    setSaving(true);
     try {
       await engine.settingsSet(settings);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
       setError(String(e));
+    } finally {
+      setSaving(false);
     }
   }
 
