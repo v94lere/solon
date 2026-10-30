@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Solon",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "identifier": "dev.solon.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -60,10 +60,10 @@
       "../../../installer/vendor/docker-cli.exe": "bin/docker-cli.exe",
       "../../../installer/vendor/cli-plugins/docker-compose.exe": "bin/cli-plugins/docker-compose.exe",
       "../../../installer/vendor/NOTICE-third-party.txt": "bin/NOTICE-third-party.txt",
-      "../../../image/out/0.1.0-dev.22/vmlinuz": "image/vmlinuz",
-      "../../../image/out/0.1.0-dev.22/initrd.img": "image/initrd.img",
-      "../../../image/out/0.1.0-dev.22/rootfs.vhd": "image/rootfs.vhd",
-      "../../../image/out/0.1.0-dev.22/manifest.json": "image/manifest.json"
+      "../../../image/out/0.1.0-dev.23/vmlinuz": "image/vmlinuz",
+      "../../../image/out/0.1.0-dev.23/initrd.img": "image/initrd.img",
+      "../../../image/out/0.1.0-dev.23/rootfs.vhd": "image/rootfs.vhd",
+      "../../../image/out/0.1.0-dev.23/manifest.json": "image/manifest.json"
     },
     "licenseFile": "../../../LICENSE",
     "publisher": "Solon"

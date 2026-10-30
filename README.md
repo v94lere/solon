@@ -16,7 +16,7 @@ tiny, invisible Linux machine managed entirely by Solon.
 Solon **is not** a front-end for an existing Docker Desktop. It replaces it: Docker engine, Compose, images,
 volumes, networks, terminal, logs, a system-tray icon, and a few things nothing else does on Windows.
 
-> Project status (28 October 2026): **0.1.16**, sixteen releases in two months, written by one person.
+> Project status (30 October 2026): **0.1.17**, seventeen releases in two months, written by one person.
 > It runs my own projects every day, and it has been tested on exactly two machines: a Windows 11 Pro PC and a
 > fresh Windows 11 Home VM. The installer is **not code-signed yet** (SmartScreen warning; SHA-256 published
 > with every release). Expect rough edges on hardware I do not have — and please
@@ -104,7 +104,7 @@ on 3 September; the other two from their documentation (marked *published*).
 
 ### Features compared
 
-Solon as of 0.1.16; the others as documented in September 2026. "Partial" means it exists with a caveat.
+Solon as of 0.1.17; the others as documented in September 2026. "Partial" means it exists with a caveat.
 
 | | Solon | Docker Desktop | Podman Desktop | Rancher Desktop |
 |---|---|---|---|---|
