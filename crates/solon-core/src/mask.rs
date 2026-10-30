@@ -50,27 +50,90 @@ const SECRET_PARAMS: &[&str] = &[
     "code",
 ];
 
+/// Fragments qui, dans le nom d'un en-tête hors liste, suffisent à masquer sa valeur :
+/// `X-Amz-Security-Token`, `Private-Token`, `X-Hasura-Admin-Secret`, `X-Goog-Api-Key`…
+const SECRET_HEADER_FRAGMENTS: &[&str] = &[
+    "token",
+    "secret",
+    "key",
+    "auth",
+    "session",
+    "cookie",
+    "credential",
+    "pass",
+    "signature",
+];
+
 pub fn is_secret_header(name: &str) -> bool {
     let lower = name.trim().to_ascii_lowercase();
     SECRET_HEADERS.contains(&lower.as_str())
+        || SECRET_HEADER_FRAGMENTS.iter().any(|f| lower.contains(f))
 }
 
-/// Valeur d'en-tête telle qu'elle sera gardée.
+/// Valeur d'en-tête telle qu'elle sera gardée. Une valeur qui est une URL (`Location` d'une
+/// redirection OAuth avec `?code=…`, `Referer`, `Link`) suit la règle des chemins, et perd ses
+/// identifiants `user:pass@`.
 pub fn header_value(name: &str, value: &str) -> String {
     if is_secret_header(name) {
         return REDACTED.to_owned();
     }
+    if value.contains("://") || value.contains('?') {
+        return url(value);
+    }
     text(value)
+}
+
+/// Une URL complète ou un chemin : `scheme://user:pass@host/chemin?x=1` → identifiants masqués,
+/// chemin et paramètres passés par [`path`].
+pub fn url(value: &str) -> String {
+    let Some(scheme_end) = value.find("://") else {
+        return path(value);
+    };
+    let (scheme, rest) = value.split_at(scheme_end + 3);
+    let authority_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let (authority, tail) = rest.split_at(authority_end);
+    let authority = match authority.rfind('@') {
+        Some(at) => format!("{REDACTED}@{}", &authority[at + 1..]),
+        None => authority.to_owned(),
+    };
+    format!("{scheme}{authority}{}", path(tail))
+}
+
+/// Un segment de chemin peut porter des paramètres matriciels (`/app;jsessionid=ABC`) : même
+/// règle que les paramètres d'URL.
+fn matrix(before: &str) -> String {
+    if !before.contains(';') {
+        return text(before);
+    }
+    let mut out = String::with_capacity(before.len());
+    for (i, part) in before.split(';').enumerate() {
+        if i > 0 {
+            out.push(';');
+        }
+        match part.split_once('=') {
+            Some((name, value)) if is_secret_param(name) => {
+                out.push_str(name);
+                out.push('=');
+                out.push_str(REDACTED);
+                // La valeur s'arrête au segment suivant : `/app;jsessionid=ABC/liste`.
+                if let Some(slash) = value.find('/') {
+                    out.push_str(&text(&value[slash..]));
+                }
+            }
+            _ => out.push_str(&text(part)),
+        }
+    }
+    out
 }
 
 /// Chemin d'une requête, avec sa chaîne de paramètres. Les paramètres au nom suspect perdent leur
 /// valeur ; le reste passe par le masquage du texte libre.
 pub fn path(path: &str) -> String {
     let Some((before, query)) = path.split_once('?') else {
-        return text(path);
+        return matrix(path);
     };
     let mut out = String::with_capacity(path.len());
-    out.push_str(&text(before));
+    out.push_str(&matrix(before));
     out.push('?');
     for (i, pair) in query.split('&').enumerate() {
         if i > 0 {
@@ -371,6 +434,43 @@ mod tests {
         assert!(is_secret_header("X-Api-Key"));
         assert!(!is_secret_header("content-type"));
         assert!(!is_secret_header("x-request-id"));
+    }
+
+    #[test]
+    fn en_tetes_hors_liste_au_nom_suspect() {
+        assert!(is_secret_header("X-Amz-Security-Token"));
+        assert!(is_secret_header("Private-Token"));
+        assert!(is_secret_header("X-Hasura-Admin-Secret"));
+        assert!(is_secret_header("X-Goog-Api-Key"));
+        assert!(!is_secret_header("Keep-Alive"));
+        assert!(!is_secret_header("Content-Security-Policy"));
+        assert!(!is_secret_header("Sec-Fetch-Mode"));
+    }
+
+    #[test]
+    fn une_valeur_d_en_tete_qui_est_une_url_est_masquee_comme_un_chemin() {
+        assert_eq!(
+            header_value("Location", "https://app.example/cb?code=AUTH&state=xyz"),
+            "https://app.example/cb?code=•••&state=xyz"
+        );
+        assert_eq!(
+            header_value("Referer", "https://marc:hunter2@intra.example/page"),
+            "https://•••@intra.example/page"
+        );
+        assert_eq!(
+            header_value("Link", "</next?page=2>; rel=next"),
+            "</next?page=2>; rel=next"
+        );
+    }
+
+    #[test]
+    fn parametres_matriciels_masques() {
+        assert_eq!(
+            path("/app;jsessionid=ABC123/liste"),
+            "/app;jsessionid=•••/liste"
+        );
+        assert_eq!(path("/app;jsessionid=ABC?x=1"), "/app;jsessionid=•••?x=1");
+        assert_eq!(path("/a;b/c"), "/a;b/c");
     }
 
     #[test]

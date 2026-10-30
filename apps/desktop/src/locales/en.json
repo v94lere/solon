@@ -459,7 +459,7 @@
     "count_one": "{{count}} project",
     "count_other": "{{count}} projects",
     "welcome_title": "Welcome to Solon",
-    "welcome_hint": "Three ways to get your first project running. Everything you start gets an https://….solon.local address.",
+    "welcome_hint": "Four ways to get your first project running. Everything you start gets an https://….solon.local address.",
     "welcome_open_title": "Open a folder",
     "welcome_open_body": "A folder with a compose.yaml starts as is. A folder without one: Solon looks at what it contains and proposes an environment.",
     "welcome_stack_title": "Choose a stack",

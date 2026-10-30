@@ -37,6 +37,13 @@ if ($Uninstall) {
     # Nettoyage des enregistrements HvSocket créés par une ancienne version de ce script.
     $base = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Virtualization\GuestCommunicationServices"
     Get-ChildItem $base -ErrorAction SilentlyContinue | Where-Object { ($_ | Get-ItemProperty).ElementName -like "Solon vsock *" -or ($_ | Get-ItemProperty).ElementName -like "Monodon vsock *" } | Remove-Item -Force
+    # L'autorité locale (certificats *.solon.local) quitte le magasin racine de la machine : une racine
+    # de confiance ne doit pas survivre au logiciel qui l'a posée. La clé reste dans %ProgramData%\Solon
+    # tant que les données sont conservées, et sera réinstallée telle quelle par une prochaine installation.
+    foreach ($ca in @("Solon Local CA", "Monodon Local CA")) {
+        $out = & certutil.exe -delstore Root $ca 2>&1
+        Log "certificate authority '${ca}': certutil exit $LASTEXITCODE"
+    }
     exit 0
 }
 

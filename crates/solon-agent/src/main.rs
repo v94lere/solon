@@ -79,7 +79,7 @@ fn main() {
                 report.fsck_summary
             )),
             Err(e) => system::log(&format!(
-                "AVERTISSEMENT disque de données : {e} — repli sur tmpfs (données non persistantes)"
+                "AVERTISSEMENT disque de données : {e} — le moteur ne pourra pas démarrer sans lui"
             )),
         }
         system::mount_boot_shares();

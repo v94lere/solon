@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use solon_core::ipc::{CONTROL_PIPE, IpcRequest, ServiceCommand, ServiceEvent};
 use solon_core::protocol::Response;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::NamedPipeServer;
 use tokio::sync::Mutex;
 
@@ -25,10 +25,29 @@ pub async fn serve(
     let mut server =
         solon_hvsock::relay::create_server(CONTROL_PIPE, true, Some(CONTROL_PIPE_SDDL))?;
     tracing::info!(pipe = CONTROL_PIPE, "canal de contrôle à l'écoute");
+    // Une erreur passagère ne doit pas éteindre le canal de contrôle jusqu'au redémarrage du
+    // service : on recrée l'instance et on continue.
+    let new_server = || async {
+        loop {
+            match solon_hvsock::relay::create_server(CONTROL_PIPE, false, Some(CONTROL_PIPE_SDDL)) {
+                Ok(s) => return s,
+                Err(e) => {
+                    tracing::warn!(
+                        "canal de contrôle : nouvelle instance impossible ({e}), nouvel essai"
+                    );
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                }
+            }
+        }
+    };
     loop {
-        server.connect().await?;
+        if let Err(e) = server.connect().await {
+            tracing::warn!("canal de contrôle : connexion refusée ({e})");
+            server = new_server().await;
+            continue;
+        }
         let connected = server;
-        server = solon_hvsock::relay::create_server(CONTROL_PIPE, false, Some(CONTROL_PIPE_SDDL))?;
+        server = new_server().await;
         let engine = engine.clone();
         let settings_path = settings_path.clone();
         let quit = quit.clone();
@@ -54,8 +73,16 @@ async fn handle(
     let mut trace_subscription: Option<tokio::task::JoinHandle<()>> = None;
     loop {
         line.clear();
-        if reader.read_line(&mut line).await? == 0 {
+        // Une ligne sans fin ne doit pas faire grossir la mémoire sans limite : 1 Mio suffit à
+        // toute commande, et au-delà on ferme la connexion.
+        if (&mut reader).take(1 << 20).read_line(&mut line).await? == 0 {
             break;
+        }
+        if !line.ends_with('\n') {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "commande trop longue",
+            ));
         }
         let request: IpcRequest = match serde_json::from_str(line.trim()) {
             Ok(r) => r,

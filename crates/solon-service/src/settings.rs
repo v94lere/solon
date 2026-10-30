@@ -32,8 +32,40 @@ pub fn load_settings(path: &Path) -> Settings {
     }
 }
 
+/// Refuse des réglages avec lesquels la machine ne redémarrerait pas. La commande vient de
+/// l'application, mais aussi de n'importe quel processus de la session : on ne lui fait pas confiance.
+pub fn validate_settings(s: &Settings) -> Result<(), String> {
+    if !(1024..=1_048_576).contains(&s.memory_mb) {
+        return Err(format!(
+            "mémoire hors limites : {} Mo (1 024 à 1 048 576)",
+            s.memory_mb
+        ));
+    }
+    if !(1..=256).contains(&s.processors) {
+        return Err(format!(
+            "processeurs hors limites : {} (1 à 256)",
+            s.processors
+        ));
+    }
+    if !(8..=65_536).contains(&s.data_disk_gib) {
+        return Err(format!(
+            "disque de données hors limites : {} Gio (8 à 65 536)",
+            s.data_disk_gib
+        ));
+    }
+    if s.sleep_idle_minutes == 0 {
+        return Err("délai d'endormissement nul".to_owned());
+    }
+    Ok(())
+}
+
 pub fn save_settings(path: &Path, settings: &Settings) -> std::io::Result<()> {
-    std::fs::write(path, serde_json::to_string_pretty(settings)?)
+    validate_settings(settings).map_err(std::io::Error::other)?;
+    // Fichier temporaire puis renommage : un arrêt au milieu de l'écriture ne laisse pas un
+    // `settings.json` tronqué, que `load_settings` remplacerait en silence par les valeurs par défaut.
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, serde_json::to_string_pretty(settings)?)?;
+    std::fs::rename(&tmp, path)
 }
 
 /// Ce que le service note sur disque pour détecter un arrêt non propre et se rattacher.

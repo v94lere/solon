@@ -121,9 +121,10 @@ fn ensure_plugin_dir(plugins_dir: &std::path::Path) {
         return;
     };
     let path = config_dir.join("config.json");
-    let mut root: serde_json::Value = std::fs::read_to_string(&path)
-        .ok()
-        .and_then(|t| serde_json::from_str(&t).ok())
+    let original = std::fs::read_to_string(&path).ok();
+    let mut root: serde_json::Value = original
+        .as_deref()
+        .and_then(|t| serde_json::from_str(t).ok())
         .unwrap_or_else(|| serde_json::json!({}));
     if !root.is_object() {
         return;
@@ -141,8 +142,16 @@ fn ensure_plugin_dir(plugins_dir: &std::path::Path) {
     if std::fs::create_dir_all(&config_dir).is_err() {
         return;
     }
+    // VS Code lance plusieurs `docker` à la fois : on n'écrit que si quelque chose change, et par
+    // un fichier temporaire renommé, pour qu'aucun lecteur ne tombe sur un fichier vide.
     if let Ok(text) = serde_json::to_string_pretty(&root) {
-        let _ = std::fs::write(&path, text);
+        if original.as_deref() == Some(text.as_str()) {
+            return;
+        }
+        let tmp = path.with_extension(format!("json.{}.tmp", std::process::id()));
+        if std::fs::write(&tmp, &text).is_ok() && std::fs::rename(&tmp, &path).is_err() {
+            let _ = std::fs::remove_file(&tmp);
+        }
     }
 }
 

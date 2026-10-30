@@ -53,7 +53,10 @@ async fn engine_restart() -> Result<(), String> {
 /// Tauri dont plus personne n'écoute accepte toujours les messages, donc sans fermeture explicite
 /// la connexion au service resterait ouverte pour toute la session.
 #[tauri::command]
-async fn engine_subscribe(state: docker::State<'_>, channel: Channel<Value>) -> Result<u64, String> {
+async fn engine_subscribe(
+    state: docker::State<'_>,
+    channel: Channel<Value>,
+) -> Result<u64, String> {
     let task = tokio::spawn(service::subscribe(channel));
     Ok(state.register(task.abort_handle()).await)
 }

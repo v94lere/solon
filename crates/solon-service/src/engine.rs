@@ -830,9 +830,9 @@ impl Engine {
             .call_typed(
                 Command::Exec {
                     command,
-                    timeout_s: Some(timeout_s),
+                    timeout_s: Some(timeout_s.clamp(1, 3600)),
                 },
-                Duration::from_secs(timeout_s + 5),
+                Duration::from_secs(timeout_s.clamp(1, 3600) + 5),
             )
             .await
     }
@@ -871,7 +871,11 @@ impl Engine {
         let mounted_now = if running.shares.contains_key(&drive) {
             false
         } else {
-            let port = 9100 + running.shares.len() as u32;
+            // Premier port libre : après un lecteur absent au démarrage, `9100 + nombre de partages`
+            // retomberait sur un port déjà servi, et le nouveau lecteur lirait l'ancien.
+            let used: std::collections::HashSet<u32> =
+                running.shares.values().map(|s| s.port).collect();
+            let port = (9100u32..).find(|p| !used.contains(p)).unwrap_or(9100);
             let share = solon_core::vm::HostShare {
                 name: drive.clone(),
                 host_path: host_root.clone().into(),
@@ -883,7 +887,7 @@ impl Engine {
             tokio::task::spawn_blocking(move || vm.add_share(&s))
                 .await
                 .map_err(|e| SolonError::internal(e.to_string()))??;
-            running
+            let mounted = running
                 .agent
                 .call(
                     Command::MountShare(solon_core::protocol::MountShareRequest {
@@ -895,7 +899,17 @@ impl Engine {
                     }),
                     Duration::from_secs(30),
                 )
-                .await?;
+                .await;
+            if let Err(e) = mounted {
+                // Le partage HCS existe déjà : le laisser rendrait le lecteur impartageable jusqu'au
+                // redémarrage (HCS refuse un doublon). On le retire pour pouvoir réessayer.
+                let vm = running.vm.clone();
+                let s = share.clone();
+                if let Err(e2) = tokio::task::spawn_blocking(move || vm.remove_share(&s)).await {
+                    tracing::warn!("retrait du partage après échec de montage : {e2}");
+                }
+                return Err(e);
+            }
             running.shares.insert(drive.clone(), share);
             tracing::info!(drive, port, "lecteur partagé vers la machine");
             let state_path = self.inner.cfg.paths.state_file();
@@ -1131,24 +1145,27 @@ fn spawn_console_logger() -> JoinHandle<()> {
     })
 }
 
-/// Partages à rétablir au démarrage : les lecteurs mémorisés qui existent encore, dans l'ordre d'ajout
-/// (le port vsock de chacun est `9100 + index`, comme lors de l'ajout à chaud).
+/// Partages à rétablir au démarrage : les lecteurs mémorisés qui existent encore, dans l'ordre
+/// d'ajout. Les ports vsock sont attribués à la suite à partir de 9100 **parmi les lecteurs
+/// présents** : un lecteur absent ne laisse pas de trou, et l'ajout à chaud prend ensuite le
+/// premier port libre.
 fn boot_shares(drives: &[String]) -> Vec<solon_core::vm::HostShare> {
     drives
         .iter()
-        .enumerate()
-        .filter_map(|(i, drive)| {
-            let host_root = format!("{}:\\", drive.to_ascii_uppercase());
-            if !std::path::Path::new(&host_root).exists() {
+        .filter(|drive| {
+            let present =
+                std::path::Path::new(&format!("{}:\\", drive.to_ascii_uppercase())).exists();
+            if !present {
                 tracing::warn!(drive, "lecteur partagé absent, ignoré");
-                return None;
             }
-            Some(solon_core::vm::HostShare {
-                name: drive.clone(),
-                host_path: host_root.into(),
-                port: 9100 + i as u32,
-                read_only: false,
-            })
+            present
+        })
+        .enumerate()
+        .map(|(i, drive)| solon_core::vm::HostShare {
+            name: drive.clone(),
+            host_path: format!("{}:\\", drive.to_ascii_uppercase()).into(),
+            port: 9100 + i as u32,
+            read_only: false,
         })
         .collect()
 }

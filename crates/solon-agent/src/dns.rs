@@ -27,8 +27,13 @@ use std::time::{Duration, Instant};
 /// Délai accordé à chaque serveur amont avant d'essayer le suivant. Court exprès : le client
 /// réessaie de lui-même au bout de 2 s, autant lui répondre avant.
 const UPSTREAM_TIMEOUT: Duration = Duration::from_millis(1500);
-/// Taille maximale d'un message DNS sur UDP avec EDNS.
-const MAX_PACKET: usize = 4096;
+/// Taille maximale d'un message UDP : une réponse EDNS peut dépasser 4 096 octets, et la tronquer
+/// sans le drapeau TC ferait échouer le client.
+const MAX_PACKET: usize = 65_535;
+/// Questions servies en même temps. Au-delà, les suivantes sont abandonnées : le client réessaie,
+/// et surtout une rafale (amont injoignable, application qui boucle) ne crée pas des milliers de
+/// fils et de ports éphémères dans une machine de 2 Go.
+const MAX_IN_FLIGHT: usize = 64;
 /// Noms gardés. Au-delà, les plus anciens partent : un développeur n'a pas des milliers de
 /// services distants, et la table doit rester petite dans une machine qui tient en 50 Mo.
 const MAX_NAMES: usize = 4096;
@@ -39,6 +44,14 @@ struct Entry {
 }
 
 static NAMES: OnceLock<Mutex<HashMap<String, Entry>>> = OnceLock::new();
+/// Adresse sur laquelle le relais écoute, une fois démarré.
+static LISTENING: OnceLock<String> = OnceLock::new();
+static IN_FLIGHT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// L'adresse du relais en marche, s'il y en a un.
+pub fn relay_address() -> Option<&'static str> {
+    LISTENING.get().map(String::as_str)
+}
 
 fn names() -> &'static Mutex<HashMap<String, Entry>> {
     NAMES.get_or_init(|| Mutex::new(HashMap::new()))
@@ -90,11 +103,12 @@ pub fn start(address: &str, upstream: &[String]) -> Result<(), String> {
         .name("dns".into())
         .spawn(move || serve(socket, upstream))
         .map_err(|e| format!("fil du relais : {e}"))?;
+    let _ = LISTENING.set(address.to_owned());
     Ok(())
 }
 
 fn serve(socket: UdpSocket, upstream: Vec<SocketAddr>) {
-    let mut buf = [0u8; MAX_PACKET];
+    let mut buf = vec![0u8; MAX_PACKET];
     loop {
         let (n, from) = match socket.recv_from(&mut buf) {
             Ok(x) => x,
@@ -105,10 +119,15 @@ fn serve(socket: UdpSocket, upstream: Vec<SocketAddr>) {
             Ok(s) => s,
             Err(_) => continue,
         };
+        use std::sync::atomic::Ordering;
+        if IN_FLIGHT.load(Ordering::Relaxed) >= MAX_IN_FLIGHT {
+            continue;
+        }
+        IN_FLIGHT.fetch_add(1, Ordering::Relaxed);
         let upstream = upstream.clone();
-        // Un fil par question : le DNS d'un poste de développement se compte en questions par
-        // seconde, et un serveur amont lent ne doit pas bloquer les autres questions.
-        let _ = std::thread::Builder::new().spawn(move || {
+        // Un fil par question, en nombre borné : le DNS d'un poste de développement se compte en
+        // questions par seconde, et un serveur amont lent ne doit pas bloquer les autres.
+        let spawned = std::thread::Builder::new().spawn(move || {
             if let Some(answer) = resolve(&query, &upstream) {
                 if let Some((name, ips)) = parse_answers(&answer) {
                     for ip in ips {
@@ -117,7 +136,11 @@ fn serve(socket: UdpSocket, upstream: Vec<SocketAddr>) {
                 }
                 let _ = reply_socket.send_to(&answer, from);
             }
+            IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
         });
+        if spawned.is_err() {
+            IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
+        }
     }
 }
 
@@ -135,16 +158,19 @@ fn resolve(query: &[u8], upstream: &[SocketAddr]) -> Option<Vec<u8>> {
         }) else {
             continue;
         };
-        if s.set_read_timeout(Some(UPSTREAM_TIMEOUT)).is_err() || s.send_to(query, server).is_err()
+        // `connect` : seules les réponses de ce serveur sont acceptées.
+        if s.connect(server).is_err()
+            || s.set_read_timeout(Some(UPSTREAM_TIMEOUT)).is_err()
+            || s.send(query).is_err()
         {
             continue;
         }
-        let mut buf = [0u8; MAX_PACKET];
+        let mut buf = vec![0u8; MAX_PACKET];
         // Une réponse qui ne porte pas notre identifiant est une réponse tardive à autre chose.
         let deadline = Instant::now() + UPSTREAM_TIMEOUT;
         while Instant::now() < deadline {
-            match s.recv_from(&mut buf) {
-                Ok((n, _)) if n >= 12 && &buf[..2] == id => return Some(buf[..n].to_vec()),
+            match s.recv(&mut buf) {
+                Ok(n) if n >= 12 && &buf[..2] == id => return Some(buf[..n].to_vec()),
                 Ok(_) => continue,
                 Err(_) => break,
             }

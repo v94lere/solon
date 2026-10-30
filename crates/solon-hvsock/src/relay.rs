@@ -94,10 +94,26 @@ pub async fn serve_named_pipe_with_sddl(
 ) -> io::Result<()> {
     let mut server = create_server(&pipe_name, true, sddl)?;
     tracing::info!(pipe = %pipe_name, port, "relais à l'écoute");
+    // Une erreur passagère ne doit pas fermer le relais jusqu'au redémarrage du service.
+    let new_server = || async {
+        loop {
+            match create_server(&pipe_name, false, sddl) {
+                Ok(s) => return s,
+                Err(e) => {
+                    tracing::warn!(pipe = %pipe_name, "nouvelle instance impossible ({e}), nouvel essai");
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                }
+            }
+        }
+    };
     loop {
-        server.connect().await?;
+        if let Err(e) = server.connect().await {
+            tracing::warn!(pipe = %pipe_name, "connexion refusée ({e})");
+            server = new_server().await;
+            continue;
+        }
         let connected = server;
-        server = create_server(&pipe_name, false, sddl)?;
+        server = new_server().await;
         tokio::spawn(async move {
             if let Err(e) = handle(connected, vm_id, port).await {
                 tracing::debug!("connexion relais terminée : {e}");

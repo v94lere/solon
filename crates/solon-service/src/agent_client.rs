@@ -56,29 +56,40 @@ impl AgentClient {
         io.1.write_all(line.as_bytes())
             .await
             .map_err(|e| SolonError::new(ErrorCode::AgentUnreachable, e.to_string()))?;
+        let deadline = tokio::time::Instant::now() + timeout;
         let mut reply = String::new();
-        let n = tokio::time::timeout(timeout, io.0.read_line(&mut reply))
-            .await
-            .map_err(|_| {
-                SolonError::new(
+        let response: Response = loop {
+            reply.clear();
+            let n = tokio::time::timeout_at(deadline, io.0.read_line(&mut reply))
+                .await
+                .map_err(|_| {
+                    SolonError::new(
+                        ErrorCode::AgentUnreachable,
+                        "délai dépassé en attendant l'agent",
+                    )
+                })?
+                .map_err(|e| SolonError::new(ErrorCode::AgentUnreachable, e.to_string()))?;
+            if n == 0 {
+                return Err(SolonError::new(
                     ErrorCode::AgentUnreachable,
-                    "délai dépassé en attendant l'agent",
-                )
-            })?
-            .map_err(|e| SolonError::new(ErrorCode::AgentUnreachable, e.to_string()))?;
-        if n == 0 {
-            return Err(SolonError::new(
-                ErrorCode::AgentUnreachable,
-                "connexion fermée par l'agent",
-            ));
-        }
-        let response: Response = serde_json::from_str(reply.trim())?;
-        if response.id != id {
-            return Err(SolonError::internal(format!(
-                "réponse {} pour la requête {id}",
-                response.id
-            )));
-        }
+                    "connexion fermée par l'agent",
+                ));
+            }
+            let response: Response = serde_json::from_str(reply.trim())?;
+            // Une réponse plus ancienne est celle d'un appel dont le délai a expiré : elle est
+            // arrivée après coup. On la jette au lieu de décaler tous les appels suivants.
+            if response.id < id {
+                tracing::debug!(late = response.id, "réponse tardive de l'agent ignorée");
+                continue;
+            }
+            if response.id != id {
+                return Err(SolonError::internal(format!(
+                    "réponse {} pour la requête {id}",
+                    response.id
+                )));
+            }
+            break response;
+        };
         if response.ok {
             Ok(response.result.unwrap_or(serde_json::Value::Null))
         } else {

@@ -192,6 +192,10 @@ fn scan_ntfs(
             }
             let name_off = off + rec.FileNameOffset as usize;
             let name_len = rec.FileNameLength as usize / 2;
+            // Un enregistrement anormal ne doit pas faire lire au-delà de lui.
+            if name_off + 2 * name_len > off + len {
+                break;
+            }
             const FILE_ATTRIBUTE_DIRECTORY: u32 = 0x10;
             let is_dir = rec.FileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0;
             // Les fichiers ordinaires sont l'immense majorité : leur nom n'est décodé que si sa longueur

@@ -459,7 +459,7 @@
     "count_one": "{{count}} projet",
     "count_other": "{{count}} projets",
     "welcome_title": "Bienvenue dans Solon",
-    "welcome_hint": "Trois façons de lancer un premier projet. Tout ce que vous démarrez reçoit une adresse https://….solon.local.",
+    "welcome_hint": "Quatre façons de lancer un premier projet. Tout ce que vous démarrez reçoit une adresse https://….solon.local.",
     "welcome_open_title": "Ouvrir un dossier",
     "welcome_open_body": "Un dossier avec un compose.yaml démarre tel quel. Sans compose.yaml, Solon regarde ce qu'il contient et propose un environnement.",
     "welcome_stack_title": "Choisir une pile",

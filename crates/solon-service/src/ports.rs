@@ -108,12 +108,26 @@ async fn listen(binding: PortBinding, vm: GUID, sleeper: std::sync::Arc<crate::s
         tracing::warn!(?binding, "adresse d'écoute invalide");
         return;
     };
-    let listener = match TcpListener::bind(addr).await {
-        Ok(l) => l,
-        Err(e) => {
-            tracing::warn!(%addr, "port publié indisponible sur l'hôte : {e}");
-            return;
+    // Au redémarrage d'un conteneur, l'ancien relais du même port vient d'être annulé et son
+    // socket n'est pas toujours déjà libéré : on laisse quelques secondes avant de renoncer.
+    let mut listener = None;
+    for attempt in 0..15u32 {
+        match TcpListener::bind(addr).await {
+            Ok(l) => {
+                listener = Some(l);
+                break;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AddrInUse && attempt < 14 => {
+                tokio::time::sleep(Duration::from_millis(200)).await;
+            }
+            Err(e) => {
+                tracing::warn!(%addr, "port publié indisponible sur l'hôte : {e}");
+                return;
+            }
         }
+    }
+    let Some(listener) = listener else {
+        return;
     };
     tracing::info!(%addr, target = %format!("{}:{}", binding.container_ip, binding.container_port), "relais de port ouvert");
     loop {

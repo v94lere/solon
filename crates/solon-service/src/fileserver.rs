@@ -35,11 +35,13 @@ fn prefetch(paths: Vec<PathBuf>) {
         return;
     };
     for p in paths {
-        let slots = PREFETCH_SLOTS.clone();
+        // Pas de file d'attente : un `find` sur un gros dossier mettrait des dizaines de milliers de
+        // tâches en attente. Si les quatre places sont prises, ce fichier ne sera pas préchauffé.
+        let Ok(permit) = PREFETCH_SLOTS.clone().try_acquire_owned() else {
+            return;
+        };
         handle.spawn(async move {
-            let Ok(_permit) = slots.acquire().await else {
-                return;
-            };
+            let _permit = permit;
             let _ = tokio::task::spawn_blocking(move || {
                 use std::io::Read;
                 if let Ok(mut f) = std::fs::File::open(&p) {

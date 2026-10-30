@@ -407,9 +407,9 @@ pub fn mount_plan9(req: &MountShareRequest) -> Result<MountResult, String> {
     let flags = if req.read_only { libc::MS_RDONLY } else { 0 };
     let t0 = Instant::now();
     let src = CString::new("hcs-plan9").unwrap();
-    let tgt = CString::new(req.target.as_str()).unwrap();
+    let tgt = CString::new(req.target.as_str()).map_err(|e| format!("cible : {e}"))?;
     let fstype = CString::new("9p").unwrap();
-    let opts = CString::new(data.clone()).unwrap();
+    let opts = CString::new(data.clone()).map_err(|e| format!("options : {e}"))?;
     let rc = unsafe {
         libc::mount(
             src.as_ptr(),
@@ -434,7 +434,7 @@ pub fn mount_plan9(req: &MountShareRequest) -> Result<MountResult, String> {
 }
 
 pub fn umount(target: &str) -> Result<(), String> {
-    let t = CString::new(target).unwrap();
+    let t = CString::new(target).map_err(|e| format!("cible : {e}"))?;
     if unsafe { libc::umount2(t.as_ptr(), 0) } < 0 {
         Err(format!(
             "umount {target} : {}",
@@ -642,7 +642,15 @@ fn supervise(state: Arc<State>) {
             Err(e) => {
                 log(&format!("dockerd : {e}"));
                 state.engine.lock().unwrap().last_error = Some(e);
+                // Tué, puis attendu et retiré des suivis : un zombie suivi mais jamais attendu
+                // bloquerait le glaneur pour toujours (il le reverrait à chaque tour).
                 let _ = containerd.kill();
+                let _ = containerd.wait();
+                state
+                    .tracked
+                    .lock()
+                    .unwrap()
+                    .remove(&(containerd.id() as i32));
                 std::thread::sleep(Duration::from_secs(2));
                 continue;
             }
@@ -796,6 +804,10 @@ pub fn start_idle_cache_release() {
 /// Récolte les zombies ré-attachés à PID 1, sans voler les enfants attendus par l'agent.
 pub fn start_reaper(state: Arc<State>) {
     std::thread::spawn(move || {
+        // `waitid(P_ALL, WNOWAIT)` peut rendre indéfiniment le même zombie suivi tant que personne
+        // ne l'attend ; derrière lui, les autres zombies s'accumuleraient. Si le même pid suivi
+        // revient pendant plus de cinq secondes, l'attente promise n'arrivera plus : on récolte.
+        let mut stuck: Option<(i32, std::time::Instant)> = None;
         loop {
             let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
             let rc = unsafe {
@@ -807,10 +819,29 @@ pub fn start_reaper(state: Arc<State>) {
                 )
             };
             let pid = if rc == 0 { unsafe { info.si_pid() } } else { 0 };
-            if pid > 0 && !state.tracked.lock().unwrap().contains(&pid) {
-                let mut status = 0;
-                unsafe { libc::waitpid(pid, &mut status, 0) };
-                continue;
+            if pid > 0 {
+                let tracked = state.tracked.lock().unwrap().contains(&pid);
+                let abandoned = match stuck {
+                    Some((p, since)) if p == pid => since.elapsed() > Duration::from_secs(5),
+                    _ => {
+                        stuck = Some((pid, std::time::Instant::now()));
+                        false
+                    }
+                };
+                if !tracked || abandoned {
+                    if abandoned {
+                        log(&format!(
+                            "zombie suivi mais jamais attendu (pid {pid}) : récolté"
+                        ));
+                        state.tracked.lock().unwrap().remove(&pid);
+                    }
+                    let mut status = 0;
+                    unsafe { libc::waitpid(pid, &mut status, 0) };
+                    stuck = None;
+                    continue;
+                }
+            } else {
+                stuck = None;
             }
             std::thread::sleep(Duration::from_millis(100));
         }

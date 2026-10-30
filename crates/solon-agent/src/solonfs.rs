@@ -106,6 +106,14 @@ fn call(req: &FsRequest, data: &[u8]) -> Result<(FsResponse, Vec<u8>), i32> {
         conn.read_exact(&mut head)?;
         let json_len = u32::from_le_bytes(head[0..4].try_into().unwrap()) as usize;
         let data_len = u32::from_le_bytes(head[4..8].try_into().unwrap()) as usize;
+        // Un en-tête aberrant (flux désynchronisé) ne doit pas faire allouer des gigaoctets :
+        // l'échec d'allocation tuerait PID 1, donc la machine.
+        if json_len > 16 * 1024 * 1024 || data_len > FS_MAX_IO as usize {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("trame solonfs aberrante ({json_len} + {data_len} octets)"),
+            ));
+        }
         let mut json = vec![0u8; json_len];
         conn.read_exact(&mut json)?;
         let mut payload = vec![0u8; data_len];
@@ -607,6 +615,9 @@ impl Filesystem for SolonFs {
                 },
                 chunk,
             ) {
+                // Zéro octet écrit sans erreur : disque Windows plein ou fichier verrouillé ;
+                // boucler martèlerait l'hôte sans fin.
+                Ok((FsResponse::Written { len: 0 }, _)) => return reply.error(libc::ENOSPC),
                 Ok((FsResponse::Written { len }, _)) => done += len as usize,
                 Ok((FsResponse::Error { errno }, _)) => return reply.error(errno),
                 Ok(_) => return reply.error(libc::EIO),

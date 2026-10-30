@@ -168,37 +168,73 @@ fn hosts_path() -> PathBuf {
         .join("hosts")
 }
 
-/// Réécrit le bloc géré du fichier `hosts` (idempotent : rien n'est écrit si le contenu est identique).
-pub fn write_hosts_block(domains: &DomainMap) -> io::Result<()> {
-    let path = hosts_path();
-    let current = std::fs::read_to_string(&path).unwrap_or_default();
-    let mut kept = String::with_capacity(current.len());
+/// Lit le fichier `hosts` tel quel, en octets. Absent : vide. Tenu par l'antivirus (erreur 32) :
+/// on réessaie, comme à l'écriture. Toute autre erreur remonte : repartir d'un contenu vide
+/// effacerait les entrées personnelles de l'utilisateur à la réécriture.
+fn read_hosts(path: &Path) -> io::Result<Vec<u8>> {
+    let mut last = None;
+    for attempt in 0..20 {
+        match std::fs::read(path) {
+            Ok(bytes) => return Ok(bytes),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(e)
+                if e.raw_os_error() == Some(32) || e.kind() == io::ErrorKind::PermissionDenied =>
+            {
+                last = Some(e);
+                std::thread::sleep(std::time::Duration::from_millis(50 + 50 * attempt));
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    Err(last.unwrap_or_else(|| io::Error::other("hosts : lecture impossible")))
+}
+
+/// Le bloc géré par Solon retiré de `current`, le reste conservé octet pour octet (le fichier peut
+/// contenir des commentaires accentués dans une page de codes ANSI : on ne le décode pas).
+fn hosts_without_block(current: &[u8]) -> Vec<u8> {
+    let markers_begin = [HOSTS_BEGIN.as_bytes(), LEGACY_HOSTS_BEGIN.as_bytes()];
+    let markers_end = [HOSTS_END.as_bytes(), LEGACY_HOSTS_END.as_bytes()];
+    let mut kept = Vec::with_capacity(current.len());
     let mut skipping = false;
-    for line in current.lines() {
-        if line.trim() == HOSTS_BEGIN || line.trim() == LEGACY_HOSTS_BEGIN {
+    let mut lines = current.split(|&b| b == b'\n').peekable();
+    while let Some(line) = lines.next() {
+        // Le dernier élément vide vient du `\n` final, ce n'est pas une ligne.
+        if lines.peek().is_none() && line.is_empty() {
+            break;
+        }
+        let line = line.strip_suffix(b"\r").unwrap_or(line);
+        let trimmed = line.trim_ascii();
+        if markers_begin.contains(&trimmed) {
             skipping = true;
             continue;
         }
-        if line.trim() == HOSTS_END || line.trim() == LEGACY_HOSTS_END {
+        if markers_end.contains(&trimmed) {
             skipping = false;
             continue;
         }
         if !skipping {
-            kept.push_str(line);
-            kept.push_str("\r\n");
+            kept.extend_from_slice(line);
+            kept.extend_from_slice(b"\r\n");
         }
     }
-    let mut next = kept.trim_end().to_owned();
+    kept
+}
+
+/// Réécrit le bloc géré du fichier `hosts` (idempotent : rien n'est écrit si le contenu est identique).
+pub fn write_hosts_block(domains: &DomainMap) -> io::Result<()> {
+    let path = hosts_path();
+    let current = read_hosts(&path)?;
+    let mut next = hosts_without_block(&current).trim_ascii_end().to_vec();
     if !domains.is_empty() {
-        next.push_str("\r\n");
-        next.push_str(HOSTS_BEGIN);
-        next.push_str("\r\n");
+        next.extend_from_slice(b"\r\n");
+        next.extend_from_slice(HOSTS_BEGIN.as_bytes());
+        next.extend_from_slice(b"\r\n");
         for name in domains.keys() {
-            next.push_str(&format!("127.0.0.1 {name}\r\n"));
+            next.extend_from_slice(format!("127.0.0.1 {name}\r\n").as_bytes());
         }
-        next.push_str(HOSTS_END);
+        next.extend_from_slice(HOSTS_END.as_bytes());
     }
-    next.push_str("\r\n");
+    next.extend_from_slice(b"\r\n");
     if next == current {
         return Ok(());
     }
@@ -229,19 +265,25 @@ pub fn write_hosts_block(domains: &DomainMap) -> io::Result<()> {
 /// administrateurs (S-1-5-32-544) ; les fichiers déjà présents sont remis en héritage simple (`/reset`)
 /// pour qu'ils suivent le dossier. Idempotent. (Pas de `/T` : appliquer `(OI)(CI)` à un fichier lui
 /// laisse une liste de droits vide, que même SYSTEM ne peut plus lire.)
-fn restrict_to_admins(dir: &Path) {
+fn restrict_to_admins(dir: &Path) -> bool {
     let icacls = |args: &[&std::ffi::OsStr]| match std::process::Command::new("icacls.exe")
         .args(args)
         .output()
     {
-        Ok(o) if o.status.success() => {}
-        Ok(o) => tracing::warn!(
-            "droits du dossier de l'autorité : {}",
-            String::from_utf8_lossy(&o.stdout).trim()
-        ),
-        Err(e) => tracing::warn!("icacls introuvable : {e}"),
+        Ok(o) if o.status.success() => true,
+        Ok(o) => {
+            tracing::warn!(
+                "droits du dossier de l'autorité : {}",
+                String::from_utf8_lossy(&o.stdout).trim()
+            );
+            false
+        }
+        Err(e) => {
+            tracing::warn!("icacls introuvable : {e}");
+            false
+        }
     };
-    icacls(&[
+    let ok = icacls(&[
         dir.as_os_str(),
         "/inheritance:r".as_ref(),
         "/grant:r".as_ref(),
@@ -254,6 +296,7 @@ fn restrict_to_admins(dir: &Path) {
             icacls(&[entry.path().as_os_str(), "/reset".as_ref(), "/Q".as_ref()]);
         }
     }
+    ok
 }
 
 /// Paramètres (fixes) du certificat de l'autorité : 10 ans, contrainte CA, signature de certificats.
@@ -274,6 +317,12 @@ fn ca_params() -> io::Result<rcgen::CertificateParams> {
     ];
     params.not_before = rcgen::date_time_ymd(2026, 1, 1);
     params.not_after = rcgen::date_time_ymd(2036, 1, 1);
+    // L'autorité ne vaut que pour `*.solon.local` : une clé qui fuirait ne permettrait pas de se
+    // faire passer pour un autre site auprès du navigateur.
+    params.name_constraints = Some(rcgen::NameConstraints {
+        permitted_subtrees: vec![rcgen::GeneralSubtree::DnsName(".solon.local".to_owned())],
+        excluded_subtrees: vec![],
+    });
     Ok(params)
 }
 
@@ -294,9 +343,7 @@ impl LocalCa {
     /// (exécutés sans élévation).
     fn load_or_create_with(dir: &Path, restrict: bool) -> io::Result<Arc<LocalCa>> {
         std::fs::create_dir_all(dir)?;
-        if restrict {
-            restrict_to_admins(dir);
-        }
+        let restricted = !restrict || restrict_to_admins(dir);
         let key_path = dir.join("solon-ca.key");
         let cert_path = dir.join("solon-ca.pem");
         let cer_path = dir.join("solon-ca.cer");
@@ -304,6 +351,13 @@ impl LocalCa {
             rcgen::KeyPair::from_pem(&std::fs::read_to_string(&key_path)?)
                 .map_err(|e| io::Error::other(format!("clé de l'autorité : {e}")))?
         } else {
+            // Pas de clé dans un dossier que tout le monde peut lire : `%ProgramData%` est lisible
+            // par défaut, et une clé racine lisible vaut interception de tous les sites locaux.
+            if !restricted {
+                return Err(io::Error::other(
+                    "droits du dossier de l'autorité non restreints : clé non créée",
+                ));
+            }
             let key = rcgen::KeyPair::generate().map_err(io::Error::other)?;
             let cert = ca_params()?.self_signed(&key).map_err(io::Error::other)?;
             std::fs::write(&key_path, key.serialize_pem())?;
@@ -859,6 +913,7 @@ where
     {
         Ok(Ok(s)) => s,
         _ => {
+            let host = html_escape(&host);
             let body = format!(
                 "<!doctype html><meta charset=\"utf-8\"><title>Solon</title><body style=\"font-family:Segoe UI,sans-serif;max-width:40em;margin:4em auto;color:#222\"><h1 style=\"font-weight:600\">Solon</h1><p>The container behind <code>{host}</code> is not answering on port {} ({}).</p><p>Check that it listens on that port, or publish the right one.</p></body>",
                 target.port, target.ip
@@ -884,6 +939,7 @@ where
     let capture = trace.captures_bodies(target.peer.project.as_deref());
     let pump = tokio::spawn(async move {
         let mut buf = Vec::with_capacity(8192);
+        let mut current: Option<Pending> = None;
         loop {
             let head_end = match read_head(&mut upstream_rx, &mut buf).await {
                 Ok(Some(n)) => n,
@@ -891,9 +947,18 @@ where
             };
             // La requête est mise en file avant d'être relayée : elle est donc déjà là quand sa
             // réponse arrive, et `try_recv` n'attend jamais.
-            let pending = pending_rx.try_recv().ok();
-            let method = pending.as_ref().map_or("GET", |p| p.method.as_str());
+            if current.is_none() {
+                current = pending_rx.try_recv().ok();
+            }
+            let method = current.as_ref().map_or("GET", |p| p.method.as_str());
             let (status, response_headers, body) = parse_response_head(&buf[..head_end], method);
+            // Une réponse intermédiaire (`100 Continue`, `103 Early Hints`) précède la vraie : la
+            // requête reste en attente de celle-ci. `101` est finale, la connexion devient un tunnel.
+            let pending = if (100..200).contains(&status) && status != 101 {
+                None
+            } else {
+                current.take()
+            };
             let elapsed = pending
                 .as_ref()
                 .map_or(0, |p| p.started.elapsed().as_millis() as u64);
@@ -1013,7 +1078,23 @@ where
     result
 }
 
+/// Le minimum pour qu'un en-tête `Host` forgé ne devienne pas du HTML dans nos pages d'erreur.
+fn html_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '&' => out.push_str("&amp;"),
+            '"' => out.push_str("&quot;"),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
 fn not_found_page(host: &str, domains: &DomainMap) -> String {
+    let host = html_escape(host);
     let mut items = String::new();
     for (name, t) in domains {
         items.push_str(&format!(
@@ -1254,6 +1335,36 @@ mod tests {
         );
         // Sans type de contenu, on ne devine pas.
         assert_eq!(capturable(&h(&[("Content-Length", "12")])), None);
+    }
+
+    /// Le fichier hosts de l'utilisateur n'est jamais réécrit à partir de rien : ses lignes, même
+    /// dans une page de codes ANSI, ressortent octet pour octet, seul notre bloc change.
+    #[test]
+    fn le_bloc_hosts_est_retire_sans_toucher_au_reste() {
+        let mut current = Vec::new();
+        current.extend_from_slice(b"# Copyright (c) 1993-2009 Microsoft Corp.\r\n");
+        current.extend_from_slice(b"# commentaire accentu\xe9 en ANSI\r\n");
+        current.extend_from_slice(b"192.168.1.10 nas\r\n");
+        current.extend_from_slice(HOSTS_BEGIN.as_bytes());
+        current.extend_from_slice(b"\r\n127.0.0.1 web.solon.local\r\n");
+        current.extend_from_slice(HOSTS_END.as_bytes());
+        current.extend_from_slice(b"\r\n");
+        let kept = hosts_without_block(&current);
+        assert_eq!(
+            kept,
+            b"# Copyright (c) 1993-2009 Microsoft Corp.\r\n# commentaire accentu\xe9 en ANSI\r\n192.168.1.10 nas\r\n".to_vec()
+        );
+        // Sans marqueur, rien ne change ; un fichier vide reste vide.
+        assert_eq!(hosts_without_block(b"a b\nc d"), b"a b\r\nc d\r\n".to_vec());
+        assert!(hosts_without_block(b"").is_empty());
+    }
+
+    #[test]
+    fn les_pages_d_erreur_echappent_l_hote() {
+        assert_eq!(
+            html_escape("<script>&\"x\""),
+            "&lt;script&gt;&amp;&quot;x&quot;"
+        );
     }
 
     #[test]

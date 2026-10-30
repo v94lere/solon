@@ -303,6 +303,19 @@ impl Sleeper {
                 }
                 match self.docker(&format!("docker pause {id}")).await {
                     Ok(_) => {
+                        // Entre le contrôle et la pause, une connexion a pu arriver : elle serait
+                        // gelée jusqu'au délai du navigateur. On la laisse passer.
+                        let late = {
+                            let st = self.state.lock().await;
+                            st.activity.get(&id).is_some_and(|a| a.conns > 0)
+                        };
+                        if late {
+                            if let Err(e) = self.docker(&format!("docker unpause {id}")).await {
+                                tracing::warn!(container = %name, "réveil immédiat impossible : {e}");
+                            }
+                            tracing::info!(container = %name, "mise en pause annulée : une connexion venait d'arriver");
+                            continue;
+                        }
                         tracing::info!(container = %name, idle_s = settings.idle.as_secs(), "conteneur endormi (inactif)");
                         self.state.lock().await.sleeping.insert(id.clone());
                         self.changed.notify_one();

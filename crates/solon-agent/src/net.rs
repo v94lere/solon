@@ -54,7 +54,9 @@ pub fn configure(cfg: &NetworkConfig) -> Result<(), String> {
     let mut resolv = String::new();
     let relay = match crate::dns::start(&cfg.address, &cfg.dns) {
         Ok(()) => true,
-        Err(e) if e.contains("in use") => true,
+        // Déjà en marche : seulement si c'est bien sur cette adresse. Après une reconfiguration
+        // avec une autre adresse, citer un relais qui n'écoute plus là coûterait 2 s par résolution.
+        Err(_) if crate::dns::relay_address() == Some(cfg.address.as_str()) => true,
         Err(e) => {
             log(&format!(
                 "relais DNS indisponible ({e}), résolution directe"
