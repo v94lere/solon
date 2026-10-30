@@ -8,12 +8,12 @@ export const LATEST = `${REPO}/releases/latest`;
 const en = {
   nav: { features: "Features", compare: "Benchmark", stacks: "Stacks", releases: "Releases", help: "Help", github: "GitHub", download: "Download" },
   hero: {
-    kicker: "Open source · Windows 10 & 11 Pro · Apache 2.0",
+    kicker: "Open source · Windows 10 & 11, any edition · Apache 2.0",
     title: "Docker on Windows, without Docker Desktop or WSL.",
     lead: "Solon is a standalone container manager: one installer, a complete Docker engine running in a tiny Linux machine that Solon creates and manages itself. No licence, no telemetry, no WSL.",
     download: "Download for Windows",
     winget: "winget coming soon",
-    requirements: "Windows 11 or 10 22H2, Pro / Enterprise / Education, hardware virtualization enabled. Check the SHA-256 published with each release.",
+    requirements: "Windows 11 or 10 22H2, any edition (Home included), hardware virtualization enabled. Check the SHA-256 published with each release.",
     unsigned: "The installer is not signed yet: SmartScreen shows a warning, choose “More info” then “Run anyway”. Code signing through the SignPath Foundation (free signing for open-source projects) has been requested; releases will be signed as soon as the project is accepted.",
   },
   numbers: [
@@ -33,9 +33,9 @@ const en = {
     title: "What Solon does",
     items: [
       { title: "Addresses that always work", body: "Every container answers at https://<name>.solon.local, published port or not, with a certificate your browser trusts. Compose services get <service>.<project>.solon.local." },
-      { title: "Fast Windows folders", body: "Folders mounted into containers go through solonfs, Solon's own file sharing: 3.6 to 94× faster than the 9P sharing used by WSL2 and Docker Desktop." },
+      { title: "Fast Windows folders", body: "Folders mounted into containers go through solonfs, Solon's own file sharing: 3.6 to 94× faster than the 9P sharing used by WSL2 and Docker Desktop, depending on the operation (docs/measurements.md)." },
       { title: "Wake on demand", body: "A container that receives no traffic for ten minutes is paused; the next request wakes it in a fraction of a second. Databases that only talk internally are never touched." },
-      { title: "Ready-made stacks", body: "WordPress, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Jupyter Lab, Mailpit… and starter kits for Django, Flask, FastAPI and Next.js that generate a project on first start." },
+      { title: "Ready-made stacks", body: "WordPress, Odoo 18, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Uptime Kuma, Jupyter Lab, Mailpit… and starter kits for Django, Flask, FastAPI and Next.js that generate a project on first start." },
       { title: "Compose, all of it", body: "Open a folder, Solon detects the stack or proposes one. Services, merged logs, Up / Down / Rebuild, and the compose file editable in place with Save and Up." },
       { title: "See inside", body: "Files tab with drag-and-drop, terminal, debug shell that works even in images without a shell, live CPU, memory and network charts per container. VS Code Dev Containers work as is." },
       { title: "Radiography", body: "Who calls whom, live: a map of your services and a journal of every exchange, refused calls in red, full HTTP for what comes through a local address, names on outside hosts. Pause, step, replay. Sensitive values masked before they are stored; everything stays on your PC." },
@@ -71,7 +71,7 @@ const en = {
     },
     features: {
       title: "Features compared",
-      lead: "Solon as of 0.1.12; the others as documented in September 2026. “Partial” means the feature exists with a caveat.",
+      lead: "Solon as of 0.1.16; the others as documented in September 2026. “Partial” means the feature exists with a caveat.",
       cols: ["", "Solon", "Docker Desktop", "Podman Desktop", "Rancher Desktop"],
       rows: [
         ["Official docker CLI and Compose, no alias", "yes", "yes", "partial: compatible socket", "yes (moby)"],
@@ -82,7 +82,7 @@ const en = {
         ["One environment per Git branch, volumes copied", "yes", "no", "no", "no"],
         ["Project backup and restore, volumes included", "yes", "partial: extension", "no", "no"],
         ["Idle containers paused, woken on demand", "yes", "partial: whole machine (Resource Saver)", "no", "no"],
-        ["Windows folders shared with solonfs, 4 to 94× faster than 9P", "yes", "no: 9P", "no: 9P", "no: 9P"],
+        ["Windows folders shared with solonfs, 3.6 to 94× faster than 9P depending on the operation", "yes", "no: 9P", "no: 9P", "no: 9P"],
         ["Find Compose projects on the disk", "yes", "no", "no", "no"],
         ["VS Code Dev Containers", "yes, verified", "yes", "partial: path setting", "yes"],
         ["Kubernetes built in", "no", "yes", "partial: extensions", "yes (K3s)"],
@@ -221,6 +221,10 @@ const en = {
         ["IMAGE_CORRUPTED", "Engine files missing or SHA-256 mismatch", "Reinstall Solon."],
         ["DATA_DISK_ERROR", "data.vhdx cannot be created or opened", "Check disk space and antivirus exclusions; as a last resort rename %ProgramData%\\Solon\\data.vhdx (loses Docker data)."],
         ["VM_BOOT_TIMEOUT, AGENT_UNREACHABLE, ENGINE_UNREACHABLE", "The machine does not answer", "Restart the engine; read solon-service.log; report with the diagnostic zip."],
+        ["UNSUPPORTED_WINDOWS_EDITION", "Windows edition not supported", "Solon runs on Windows 10 22H2 and Windows 11, all editions including Home; older builds are not supported. Update Windows."],
+        ["VM_CONFIGURATION_REJECTED, HCS_ERROR", "Windows refused the engine configuration, or the virtualization layer returned an error", "Reboot once; if it persists, report with solon-service.log (it carries the Windows error code)."],
+        ["IO", "A file under %ProgramData%\\Solon could not be read or written", "Check disk space and antivirus exclusions on %ProgramData%\\Solon."],
+        ["INTERNAL", "A bug in Solon", "Report with solon-service.log; the engine usually recovers after a restart."],
         ["No network from containers", "Corporate VPN or IP range conflict", "Solon picks a free range and sets the MTU to 1400; some VPNs still block virtual adapters: disable the VPN to test, then report."],
         ["“The Solon service is not running”", "Service stopped", "<code>sc start SolonService</code> as administrator, or reinstall."],
       ],
@@ -275,12 +279,12 @@ const en = {
 const fr: typeof en = {
   nav: { features: "Fonctions", compare: "Comparatif", stacks: "Piles", releases: "Versions", help: "Aide", github: "GitHub", download: "Télécharger" },
   hero: {
-    kicker: "Open source · Windows 10 et 11 Pro · Apache 2.0",
+    kicker: "Open source · Windows 10 et 11, toutes éditions · Apache 2.0",
     title: "Docker sur Windows, sans Docker Desktop ni WSL.",
     lead: "Solon est un gestionnaire de conteneurs autonome : un installateur, un moteur Docker complet dans une petite machine Linux que Solon crée et gère lui-même. Pas de licence, pas de télémétrie, pas de WSL.",
     download: "Télécharger pour Windows",
     winget: "winget bientôt",
-    requirements: "Windows 11 ou 10 22H2, éditions Pro, Entreprise ou Éducation, virtualisation matérielle activée. Vérifiez le SHA-256 publié avec chaque version.",
+    requirements: "Windows 11 ou 10 22H2, toutes éditions (Famille comprise), virtualisation matérielle activée. Vérifiez le SHA-256 publié avec chaque version.",
     unsigned: "L'installateur n'est pas encore signé : SmartScreen affiche un avertissement, choisissez « Informations complémentaires » puis « Exécuter quand même ». Une signature via la SignPath Foundation (signature gratuite pour les projets open source) a été demandée ; les versions seront signées dès l'acceptation du projet.",
   },
   numbers: [
@@ -300,9 +304,9 @@ const fr: typeof en = {
     title: "Ce que Solon fait",
     items: [
       { title: "Des adresses qui marchent toujours", body: "Chaque conteneur répond sur https://<nom>.solon.local, port publié ou non, avec un certificat reconnu par votre navigateur. Les services Compose ont <service>.<projet>.solon.local." },
-      { title: "Dossiers Windows rapides", body: "Les dossiers montés dans les conteneurs passent par solonfs, le partage de fichiers de Solon : 3,6 à 94× plus rapide que le 9P utilisé par WSL2 et Docker Desktop." },
+      { title: "Dossiers Windows rapides", body: "Les dossiers montés dans les conteneurs passent par solonfs, le partage de fichiers de Solon : 3,6 à 94× plus rapide que le 9P utilisé par WSL2 et Docker Desktop, selon l'opération (docs/measurements.md)." },
       { title: "Réveil à la demande", body: "Un conteneur sans trafic pendant dix minutes est mis en pause ; la requête suivante le réveille en une fraction de seconde. Les bases qui ne parlent qu'en interne ne sont jamais touchées." },
-      { title: "Piles prêtes", body: "WordPress, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Jupyter Lab, Mailpit… et des kits de démarrage Django, Flask, FastAPI et Next.js qui génèrent un projet au premier lancement." },
+      { title: "Piles prêtes", body: "WordPress, Odoo 18, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Uptime Kuma, Jupyter Lab, Mailpit… et des kits de démarrage Django, Flask, FastAPI et Next.js qui génèrent un projet au premier lancement." },
       { title: "Compose, en entier", body: "Ouvrez un dossier, Solon reconnaît la pile ou en propose une. Services, journaux mêlés, Up / Down / Rebuild, et le fichier Compose modifiable sur place avec Save and Up." },
       { title: "Voir dedans", body: "Onglet Fichiers avec glisser-déposer, terminal, shell de débogage même dans les images sans shell, courbes CPU, mémoire et réseau par conteneur. VS Code Dev Containers fonctionne tel quel." },
       { title: "Radiographie", body: "Qui appelle qui, en direct : une carte de vos services et un journal de chaque échange, appels refusés en rouge, HTTP complet pour ce qui entre par une adresse locale, des noms sur les hôtes extérieurs. Pause, pas à pas, relecture. Valeurs sensibles masquées avant d'être gardées ; tout reste sur votre PC." },
@@ -338,7 +342,7 @@ const fr: typeof en = {
     },
     features: {
       title: "Fonctionnalités comparées",
-      lead: "Solon en 0.1.12 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.",
+      lead: "Solon en 0.1.16 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.",
       cols: ["", "Solon", "Docker Desktop", "Podman Desktop", "Rancher Desktop"],
       rows: [
         ["CLI docker et Compose officiels, sans alias", "oui", "oui", "partiel : socket compatible", "oui (moby)"],
@@ -349,7 +353,7 @@ const fr: typeof en = {
         ["Un environnement par branche Git, volumes copiés", "oui", "non", "non", "non"],
         ["Sauvegarde et restauration d'un projet, volumes compris", "oui", "partiel : extension", "non", "non"],
         ["Conteneurs inactifs en veille, réveil à la demande", "oui", "partiel : toute la machine (Resource Saver)", "non", "non"],
-        ["Dossiers Windows partagés par solonfs, 4 à 94× plus rapide que 9P", "oui", "non : 9P", "non : 9P", "non : 9P"],
+        ["Dossiers Windows partagés par solonfs, 3,6 à 94× plus rapide que 9P selon l'opération", "oui", "non : 9P", "non : 9P", "non : 9P"],
         ["Recherche des projets Compose sur le disque", "oui", "non", "non", "non"],
         ["VS Code Dev Containers", "oui, vérifié", "oui", "partiel : réglage du chemin", "oui"],
         ["Kubernetes intégré", "non", "oui", "partiel : extensions", "oui (K3s)"],
@@ -488,6 +492,10 @@ const fr: typeof en = {
         ["IMAGE_CORRUPTED", "Fichiers du moteur absents ou empreinte SHA-256 invalide", "Réinstaller Solon."],
         ["DATA_DISK_ERROR", "data.vhdx impossible à créer ou ouvrir", "Vérifier l'espace disque et les exclusions antivirus ; en dernier recours renommer %ProgramData%\\Solon\\data.vhdx (perte des données Docker)."],
         ["VM_BOOT_TIMEOUT, AGENT_UNREACHABLE, ENGINE_UNREACHABLE", "La machine ne répond pas", "Redémarrer le moteur ; consulter solon-service.log ; signaler avec le zip de diagnostic."],
+        ["UNSUPPORTED_WINDOWS_EDITION", "Édition de Windows non prise en charge", "Solon fonctionne sur Windows 10 22H2 et Windows 11, toutes éditions, Famille comprise ; les versions plus anciennes ne sont pas prises en charge. Mettre Windows à jour."],
+        ["VM_CONFIGURATION_REJECTED, HCS_ERROR", "Windows a refusé la configuration du moteur, ou la couche de virtualisation a renvoyé une erreur", "Redémarrer une fois ; si cela persiste, signaler avec solon-service.log (il contient le code d'erreur Windows)."],
+        ["IO", "Un fichier sous %ProgramData%\\Solon n'a pas pu être lu ou écrit", "Vérifier l'espace disque et les exclusions antivirus sur %ProgramData%\\Solon."],
+        ["INTERNAL", "Un bogue de Solon", "Signaler avec solon-service.log ; le moteur repart en général après un redémarrage."],
         ["Pas d'accès réseau depuis les conteneurs", "VPN d'entreprise ou conflit de plage IP", "Solon choisit une plage libre et fixe le MTU à 1400 ; certains VPN bloquent tout de même les cartes virtuelles : désactiver le VPN pour tester, puis signaler."],
         ["« Le service Solon n'est pas en cours d'exécution »", "Service arrêté", "<code>sc start SolonService</code> en administrateur, ou réinstaller."],
       ],

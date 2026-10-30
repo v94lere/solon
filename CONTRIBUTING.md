@@ -13,11 +13,18 @@ les contributions les plus utiles sont des rapports précis, des tests sur d'aut
 | `crates/solon-hvsock` | Sockets Hyper-V côté hôte, relais named pipe → HvSocket |
 | `crates/solon-prereq` | Détection des prérequis Windows |
 | `crates/solon-service` | Service Windows : machine à états, réseau HNS, disque, relais de ports, canal de contrôle |
-| `crates/solon-agent` | PID 1 de la machine Linux (musl statique) : montages, dockerd, RPC, événements |
+| `crates/solon-agent` | PID 1 de la machine Linux (musl statique) : montages, dockerd, RPC, événements, client solonfs, lecture des sondes eBPF |
+| `crates/solon-docker-shim` | Le `docker.exe` livré dans `bin\` : lance le CLI Docker officiel en le dirigeant vers le moteur Solon, sauf hôte ou contexte explicite |
+| `crates/solon-trace-common` | Vocabulaire `no_std` partagé entre les sondes eBPF et l'agent (disposition mémoire des événements) |
+| `crates/solon-trace-ebpf` | Sondes eBPF de la Radiographie (hors espace de travail Cargo : cible `bpfel-unknown-none`, compilées dans un conteneur, voir son `Dockerfile`) |
 | `apps/desktop` | Application Tauri v2 (React, TypeScript, Tailwind), anglais par défaut, français |
 | `image/` | Pipeline reproductible de l'image Linux : noyau, système racine Alpine, initrd, manifeste |
+| `installer/` | Scripts de l'installeur NSIS : activation des composants Windows, service, PATH, signature |
+| `packaging/` | Paquet MSIX pour le Microsoft Store et manifeste winget |
+| `site/` | Site de présentation (Astro, statique), publié sur GitHub Pages par le workflow « Site » |
+| `bench/` | Script de comparaison avec Docker Desktop et sa pile Compose |
 | `tests/e2e` | Scénarios de bout en bout contre le vrai service |
-| `docs/` | Mesures et faits établis |
+| `docs/` | Guide fonctionnel, mesures et faits établis |
 
 Lisez `ARCHITECTURE.md` avant de toucher au provisionnement : chaque section « Résultats du bloc »
 liste les pièges déjà rencontrés (ACL du groupe Virtual Machines, `HVSOCKET_CONNECT_TIMEOUT`,
@@ -25,7 +32,8 @@ périphérique Plan9 à déclarer dès la création, `docker events` qui ne vide
 
 ## Mettre en place un poste de développement
 
-- Windows 11 Pro/Entreprise/Éducation avec Hyper-V et la Plateforme de machine virtuelle activés.
+- Windows 11 ou 10 22H2, toutes éditions, avec Hyper-V et la Plateforme de machine virtuelle activés (sur
+  Famille, la Plateforme de machine virtuelle seule ; le repli 9P du partage de fichiers n'y existe pas).
 - Rust stable (`rustup`), cible `x86_64-unknown-linux-musl` (`rustup target add x86_64-unknown-linux-musl`).
 - Node 22 et npm.
 - Solon installé : l'image Linux se construit dans un conteneur Solon (`image/build.sh` sous Alpine, ~15 s), plus besoin de WSL.

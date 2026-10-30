@@ -28,7 +28,9 @@ update at least every 14 days until the report is resolved.
 
 In scope: the Windows service, the desktop application, the guest agent and the engine image,
 the installer, the `solon.local` proxies and local certificate authority, solonfs (the file
-server for Windows drives), and the bundled `docker.exe` launcher.
+server for Windows drives), the bundled `docker.exe` launcher, and Radiography (the eBPF probes
+in the engine, the HTTP capture done by the `solon.local` proxy, and the masking of sensitive
+values before anything is stored).
 
 Out of scope: vulnerabilities in the upstream Docker engine, containerd, runc, the Linux
 kernel or Alpine packages (report them upstream; Solon will pick up the fixed versions), and

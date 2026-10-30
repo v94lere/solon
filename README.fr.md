@@ -185,7 +185,9 @@ cargo build --release -p solon-service
 cd apps\desktop && npm install && npm run tauri build
 ```
 
-Pour le développement, le service se lance en mode console (fenêtre UAC) et l'application en mode dev :
+Mode développement sans installer : le service se lance en mode console, à la main
+(`solon-service.exe console --start` dans un terminal administrateur) ou par le script ci-dessous (une
+fenêtre UAC), puis l'application en mode dev :
 
 ```powershell
 .\tests\e2e\start-console.ps1 -ImageDir .\image\out\<version> -Release
@@ -203,8 +205,9 @@ Radiography, Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le rep
 
 - **Projets** (accueil) : une carte par projet Compose avec son état, son **adresse principale**
   (`https://web.blog.solon.local`, copiable, avec le cadenas), ses services, Ouvrir / Up / Arrêter / Détails. Les dossiers ouverts auparavant mais arrêtés sont listés aussi ; les
-  conteneurs lancés hors projet sont dans « Autres conteneurs ». Sans rien encore, la page propose trois
-  départs : ouvrir un dossier, choisir une pile, essayer hello-world. La page d'un projet gagne un onglet
+  conteneurs lancés hors projet sont dans « Autres conteneurs ». Sans rien encore, la page propose quatre
+  départs : ouvrir un dossier, choisir une pile, chercher les projets déjà présents sur ce PC, essayer
+  hello-world. La page d'un projet gagne un onglet
   **Environnement** : le `.env` et les blocs `environment:` du `compose.yaml`, plus les ports publiés,
   modifiables sans toucher au YAML.
 - **Sauvegarder et restaurer un projet** : « Sauvegarder… » sur la page d'un projet écrit un seul zip avec les
@@ -237,15 +240,17 @@ Radiography, Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le rep
   conteneur ; l'état « Asleep » apparaît dans la liste.
 - **Piles prêtes et détection de projet** : « New stack… » ouvre une galerie : des kits de
   démarrage qui génèrent un projet au premier lancement (Django + PostgreSQL, Flask + Redis, FastAPI +
-  PostgreSQL, Next.js), des applications prêtes (WordPress, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud,
-  Ghost, Gitea, Uptime Kuma, Jupyter Lab, site statique Nginx) et des outils de développement (Mailpit) : on
+  PostgreSQL, Next.js), des applications prêtes (WordPress, Odoo 18, PostgreSQL, MariaDB, MongoDB, Redis, n8n,
+  Nextcloud, Ghost, Gitea, Uptime Kuma, Jupyter Lab, site statique Nginx) et des outils de développement (Mailpit) : on
   choisit, on désigne un dossier, on relit le `compose.yaml` généré, « Créer et démarrer ». Ouvrir un dossier sans fichier
   Compose fait regarder à Solon ce qu'il contient (package.json, requirements.txt, Dockerfile, composer.json,
   go.mod, Cargo.toml, pom.xml, .csproj, Gemfile…) et proposer un environnement, modifiable
   avant création. Rien n'est jamais écrasé.
 - **Fiche d'un conteneur** (clic sur son nom) : onglet **Overview** avec image, commande, dates, politique de
   redémarrage, réseaux (adresse, passerelle, alias), ports, montages, variables d'environnement, étiquettes, et
-  **copie de fichiers** dans les deux sens (`docker cp` sans ligne de commande). Onglets Logs, Terminal, Inspect.
+  **copie de fichiers** dans les deux sens (`docker cp` sans ligne de commande). Onglets Logs (filtres Tout /
+  Avertissements / Erreurs avec compteurs, recherche, retour à la ligne, couleurs), Files, Terminal, Debug shell,
+  Inspect. Démarrer, arrêter, redémarrer, supprimer et « Keep awake » dans l'en-tête.
 - **Fichiers** (onglet de la fiche d'un conteneur, et bouton « Files » ou clic sur le nom d'un volume) : un
   explorateur des fichiers du conteneur ou du volume : parcourir, copier vers Windows, envoyer des fichiers ou un
   dossier (bouton ou **glisser-déposer** depuis l'Explorateur), créer un dossier, supprimer. Fonctionne sans shell
@@ -270,7 +275,7 @@ Radiography, Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le rep
 - **Diagnostic** (Réglages → Exporter un diagnostic) : une archive zip avec les journaux, l'état, les réglages,
   les prérequis et `docker info`, à joindre à un rapport de bug. Aucun identifiant n'y figure.
 - **Activity** : performances en temps réel. En haut, le moteur : processeur, mémoire (utilisée / totale, réservée),
-  stockage des données, réseau, avec les courbes de la dernière minute. En dessous, chaque conteneur en marche :
+  stockage des données, réseau, avec les courbes sur 1 min, 10 min ou 1 h au choix. En dessous, chaque conteneur en marche :
   processeur, mémoire, débit réseau, courbe du processeur ; colonnes triables. Rien n'est installé dans les conteneurs.
 - **Radiography** (`Ctrl+7`) : qui appelle qui, en temps réel. Une carte (un cercle par service, un trait par
   relation, rouge quand des appels échouent) et un journal (un échange par ligne, dépliable pour voir les
@@ -284,12 +289,14 @@ Radiography, Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le rep
   `dmesg`… La session reste ouverte quand on change de section ; « Nouvelle session » en relance une.
 - **Recherche globale `Ctrl+K`** : conteneurs, images, volumes, réseaux, projets, actions du moteur, sections.
   `Ctrl+1` à `Ctrl+9` changent de section dans l'ordre du menu.
-- **Réglages** : langue (anglais par défaut, français), apparence (clair, sombre, Windows), couleur d'accent (bleu
-  Solon ou couleur de Windows), mémoire et processeurs du moteur (par défaut
-  tous les cœurs moins deux), limite de stockage, démarrage à l'ouverture de session.
-- **Barre des tâches** : un clic sur l'icône ouvre le menu : état du moteur, nombre de conteneurs en
-  marche, **chaque conteneur avec Démarrer / Redémarrer / Arrêter**, ouvrir Solon, démarrer ou arrêter le
-  moteur, quitter. Dans la langue de l'interface. Fermer la fenêtre laisse Solon actif dans la barre des tâches.
+- **Réglages** : langue (anglais par défaut, français), apparence (clair, sombre, Windows), couleur d'accent (rose
+  Solon ou couleur de Windows), mémoire et processeurs du moteur (par défaut tous les cœurs moins deux), limite
+  de stockage, démarrage à l'ouverture de session, mise en veille des conteneurs inactifs, repli sur l'ancien
+  partage de fichiers, export de diagnostic.
+- **Barre des tâches** : un clic sur l'icône ouvre le menu : état du moteur, nombre de conteneurs en marche,
+  **chaque projet avec Démarrer / Redémarrer / Arrêter**, puis les conteneurs hors projet, ouvrir Solon,
+  démarrer ou arrêter le moteur, quitter. Dans la langue de l'interface. Fermer la fenêtre laisse Solon actif
+  dans la barre des tâches.
 
 ### CLI `docker` et `docker compose` intégrés
 
@@ -340,8 +347,8 @@ retrouver le direct.
 Les dossiers Windows montés dans les conteneurs (`-v C:\...`, projets Compose) passent par **solonfs**, le système de
 fichiers de Solon : un serveur côté Windows, un client côté Linux, et un protocole qui ramène tout un dossier en une
 seule question au lieu d'une par fichier. Mesuré sur 5 000 fichiers face au partage 9P de Windows (celui de WSL2 et
-de Docker Desktop) : lister 6,6× plus vite, lire les attributs 94× plus vite, lire le contenu 3,6 à 9× plus vite,
-écrire 4× plus vite. Détails et méthode : `docs/measurements.md`.
+de Docker Desktop) : 3,6 à 94× plus rapide selon l'opération (lister 6,6×, lire les attributs 94×, lire le contenu
+3,6 à 9×, écrire 4×). Détails et méthode : `docs/measurements.md`.
 
 Ce qu'il faut savoir :
 
@@ -390,16 +397,15 @@ perdues, comme sur toute machine Linux.
 
 - **Ports UDP** publiés non relayés vers `localhost` (TCP seulement).
 - **Un seul moteur par machine**, pas de profils multiples.
-- **Montages de dossiers Windows** : métadonnées lentes (voir plus haut). Les chemins `C:\...` de `docker run -v`,
-  `--mount` et des fichiers Compose sont traduits automatiquement et le lecteur est partagé à la volée.
-- **Docker Hub** : le CLI `docker` de Windows peut réutiliser des identifiants périmés stockés par Docker
-  Desktop (voir « Utilisation »).
-- **Installeur non signé** (avertissement SmartScreen) ; le chemin « activation de Hyper-V puis redémarrage »
-  n'a pas encore été éprouvé sur une machine vierge.
-- Pas de mise à jour silencieuse : Solon signale qu'une nouvelle version existe (Réglages → Mises à jour, une
-  requête vers github.com, désactivable). « Installer la mise à jour » télécharge l'installateur, vérifie son
-  SHA-256 avec le `SHA256SUMS.txt` de la version, puis Windows demande l'autorisation ; Solon se rouvre et
-  relance ce qui tournait. Rien ne s'installe sans vous.
+- **Installeur non signé** (avertissement SmartScreen). **Pas de mise à jour silencieuse** : Solon signale
+  qu'une nouvelle version existe (Réglages → Mises à jour, une requête vers github.com, désactivable).
+  « Installer la mise à jour » télécharge l'installateur, vérifie son SHA-256 avec le `SHA256SUMS.txt` de la
+  version, puis Windows demande l'autorisation ; Solon se rouvre et relance ce qui tournait. Rien ne
+  s'installe sans vous.
+- Un conteneur endormi n'exécute pas ses tâches planifiées internes tant que rien ne l'appelle ; « Keep
+  awake » sur sa fiche si cela compte.
+- `curl.exe` de Windows refuse les certificats HTTPS locaux sans `--ssl-no-revoke` (comme avec mkcert) ; les
+  navigateurs et .NET les acceptent.
 
 ## Où ça va, et où vous pouvez aider
 
@@ -422,14 +428,15 @@ une commande, et la documentation, les traductions et les reproductions de bogue
 
 ## Documentation
 
-- `ARCHITECTURE.md` : choix techniques (virtualisation HCS, image Linux, HvSocket, 9P, réseau), résultats
+- `ARCHITECTURE.md` : choix techniques (virtualisation HCS, image Linux, HvSocket, solonfs, réseau), résultats
   mesurés bloc par bloc, registre des risques.
 - `docs/guide-fonctionnel.md` : le guide fonctionnel de l'application, écran par écran.
 - `docs/measurements.md` : toutes les mesures et les faits établis.
 - `bench/` : le script de comparaison et sa pile Compose (voir le comparatif plus haut).
 - `site/` : le site de présentation (Astro, statique), publié sur GitHub Pages par le workflow « Site ».
 - `tests/e2e/` : scénarios de bout en bout.
-- `CONTRIBUTING.md` : comment contribuer.
+- `CONTRIBUTING.md` : comment contribuer ; `SECURITY.md` : comment signaler une faille ;
+  `CODE_OF_CONDUCT.md`.
 
 ## Licence
 

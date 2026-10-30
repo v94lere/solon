@@ -29,9 +29,10 @@ besoin.
 
 ## 3. Installation et premier démarrage
 
-1. **Installateur** `Solon_x.y.z_x64-setup.exe` (GitHub Releases, bientôt winget). Windows 10 22H2 ou 11, éditions
-   Pro, Entreprise ou Éducation ; virtualisation activée dans le BIOS. L'installateur active Hyper-V et la
-   Plateforme de machine virtuelle si besoin et demande alors un redémarrage. Il n'est pas encore signé : sur
+1. **Installateur** `Solon_x.y.z_x64-setup.exe` (GitHub Releases, bientôt winget). Windows 10 22H2 ou 11, toutes
+   éditions, Famille comprise ; virtualisation activée dans le BIOS. L'installateur active Hyper-V et la
+   Plateforme de machine virtuelle si besoin et demande alors un redémarrage (sur Famille, la Plateforme de
+   machine virtuelle seule suffit ; le repli 9P du partage de fichiers n'y existe pas). Il n'est pas encore signé : sur
    l'écran SmartScreen, « Informations complémentaires » puis « Exécuter quand même ».
 2. **Service Windows** `SolonService` installé et démarré ; il gère le moteur. Le moteur lui-même démarre au
    premier lancement de l'application (ou à l'ouverture de session si le réglage est coché).
@@ -306,8 +307,7 @@ Open the Solon app to start it. »
   éveillé » si cela compte).
 - `curl.exe` de Windows demande `--ssl-no-revoke` pour les certificats locaux ; les navigateurs et .NET les
   acceptent.
-- Le partage d'un projet à un collègue sur le réseau, l'import depuis Docker Desktop et la mise à jour des
-  images ne sont pas encore là.
+- Le partage d'un projet à un collègue sur le réseau et la mise à jour des images ne sont pas encore là.
 
 ## 16. Où chercher de l'aide
 

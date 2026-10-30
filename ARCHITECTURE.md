@@ -1,7 +1,7 @@
 # Solon — Plan d'architecture
 
-> **Statut : v0.1 validée le 2 septembre 2026 (six décisions de la section 0 acceptées). Le document sera complété par les mesures au fil des blocs.**
-> Ce document deviendra la documentation technique de référence (`ARCHITECTURE.md`) une fois validé.
+> **Statut : documentation technique de référence. Dernière mise à jour : 28 octobre 2026 (version 0.1.16).**
+> Le plan v0.1 a été validé le 2 septembre 2026 (six décisions de la section 0 acceptées) ; les sections « Résultats du bloc » et les paragraphes datés consignent ce qui a été construit depuis, sans réécrire le plan initial. Quand le plan et un paragraphe daté divergent, le paragraphe daté a raison.
 
 Solon est un gestionnaire de conteneurs autonome pour Windows, dans l'esprit d'OrbStack : une VM Linux minuscule, invisible, entièrement gérée par nous, avec des chemins de communication optimisés. Ce plan fixe les choix de virtualisation, de construction de l'image Linux, de communication hôte↔VM, de partage de fichiers, et le découpage du code. Il liste aussi, sans les cacher, les points pour lesquels il n'existe pas aujourd'hui de solution mature sur Windows.
 
@@ -113,7 +113,7 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 
 - **Les 7 fonctionnalités du MVP sont présentes** : vues Images (lancer, inspecter, supprimer), Volumes et Réseaux (créer, inspecter, supprimer), Compose (dossier Windows partagé à la demande par 9P, `docker compose` exécuté dans la machine via l'agent, regroupement par projet), icône de barre des tâches (état, conteneurs en marche, démarrer/arrêter, ouvrir, quitter).
 - Le partage de dossier à la demande implémente la §5.2 : un partage par lecteur, monté sur `/mnt/host/<lettre>`, chemin traduit ; découverte : le périphérique Plan9 doit être déclaré à la création de la machine pour accepter des ajouts à chaud.
-- Limites assumées : sortie Compose capturée en fin de commande (pas de flux), UDP non relayé, une seule machine par hôte.
+- Limites assumées à l'époque : sortie Compose capturée en fin de commande (pas de flux), UDP non relayé, une seule machine par hôte.
 
 ### 1.9 Résultats du bloc 5 (durcissement, 2 septembre 2026)
 
@@ -125,7 +125,7 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 - **Installeur** : image et service installés à côté de l'exécutable (`<install>\image`, `<install>\solon-service.exe`), le service la trouve sans copie ; `installer/setup.ps1` (élevé) active les composants Windows, enregistre les GUID HvSocket et installe `SolonService` ; désinstallation avec question avant de supprimer `%ProgramData%\Solon`.
 - **Installeur testé de bout en bout** (`tests/e2e/install-test.ps1`) : installation silencieuse en 40 s, service Windows réel (LocalSystem, session 0) qui démarre le moteur en 4 s au premier lancement, `docker` accessible sans élévation, port publié relayé, arrêt propre.
 - Mesure honnête : le plancher mémoire au repos reste **426 Mo** malgré les hints (ballon et signalement de pages libres actifs dans l'invité) ; voir `docs/measurements.md` pour l'analyse et les pistes.
-- Reste fragile : pas encore testé sur une machine où Hyper-V est **désactivé** (chemin « activation + redémarrage » de `setup.ps1`) ni sur Windows Famille ; installeur non signé (SmartScreen).
+- Reste fragile à l'époque : pas encore testé sur une machine où Hyper-V est **désactivé** (chemin « activation + redémarrage » de `setup.ps1`) ni sur Windows Famille ; installeur non signé (SmartScreen).
 
 ### 1.10 Résultats du bloc 6 (livraison, 3 septembre 2026)
 
@@ -148,7 +148,8 @@ Détail et tableau complet dans `docs/measurements.md`. En résumé :
 - **Lot « dossiers rapides », étape 1 (6 septembre 2026)** : système de fichiers maison **solonfs** monté en parallèle du 9P sous `/mnt/solonfs/<lettre>` pour mesure. Serveur dans le service (`fileserver.rs`, `FS_CONNECTIONS` = 4 connexions ouvertes par l'hôte vers le port vsock **5006** de l'agent — l'hôte reste l'initiateur de toutes les connexions), client **FUSE** dans l'agent (`solonfs.rs`, crate `fuser` 0.15 copiée dans `third_party/` pour corriger la compilation croisée). Protocole `solon_core::fs` : trames `[u32 taille JSON][u32 taille données][JSON][données]`, `Readdir` avec attributs de toutes les entrées, `Lookup` avec attribut complet, lectures ≥ 128 Ko, cache d'attributs/listes 1,5 s côté invité, listages figés par descripteur, droits root 0777/0666 (chmod ignoré). Préchauffage côté hôte des petits fichiers (≤ 256 Ko, ≤ 64 par dossier, 4 en parallèle) au listage, car la première ouverture NTFS coûte ~3,5 ms. Résultats : 4 à 94× plus rapide que 9P selon l'opération (`docs/measurements.md`). Non fait encore : basculer `/mnt/host` (montages des conteneurs) sur solonfs, Windows Famille (retirer la dépendance au périphérique Plan9), client FUSE multi-thread, invalidation du cache par notifications de changement côté hôte.
 - **Lot « dossiers rapides », étape 2 (6 septembre 2026)** : bascule. solonfs est monté sur **`/mnt/host/<lettre>`** (chemins utilisés par la traduction des montages et par Compose), le 9P de Windows sur `/mnt/host9p/<lettre>` en secours. Réglage `legacy_file_sharing` (`settings.json`, case dans Réglages) → le service ajoute `solon.fs=9p` à la ligne de commande du noyau et l'agent remet le 9P sur `/mnt/host` sans monter solonfs. Si l'hôte ne fournit aucune connexion pendant 30 s, une opération renvoie EIO au lieu de bloquer le conteneur.
 - **Après le test machine vierge (6 septembre 2026)** : (1) `chmod` refusé (EPERM) aux utilisateurs non root des conteneurs sur solonfs → option `DefaultPermissions` retirée du montage FUSE, le système de fichiers arbitre lui-même (tout permis, chmod/chown ignorés) ; (2) `docker compose` introuvable sans Docker Desktop → plugin déclaré via `cliPluginsExtraDirs` ; (3) **l'image du moteur se construit désormais dans un conteneur Solon** (Alpine 3.24, 14 s, dépôt monté par solonfs) au lieu de WSL : les scripts de build évitent le SIGPIPE `curl | head` sous busybox (`pipefail`).
-- Limites connues consignées dans le README : sortie Compose non diffusée en flux, UDP non relayé, une machine par hôte, Windows Famille exclu, identifiants Docker Hub du CLI hérités de Docker Desktop.
+- Limites connues consignées dans le README à l'époque : sortie Compose non diffusée en flux, UDP non relayé, une machine par hôte, Windows Famille exclu, identifiants Docker Hub du CLI hérités de Docker Desktop.
+- **État au 28 octobre 2026 (0.1.16)** : de cette liste, seules restent **UDP non relayé** et **une machine par hôte**. La sortie Compose est diffusée en flux depuis le lot « trois défauts » (vsock 5005), Windows Famille est pris en charge depuis la 0.1.12 (vérifié sur Windows 11 Famille 25H2 le 13 septembre 2026), et les identifiants Docker Hub périmés ne concernent que les PC où Docker Desktop est ou a été installé (`docker logout` suffit, voir le README) : ce n'est pas une limite de Solon.
 
 ---
 
@@ -224,17 +225,23 @@ Engagement de maintenance : une nouvelle image à chaque CVE noyau ou Docker not
 - Côté Windows : socket `AF_HYPERV` (famille 34), `SOCK_STREAM`, protocole `HV_PROTOCOL_RAW`, adresse `SOCKADDR_HV{VmId, ServiceId}`. `VmId` = identifiant de la VM HCS. Pour un invité Linux, le `ServiceId` encode le port vsock : `xxxxxxxx-facb-11e6-bd58-64006a7986d3` où `xxxxxxxx` est le port en hexadécimal.
 - Côté Linux : `AF_VSOCK` avec transport `hv_sock`, CID hôte = 2. L'agent écoute sur des ports fixes.
 - **Toutes les connexions sont initiées par l'hôte** (service → agent). Cela évite d'enregistrer des services hôtes dans `HKLM\...\Virtualization\GuestCommunicationServices` pour l'écoute côté hôte (l'installeur enregistre quand même nos GUID pour garder la porte ouverte), et cela simplifie le modèle de sécurité : l'invité ne peut rien ouvrir vers l'hôte.
+  *État au 28 octobre 2026* : l'enregistrement des GUID a été abandonné, `installer/setup.ps1` n'écrit plus rien dans `GuestCommunicationServices` et supprime à la désinstallation les clés `Solon vsock *` laissées par les anciennes versions. Toutes les connexions restent ouvertes par l'hôte.
 - Intégration Tokio : wrapper `HvStream` sur un socket brut `AF_HYPERV` enregistré auprès de `mio` via `FromRawSocket` (IOCP/AFD acceptent ces sockets, c'est ce que fait WSL). **À valider au spike** ; repli : threads bloquants dédiés, ce qui suffit largement pour le trafic de contrôle.
 
 ### 4.2 Ports et protocoles
 
-| Port vsock | Rôle | Protocole |
-|---|---|---|
-| 5000 | RPC de contrôle agent | Trames `u32 longueur + JSON` (`serde`), requêtes/réponses avec identifiant, notifications asynchrones |
-| 5001 | API Docker | Octets bruts relayés vers `/run/docker.sock` (HTTP/1.1, hijack inclus) |
-| 5002 | Relais de ports publiés | Une connexion par flux TCP entrant ; en-tête initial `{port, container_ip}` puis octets bruts |
-| 5003 | Flux Compose / exec agent | Une connexion par commande : stdout/stderr multiplexés en trames, code de retour final |
-| 5004 | Console de diagnostic | Journal de l'agent en flux |
+Tableau mis à jour le 28 octobre 2026 d'après les constantes de `crates/solon-core/src/protocol.rs` et `fs.rs` (le plan initial prévoyait cinq ports, 5003 pour les flux Compose et 5004 pour une console de diagnostic ; les deux ont été réaffectés). Toutes les connexions sont ouvertes par l'hôte, même quand c'est l'invité qui pousse ensuite les données.
+
+| Port vsock | Constante | Rôle | Protocole |
+|---|---|---|---|
+| 5000 | `PORT_CONTROL` | RPC de contrôle agent | Requêtes/réponses JSON, une par ligne (`\n`), corrélées par `id` |
+| 5001 | `PORT_DOCKER` | API Docker | Octets bruts relayés vers `/run/docker.sock` (HTTP/1.1, hijack inclus) |
+| 5002 | `PORT_PORTS` | Relais de ports publiés | Une connexion par flux TCP entrant : une ligne `PortRelayHeader`, une ligne `PortRelayAck`, puis octets bruts |
+| 5003 | `PORT_EVENTS` | Événements de l'agent | L'hôte se connecte, l'invité pousse des `AgentEvent` JSON, un par ligne |
+| 5004 | `PORT_SHELL` | Terminal dans la machine | En-tête JSON puis trames `[type, len16, charge]` hôte → agent (saisie, redimensionnement) ; octets bruts du pseudo-terminal agent → hôte |
+| 5005 | `PORT_EXEC` | Exécution en flux (Compose, commandes) | `sh -c` ; trames stdout/stderr, puis code de retour |
+| 5006 | `PORT_FS` (`fs.rs`) | solonfs | Trames `[u32 taille JSON][u32 taille données][JSON][données]`, quatre connexions ouvertes par l'hôte |
+| 5007 | `PORT_TRACE` | Radiographie | Comme 5003, mais des `TraceEvent` : flux séparé parce que bien plus bavard, pour qu'une rafale d'échanges ne retarde pas un changement d'état |
 
 RPC de contrôle (liste initiale) : `Ping`, `GetHealth`, `MountShare{name, port, target, read_only}`, `UnmountShare`, `ListMounts`, `GetStatsSnapshot` (optionnel, voir §8.4), `ComposeRun{project_dir, args}`, `PrepareShutdown{timeout}`, `Poweroff`, `FsckReport`, `SetTimezone`.
 
@@ -309,7 +316,7 @@ Chaque transition est journalisée (`tracing`, fichiers tournants dans `%Program
 | Détection | Source | Message utilisateur (FR, sans « VM ») |
 |---|---|---|
 | Virtualisation matérielle désactivée | `Win32_ComputerSystem.HypervisorPresent=false` et `Win32_Processor.VirtualizationFirmwareEnabled=false` | « La virtualisation matérielle est désactivée dans le BIOS/UEFI. Activez « Intel VT-x » ou « AMD-V » (souvent dans l'onglet Advanced/CPU), puis relancez Solon. » |
-| Édition Home | `Win32_OperatingSystem.OperatingSystemSKU` ∈ SKU « Core » | « Solon nécessite Windows 11 Pro, Entreprise ou Éducation. » + lien de documentation |
+| Édition Home | `Win32_OperatingSystem.OperatingSystemSKU` ∈ SKU « Core » | *Plan initial* : « Solon nécessite Windows 11 Pro, Entreprise ou Éducation. » **Depuis la 0.1.12 (constaté le 28 octobre 2026)**, ce message n'est plus émis : `check_edition` de `solon-prereq` accepte toutes les éditions et se contente de noter « édition Famille : Plateforme de machine virtuelle » dans le rapport. |
 | Fonctionnalité manquante | API DISM (`DismGetFeatureInfo`) | « Un composant Windows doit être activé. Solon va le faire ; un redémarrage sera nécessaire. » (bouton) |
 | Activation refusée par stratégie | HRESULT DISM `0x800f0954`, `0x800f0805`, `0x800f0922`, erreurs GPO | « Votre organisation restreint l'activation de composants Windows. Transmettez à votre administrateur : activer `Microsoft-Hyper-V` et `VirtualMachinePlatform`. » |
 | Hyperviseur non lancé (autre hyperviseur, `hypervisorlaunchtype off`, Solon dans une VM sans virtualisation imbriquée) | HCS `HCS_E_HYPERV_NOT_RUNNING (0x80370102)` / `HCS_E_HYPERV_NOT_INSTALLED (0x80370101)` | « Le moteur de virtualisation Windows n'est pas démarré. Causes fréquentes : VirtualBox/VMware anciens, `bcdedit hypervisorlaunchtype` désactivé, exécution dans une machine virtuelle. » |
@@ -324,13 +331,15 @@ Chaque transition est journalisée (`tracing`, fichiers tournants dans `%Program
 - **Arrêt propre** : `PrepareShutdown{timeout=10 s}` → l'agent arrête les conteneurs (`docker stop` groupé), `dockerd`, `sync`, démonte, `poweroff` ; le service attend l'événement d'arrêt HCS, sinon `HcsTerminateComputeSystem` après 20 s. Le relais Docker refuse les nouvelles connexions dès le début de l'arrêt.
 - **Arrêt brutal (coupure, crash hôte, `HcsTerminate`)** : le rootfs est en lecture seule, donc toujours cohérent. `data.vhdx` est en ext4 journalisé, monté `data=ordered`, avec `barrier` actif et `CachingMode` du disque HCS réglé pour ne pas mentir sur les `fsync` (à valider : `Uncached` vs `Cached`). Au redémarrage : `fsck -p`, rapport à l'hôte (`FsckReport`), puis `dockerd` reconstruit son état (`live-restore` désactivé : les conteneurs sont marqués arrêtés, ceux en `restart: always` repartent). Le service détecte au boot une VM orpheline (`Owner=Solon`) et la termine avant de recréer la sienne. Un fichier `state.json` avec horodatage et étape en cours permet de détecter « le dernier arrêt n'était pas propre » et de l'indiquer à l'utilisateur.
 - **Crash du service seul** : au redémarrage il tente `HcsOpenComputeSystem` sur l'identifiant conservé ; si la VM est vivante, il se rattache (reconnexion HvSocket) sans redémarrer les conteneurs.
-- **Mémoire** : allocation configurable (défaut : 25 % de la RAM, min 1 Go, max 8 Go), `AllowOvercommit` + hints HCS, `hv_balloon` + page reporting côté noyau, `vm.drop_caches` périodique côté agent si l'inactivité dépasse un seuil. Mesure : working set du processus `vmmem` correspondant + service + app.
+- **Mémoire** : allocation configurable (*plan initial* : 25 % de la RAM, min 1 Go, max 8 Go ; **en pratique, 28 octobre 2026** : 2 048 Mo fixes par défaut, `memory_mb` dans `solon-core/src/ipc.rs`, modifiable dans les Réglages), `AllowOvercommit` + hints HCS, `hv_balloon` + page reporting côté noyau, `vm.drop_caches` périodique côté agent si l'inactivité dépasse un seuil. Mesure : working set du processus `vmmem` correspondant + service + app.
 
 ---
 
 ## 8. Découpage Rust et commandes Tauri
 
 ### 8.1 Espace de travail Cargo
+
+Plan initial (2 septembre 2026) ; l'arborescence réelle au 28 octobre 2026 suit.
 
 ```
 solon/
@@ -352,6 +361,37 @@ solon/
 ├── installer/                 hooks NSIS, scripts d'activation de fonctionnalités, enregistrement HvSocket
 ├── docs/                      décisions (ADR), mesures, dépannage
 └── tests/                     tests d'intégration (gated `SOLON_IT=1`, Windows + Hyper-V)
+```
+
+**Arborescence réelle (28 octobre 2026, 0.1.16, d'après le `Cargo.toml` racine).** Les crates `solon-engine`, `solon-ipc` et `solon-bench` du plan n'ont pas vu le jour : l'accès à Docker passe par le mandataire HTTP de `solon-service` (`docker_proxy.rs`), le protocole app ↔ service dans `solon-core/src/ipc.rs`, et les bancs sont des scripts PowerShell dans `bench/`.
+
+```
+solon/
+├── Cargo.toml                 (workspace, resolver 3, version partagée)
+├── crates/
+│   ├── solon-core/            modèles, erreurs à codes stables, protocole hôte↔agent (`protocol.rs`),
+│   │                          protocole solonfs (`fs.rs`), protocole app↔service (`ipc.rs`)
+│   ├── solon-trace-common/    [no_std] vocabulaire partagé sondes eBPF ↔ agent (disposition mémoire des événements)
+│   ├── solon-vm-hcs/          [windows] bindings HCS/HCN/virtdisk, document JSON, cycle de vie, orphelins
+│   ├── solon-hvsock/          [windows] sockets Hyper-V côté hôte, GUID de service ↔ port vsock
+│   ├── solon-prereq/          [windows] détection/activation des prérequis, mapping HRESULT → codes
+│   ├── solon-service/         [windows] service Windows : machine à états, mandataire Docker, relais de ports,
+│   │                          domaines locaux et autorité de certification, veille, solonfs (serveur),
+│   │                          Radiographie (`trace.rs`), API de contrôle sur `\\.\pipe\solon-control`
+│   ├── solon-agent/           [linux, musl statique] PID 1 invité : montages, dockerd, RPC, exec, shell,
+│   │                          client FUSE solonfs, lecture des sondes eBPF
+│   ├── solon-docker-shim/     [windows] `bin\docker.exe`, lanceur du CLI Docker officiel vers le moteur Solon
+│   └── solon-trace-ebpf/      [hors workspace] sondes eBPF (cible bpfel-unknown-none, nightly figée, compilées
+│                              dans un conteneur : voir son Dockerfile)
+├── apps/desktop/              Tauri v2 (src-tauri/ membre du workspace + src/ React)
+├── image/                     noyau, système racine Alpine, initrd, manifeste, scripts de construction
+├── installer/                 hooks NSIS, `setup.ps1` (composants Windows, service, PATH), `sign.ps1`
+├── packaging/                 msix/ (Microsoft Store) et winget/
+├── site/                      site de présentation (Astro), publié sur GitHub Pages
+├── bench/                     `bench.ps1`, `mem-reclaim.ps1` et leur pile Compose
+├── third_party/               `fuser` corrigé pour la compilation croisée
+├── docs/                      guide fonctionnel, mesures, captures
+└── tests/e2e/                 scénarios de bout en bout (PowerShell) contre le vrai service
 ```
 
 ### 8.2 Traits pour la phase 2 (Linux natif)
@@ -415,7 +455,7 @@ MVP : flux `bollard` `/containers/{id}/stats?stream=1` par conteneur en marche, 
 - **NSIS** via le bundler Tauri (`installMode: perMachine`, donc élevé), hooks `installer/hooks.nsh` → `installer/setup.ps1` : vérification et activation des fonctionnalités (`Microsoft-Hyper-V`, `VirtualMachinePlatform`) avec drapeau « redémarrage requis » (code 3010 → `SetRebootFlag`) ; installation et démarrage de `SolonService` (Automatique). Aucun enregistrement HvSocket dans le registre : toutes les connexions sont ouvertes par l'hôte. L'image (`vmlinuz`, `initrd.img`, `rootfs.vhd`, `manifest.json`) et `solon-service.exe` sont installés **dans le dossier d'installation** ; le service cherche `image\` à côté de son exécutable avant `%ProgramData%\Solon\image`. Les données (`data.vhdx`, `state.json`, `settings.json`, journaux) restent dans `%ProgramData%\Solon`. Désinstallation : arrêt et suppression du service (qui arrête la machine et détache le réseau), **question explicite** avant de supprimer `%ProgramData%\Solon` (réponse par défaut : conserver, y compris en mode silencieux).
 - Taille mesurée : **80 Mo** d'installeur pour 324 Mo décompressés (rootfs 307 Mo). Embarquée : un seul fichier, aucun téléchargement, cohérent avec « zéro requête sortante ».
 - **Signature** : configuration séparée `apps/desktop/src-tauri/tauri.signed.conf.json` (`bundle.windows.signCommand` → `installer/sign.ps1`, `signtool` avec certificat OV/EV du magasin ou Azure Trusted Signing, horodatage RFC 3161) ; construire avec `npm run tauri build -- --config src-tauri/tauri.signed.conf.json`. Tauri signe alors `solon.exe`, l'installeur et le désinstalleur ; `solon-service.exe` étant une ressource, `sign.ps1` doit aussi lui être appliqué avant la construction (`installer/sign.ps1 -Path target\release\solon-service.exe`). Sans certificat, SmartScreen avertira ; la réputation ne se construit qu'avec un certificat stable.
-- **Mises à jour** : hors MVP (impliquerait une requête réseau). Une nouvelle version se distribue par un nouvel installeur qui conserve `data.vhdx`.
+- **Mises à jour** : *plan initial* : hors MVP (impliquerait une requête réseau) ; une nouvelle version se distribue par un nouvel installeur qui conserve `data.vhdx`. **Depuis la 0.1.13 (14 septembre 2026)** : l'application vérifie sur github.com qu'une version plus récente existe (une seule requête, désactivable dans Réglages → Mises à jour, aucun identifiant envoyé) ; « Installer la mise à jour » télécharge l'installeur, vérifie son SHA-256 contre le `SHA256SUMS.txt` de la version, puis Windows demande l'autorisation (UAC) ; Solon se rouvre et relance ce qui tournait (`apps/desktop/src-tauri/src/update.rs`). Le service, lui, ne fait toujours aucune requête sortante.
 
 ---
 

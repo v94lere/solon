@@ -52,9 +52,9 @@ Le SDK Windows fournit `makeappx`, `makepri` et `signtool` ; il vient avec Visua
 
 ```powershell
 # 1. faire confiance au certificat de test (PowerShell administrateur)
-Import-Certificate -FilePath .\target\release\bundle\msix\Solon_0.1.13.0_x64.cer -CertStoreLocation Cert:\LocalMachine\Root
+Import-Certificate -FilePath .\target\release\bundle\msix\Solon_<version>.0_x64.cer -CertStoreLocation Cert:\LocalMachine\Root
 # 2. installer
-Add-AppxPackage .\target\release\bundle\msix\Solon_0.1.13.0_x64.msix
+Add-AppxPackage .\target\release\bundle\msix\Solon_<version>.0_x64.msix
 # 3. retirer
 Get-AppxPackage *Solon* | Remove-AppxPackage
 ```

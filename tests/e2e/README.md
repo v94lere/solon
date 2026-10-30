@@ -1,8 +1,8 @@
 # Tests de bout en bout du service
 
 Ces scripts exercent le vrai service (`solon-service`) contre une vraie machine. Ils exigent une machine
-Windows Pro/Entreprise avec Hyper-V et la Plateforme de machine virtuelle activés, et une image construite
-(`image/build.sh`). Ils ne sont pas lancés par `cargo test` : seul le lancement du service demande une
+Windows 11 ou 10 22H2, toutes éditions, avec Hyper-V et la Plateforme de machine virtuelle activés (sur
+Famille, la Plateforme seule ; le repli 9P n'y existe pas), et une image construite (`image/build.sh`). Ils ne sont pas lancés par `cargo test` : seul le lancement du service demande une
 élévation (UAC) ; tout le reste tourne **sans droits**, comme l'application.
 
 | Script | Rôle | Élévation |
