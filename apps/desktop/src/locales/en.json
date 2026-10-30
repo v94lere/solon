@@ -44,7 +44,6 @@
     "stop": "Stop engine",
     "restart": "Restart engine",
     "retry": "Try again",
-    "boot_time": "Started in {{seconds}} s",
     "recovered": "The previous session ended unexpectedly; storage was checked and recovered.",
     "service_hint": "The Solon background service must be running. Reinstalling Solon repairs it.",
     "short": {
@@ -159,6 +158,11 @@
     "logs": {
       "follow": "Follow",
       "clear": "Clear",
+    "clear_confirm": {
+      "title": "Clear the history?",
+      "body": "Everything observed so far is forgotten. New exchanges keep arriving.",
+      "confirm": "Clear"
+    },
       "timestamps": "Timestamps",
       "empty": "No output yet.",
       "wrap": "Wrap",
@@ -173,7 +177,6 @@
       "services": "Services shown"
     },
     "terminal": {
-      "shell": "Shell",
       "connect": "Open terminal",
       "disconnected": "Session ended.",
       "stopped": "The container must be running to open a terminal."
@@ -241,8 +244,6 @@
     "close": "Close",
     "copy": "Copy",
     "copied": "Copied",
-    "language": "Language",
-    "theme": "Theme",
     "yes": "Yes",
     "no": "No",
     "ok": "OK"
@@ -257,7 +258,6 @@
     "autostart": "Start the engine at sign-in",
     "save": "Save",
     "saved": "Saved. Changes apply at the next engine start.",
-    "about": "About",
     "theme": "Appearance",
     "theme_light": "Light",
     "theme_dark": "Dark",
@@ -364,7 +364,8 @@
       "body": "Containers attached to this network must be disconnected first.",
       "confirm": "Remove"
     },
-    "empty_title": "Only the default networks"
+    "empty_title": "Only the default networks",
+    "empty": "Create one here or with the docker CLI; Compose creates its own networks."
   },
   "compose": {
     "title": "Compose",
@@ -374,9 +375,13 @@
     "not_found": "No compose.yaml in {{dir}}",
     "up": "Up",
     "down": "Down",
+    "down_confirm": {
+      "title": "Stop and remove the containers of {{name}}?",
+      "body": "docker compose down stops the services and removes their containers and networks. Volumes and your data are kept; Up recreates everything.",
+      "confirm": "Down"
+    },
     "ps": "Status",
     "running": "Running…",
-    "no_output": "(no output)",
     "exit": "exit code {{code}}, {{seconds}} s"
   },
   "import": {
@@ -757,6 +762,11 @@
     "map": "Map of calls between services",
     "pause": "Pause",
     "clear": "Clear",
+    "clear_confirm": {
+      "title": "Clear the history?",
+      "body": "Everything observed so far is forgotten. New exchanges keep arriving.",
+      "confirm": "Clear"
+    },
     "empty": "Nothing observed yet",
     "empty_hint": "As soon as a service calls another, or you open a .solon.local page, it shows up here.",
     "waiting": "Waiting for the engine",

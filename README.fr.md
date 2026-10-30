@@ -351,6 +351,10 @@ Les messages de l'interface portent un **code stable** ; les journaux sont dans
 | `IMAGE_CORRUPTED` | Fichiers du moteur absents ou empreinte SHA-256 invalide | Réinstaller Solon. |
 | `DATA_DISK_ERROR` | `data.vhdx` impossible à créer ou ouvrir | Vérifier l'espace disque et les exclusions antivirus ; en dernier recours renommer `%ProgramData%\Solon\data.vhdx` (perte des données Docker). |
 | `VM_BOOT_TIMEOUT`, `AGENT_UNREACHABLE`, `ENGINE_UNREACHABLE` | La machine ne répond pas | Redémarrer le moteur ; consulter `solon-service.log` ; signaler avec le journal. |
+| `UNSUPPORTED_WINDOWS_EDITION` | Édition de Windows non prise en charge | Solon fonctionne sur Windows 10 22H2 et Windows 11, toutes éditions, Famille comprise ; les versions plus anciennes ne sont pas prises en charge. Mettre Windows à jour. |
+| `VM_CONFIGURATION_REJECTED`, `HCS_ERROR` | Windows a refusé la configuration du moteur, ou la couche de virtualisation a renvoyé une erreur | Redémarrer une fois ; si cela persiste, signaler avec `solon-service.log` (il contient le code d'erreur Windows). |
+| `IO` | Un fichier sous `%ProgramData%\Solon` n'a pas pu être lu ou écrit | Vérifier l'espace disque et les exclusions antivirus sur `%ProgramData%\Solon`. |
+| `INTERNAL` | Un bogue de Solon | Signaler avec `solon-service.log` ; le moteur repart en général après un redémarrage. |
 | Pas d'accès réseau depuis les conteneurs | VPN d'entreprise ou conflit de plage IP | Solon choisit une plage libre parmi `172.30.0.0/24`… et fixe le MTU à 1400 ; certains VPN (AnyConnect, GlobalProtect) bloquent tout de même le trafic des cartes virtuelles : désactiver le VPN pour tester, puis signaler. |
 | « Le service Solon n'est pas en cours d'exécution » | Service arrêté | `sc start SolonService` en administrateur, ou réinstaller. |
 

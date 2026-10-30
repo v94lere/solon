@@ -10,6 +10,7 @@ import { portConflictIn } from "../ports";
 import { parseComposeConfigError, yamlSyntaxProblem, type ComposeProblem } from "../composeCheck";
 import { markUserAction, useEngine } from "../engine";
 import { EnvPanel } from "../components/EnvPanel";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { AddressLine } from "./ProjectsView";
 import { LABEL_PROJECT, primaryAddress, projectBaseName, projectDirOf, projectNameOf, rememberProject, samePath, serviceNameOf, withSleeping } from "../projects";
 import { MultiLogsPanel } from "../components/MultiLogsPanel";
@@ -38,6 +39,8 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
   const queryClient = useQueryClient();
   const [project, setProject] = useState<ComposeProject | null | undefined>(undefined);
   const [busy, setBusy] = useState<string | null>(null);
+  // `down` supprime les conteneurs et réseaux du projet : on demande avant, comme pour toute suppression.
+  const [confirmDown, setConfirmDown] = useState(false);
   const [output, setOutput] = useState<{ kind: string; text: string }[]>([]);
   const [exitCode, setExitCode] = useState<number | null>(null);
   const outputRef = useRef<HTMLPreElement>(null);
@@ -378,7 +381,7 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
         <div className="flex-1" />
         <button type="button" className="btn btn-primary btn-sm" disabled={busy !== null || project === null} onClick={() => void run("up", ["up", "-d", "--remove-orphans"])}>{busy === "up" ? t("compose.running") : t("compose.up")}</button>
         <button type="button" className="btn btn-sm" disabled={busy !== null || project === null} onClick={() => void run("rebuild", ["up", "-d", "--build", "--remove-orphans"])}>{busy === "rebuild" ? t("compose.running") : t("project.rebuild")}</button>
-        <button type="button" className="btn btn-sm" disabled={busy !== null || project === null} onClick={() => void run("down", ["down"])}>{busy === "down" ? t("compose.running") : t("compose.down")}</button>
+        <button type="button" className="btn btn-sm" disabled={busy !== null || project === null} onClick={() => setConfirmDown(true)}>{busy === "down" ? t("compose.running") : t("compose.down")}</button>
         <span className="mx-1" />
         <button type="button" className="btn btn-sm" onClick={() => void openPath(dir)}>{t("project.explorer")}</button>
         <button type="button" className="btn btn-sm" onClick={() => void system.openInVsCode(dir).catch((e: unknown) => setError(String(e)))}>{t("project.vscode")}</button>
@@ -559,6 +562,20 @@ export function ProjectView({ dir, autoUp = false, onBack, onOpenContainer }: { 
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmDown}
+        title={t("compose.down_confirm.title", { name: project?.name ?? "" })}
+        confirmLabel={t("compose.down_confirm.confirm")}
+        cancelLabel={t("common.cancel")}
+        danger
+        onCancel={() => setConfirmDown(false)}
+        onConfirm={() => {
+          setConfirmDown(false);
+          void run("down", ["down"]);
+        }}
+      >
+        {t("compose.down_confirm.body")}
+      </ConfirmDialog>
     </div>
   );
 }

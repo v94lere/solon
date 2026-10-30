@@ -1,4 +1,4 @@
-# La mémoire rendue à Windows, mesurée. C'est le reproche numéro un fait aux moteurs de conteneurs
+﻿# La mémoire rendue à Windows, mesurée. C'est le reproche numéro un fait aux moteurs de conteneurs
 # sous Windows : la machine grossit et ne rend rien. Ce banc alloue 800 Mo de vraie mémoire dans un
 # conteneur, les libère, et regarde ce que le processus de la machine rend à Windows.
 #

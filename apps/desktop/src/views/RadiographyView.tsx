@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { engine, trace, type TraceBody, type TraceConnection, type TraceEvent, type TraceHttp, type TracePeer } from "../api";
 import { EmptyState, hueOf, IconPulse, PageHeader } from "../components/ui";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { TraceTimeline, type Speed, type TimelinePoint } from "../components/TraceTimeline";
 
 /** Échanges gardés à l'écran. Plus qu'il n'en faut pour afficher : la relecture remonte loin. */
@@ -53,6 +54,7 @@ export function RadiographyView() {
   const [facts, setFacts] = useState<Fact[]>([]);
   const [project, setProject] = useState<string>("");
   const [open, setOpen] = useState<number | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   // Lecture : en direct, ou figée / rejouée à partir d'un instant du passé.
   const [live, setLive] = useState(true);
   const [cursor, setCursor] = useState(0);
@@ -191,7 +193,7 @@ export function RadiographyView() {
                 {t("radiography.capture_bodies")}
               </label>
             )}
-            <button type="button" className="btn btn-sm" onClick={() => void clear()}>
+            <button type="button" className="btn btn-sm" onClick={() => setConfirmClear(true)}>
               {project ? t("radiography.clear_project", { project }) : t("radiography.clear")}
             </button>
           </>
@@ -203,6 +205,20 @@ export function RadiographyView() {
           </select>
         }
       />
+      <ConfirmDialog
+        open={confirmClear}
+        title={t("radiography.clear_confirm.title")}
+        confirmLabel={t("radiography.clear_confirm.confirm")}
+        cancelLabel={t("common.cancel")}
+        danger
+        onCancel={() => setConfirmClear(false)}
+        onConfirm={() => {
+          setConfirmClear(false);
+          void clear();
+        }}
+      >
+        {t("radiography.clear_confirm.body")}
+      </ConfirmDialog>
       {status && !status.active && (
         <div className="mx-4 mb-2 rounded px-3 py-2" role="status" style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>
           {t("radiography.inactive", { detail: status.detail })}

@@ -1,4 +1,4 @@
-# Construit le paquet MSIX de Solon à partir des binaires déjà compilés.
+﻿# Construit le paquet MSIX de Solon à partir des binaires déjà compilés.
 #
 #   .\packaging\msix\build-msix.ps1                 # paquet de test, signé avec un certificat local
 #   .\packaging\msix\build-msix.ps1 -Store          # paquet à téléverser au Partner Center (non signé)

@@ -44,7 +44,6 @@
     "stop": "Arrêter le moteur",
     "restart": "Redémarrer le moteur",
     "retry": "Réessayer",
-    "boot_time": "Démarré en {{seconds}} s",
     "recovered": "La session précédente s'est terminée brutalement ; le stockage a été vérifié et récupéré.",
     "service_hint": "Le service Solon en arrière-plan doit être en cours d'exécution. Réinstaller Solon le répare.",
     "short": {
@@ -159,6 +158,11 @@
     "logs": {
       "follow": "Suivre",
       "clear": "Effacer",
+    "clear_confirm": {
+      "title": "Effacer l'historique ?",
+      "body": "Tout ce qui a été observé jusqu'ici est oublié. Les nouveaux échanges continuent d'arriver.",
+      "confirm": "Effacer"
+    },
       "timestamps": "Horodatage",
       "empty": "Aucune sortie pour l'instant.",
       "wrap": "Retour à la ligne",
@@ -173,7 +177,6 @@
       "services": "Services affichés"
     },
     "terminal": {
-      "shell": "Shell",
       "connect": "Ouvrir un terminal",
       "disconnected": "Session terminée.",
       "stopped": "Le conteneur doit être en marche pour ouvrir un terminal."
@@ -241,8 +244,6 @@
     "close": "Fermer",
     "copy": "Copier",
     "copied": "Copié",
-    "language": "Langue",
-    "theme": "Thème",
     "yes": "Oui",
     "no": "Non",
     "ok": "OK"
@@ -257,7 +258,6 @@
     "autostart": "Démarrer le moteur à l'ouverture de session",
     "save": "Enregistrer",
     "saved": "Enregistré. Les changements s'appliquent au prochain démarrage du moteur.",
-    "about": "À propos",
     "theme": "Apparence",
     "theme_light": "Clair",
     "theme_dark": "Sombre",
@@ -364,7 +364,8 @@
       "body": "Les conteneurs attachés à ce réseau doivent d'abord en être détachés.",
       "confirm": "Supprimer"
     },
-    "empty_title": "Seulement les réseaux par défaut"
+    "empty_title": "Seulement les réseaux par défaut",
+    "empty": "Créez-en un ici ou avec le CLI docker ; Compose crée les siens tout seul."
   },
   "compose": {
     "title": "Compose",
@@ -374,9 +375,13 @@
     "not_found": "Aucun compose.yaml dans {{dir}}",
     "up": "Démarrer (up)",
     "down": "Arrêter (down)",
+    "down_confirm": {
+      "title": "Arrêter et supprimer les conteneurs de {{name}} ?",
+      "body": "docker compose down arrête les services et supprime leurs conteneurs et réseaux. Les volumes et vos données sont conservés ; Up recrée tout.",
+      "confirm": "Arrêter (down)"
+    },
     "ps": "État",
     "running": "En cours…",
-    "no_output": "(aucune sortie)",
     "exit": "code de sortie {{code}}, {{seconds}} s"
   },
   "import": {
@@ -757,6 +762,11 @@
     "map": "Carte des appels entre services",
     "pause": "Pause",
     "clear": "Effacer",
+    "clear_confirm": {
+      "title": "Effacer l'historique ?",
+      "body": "Tout ce qui a été observé jusqu'ici est oublié. Les nouveaux échanges continuent d'arriver.",
+      "confirm": "Effacer"
+    },
     "empty": "Rien d'observé pour l'instant",
     "empty_hint": "Dès qu'un service en appelle un autre, ou que vous ouvrez une page .solon.local, cela apparaît ici.",
     "waiting": "En attente du moteur",

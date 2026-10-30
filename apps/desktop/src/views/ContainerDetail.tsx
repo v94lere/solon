@@ -332,7 +332,7 @@ function OverviewPanel({ id, data, running }: { id: string; data: Inspect | unde
             [t("detail.overview.user"), <span className="mono">{cfg.User || "root"}</span>],
             [t("detail.overview.hostname"), <span className="mono">{cfg.Hostname ?? "—"}</span>],
             [t("detail.overview.restart"), `${restart}${hc.RestartPolicy?.MaximumRetryCount ? ` (${hc.RestartPolicy.MaximumRetryCount})` : ""}${data.RestartCount ? ` · ${t("detail.overview.restarts", { count: data.RestartCount })}` : ""}`],
-            ...(hc.Privileged ? [[t("detail.overview.privileged"), "yes"] as [string, React.ReactNode]] : []),
+            ...(hc.Privileged ? [[t("detail.overview.privileged"), t("common.yes")] as [string, React.ReactNode]] : []),
           ]}
         />
       </Section>

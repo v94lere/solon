@@ -324,6 +324,10 @@ from the error screen.
 | `IMAGE_CORRUPTED` | Engine files missing or SHA-256 mismatch | Reinstall Solon. |
 | `DATA_DISK_ERROR` | `data.vhdx` cannot be created or opened | Check disk space and antivirus exclusions; as a last resort rename `%ProgramData%\Solon\data.vhdx` (loses Docker data). |
 | `VM_BOOT_TIMEOUT`, `AGENT_UNREACHABLE`, `ENGINE_UNREACHABLE` | The machine does not answer | Restart the engine; read `solon-service.log`; report with the log. |
+| `UNSUPPORTED_WINDOWS_EDITION` | Windows edition not supported | Solon runs on Windows 10 22H2 and Windows 11, all editions including Home; older builds are not supported. Update Windows. |
+| `VM_CONFIGURATION_REJECTED`, `HCS_ERROR` | Windows refused the engine configuration, or the virtualization layer returned an error | Reboot once; if it persists, report with `solon-service.log` (it carries the Windows error code). |
+| `IO` | A file under `%ProgramData%\Solon` could not be read or written | Check disk space and antivirus exclusions on `%ProgramData%\Solon`. |
+| `INTERNAL` | A bug in Solon | Report with `solon-service.log`; the engine usually recovers after a restart. |
 | No network from containers | Corporate VPN or IP range conflict | Solon picks a free range among `172.30.0.0/24`… and sets the MTU to 1400; some VPNs (AnyConnect, GlobalProtect) still block virtual adapters: disable the VPN to test, then report. |
 | "The Solon service is not running" | Service stopped | `sc start SolonService` as administrator, or reinstall. |
 

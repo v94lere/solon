@@ -1,4 +1,4 @@
-# Fabrique l'objet BPF de la radiographie et le dépose dans crates/solon-agent/src/bpf/.
+﻿# Fabrique l'objet BPF de la radiographie et le dépose dans crates/solon-agent/src/bpf/.
 #
 # L'objet est versionné dans le dépôt : la compilation croisée de l'agent depuis Windows l'inclut
 # par `include_bytes!`, et bpf-linker ne tourne pas sous Windows (voir Dockerfile). Relancer ce
