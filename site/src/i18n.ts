@@ -71,7 +71,7 @@ const en = {
     },
     features: {
       title: "Features compared",
-      lead: "Solon as of 0.1.17; the others as documented in September 2026. “Partial” means the feature exists with a caveat.",
+      lead: "Solon as of 0.1.18; the others as documented in September 2026. “Partial” means the feature exists with a caveat.",
       cols: ["", "Solon", "Docker Desktop", "Podman Desktop", "Rancher Desktop"],
       rows: [
         ["Official docker CLI and Compose, no alias", "yes", "yes", "partial: compatible socket", "yes (moby)"],
@@ -342,7 +342,7 @@ const fr: typeof en = {
     },
     features: {
       title: "Fonctionnalités comparées",
-      lead: "Solon en 0.1.17 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.",
+      lead: "Solon en 0.1.18 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.",
       cols: ["", "Solon", "Docker Desktop", "Podman Desktop", "Rancher Desktop"],
       rows: [
         ["CLI docker et Compose officiels, sans alias", "oui", "oui", "partiel : socket compatible", "oui (moby)"],

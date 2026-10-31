@@ -1,6 +1,6 @@
 # Solon — Plan d'architecture
 
-> **Statut : documentation technique de référence. Dernière mise à jour : 30 octobre 2026 (version 0.1.17).**
+> **Statut : documentation technique de référence. Dernière mise à jour : 31 octobre 2026 (version 0.1.18).**
 > Le plan v0.1 a été validé le 2 septembre 2026 (six décisions de la section 0 acceptées) ; les sections « Résultats du bloc » et les paragraphes datés consignent ce qui a été construit depuis, sans réécrire le plan initial. Quand le plan et un paragraphe daté divergent, le paragraphe daté a raison.
 
 Solon est un gestionnaire de conteneurs autonome pour Windows, dans l'esprit d'OrbStack : une VM Linux minuscule, invisible, entièrement gérée par nous, avec des chemins de communication optimisés. Ce plan fixe les choix de virtualisation, de construction de l'image Linux, de communication hôte↔VM, de partage de fichiers, et le découpage du code. Il liste aussi, sans les cacher, les points pour lesquels il n'existe pas aujourd'hui de solution mature sur Windows.
