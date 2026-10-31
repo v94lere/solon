@@ -15,6 +15,8 @@ les contributions les plus utiles sont des rapports précis, des tests sur d'aut
 | `crates/solon-service` | Service Windows : machine à états, réseau HNS, disque, relais de ports, canal de contrôle |
 | `crates/solon-agent` | PID 1 de la machine Linux (musl statique) : montages, dockerd, RPC, événements, client solonfs, lecture des sondes eBPF |
 | `crates/solon-docker-shim` | Le `docker.exe` livré dans `bin\` : lance le CLI Docker officiel en le dirigeant vers le moteur Solon, sauf hôte ou contexte explicite |
+| `crates/solon-client` | Côté client du service, sans interface : canal de contrôle, détection Compose, sauvegarde et restauration d'un projet, export de diagnostic. Partagé par l'application et le CLI : une fonction qui sert aux deux va ici, pas dans `src-tauri` |
+| `crates/solon-cli` | La commande `solon` (`bin\solon.exe` une fois installée ; `solon-cli.exe` dans `target/`, l'application s'appelant déjà `solon.exe`). La voie principale pour les nouvelles fonctions depuis le 31 octobre 2026 |
 | `crates/solon-trace-common` | Vocabulaire `no_std` partagé entre les sondes eBPF et l'agent (disposition mémoire des événements) |
 | `crates/solon-trace-ebpf` | Sondes eBPF de la Radiographie (hors espace de travail Cargo : cible `bpfel-unknown-none`, compilées dans un conteneur, voir son `Dockerfile`) |
 | `apps/desktop` | Application Tauri v2 (React, TypeScript, Tailwind), anglais par défaut, français |
@@ -51,6 +53,18 @@ cd apps\desktop; npm install; npm run typecheck
 Le noyau se compile une fois (`image/kernel/build-kernel.sh`, ~7 min sur 16 cœurs) et se réutilise
 avec `SKIP_KERNEL=1`.
 
+Pour produire un installeur, l'ordre compte :
+
+```powershell
+cargo build --release -p solon-service -p solon-cli
+cd apps\desktop; npm run tauri build
+```
+
+Le service et le CLI sont copiés comme ressources (`tauri.conf.json` : `target/release/solon-service.exe` et
+`target/release/solon-cli.exe` → `bin/solon.exe`) : `tauri build` ne les reconstruit pas, il embarque ce qui
+est dans `target/release` au moment où il passe. Un `tauri build` seul livre donc un service et un `solon`
+périmés sans rien dire.
+
 ## Tests
 
 - `cargo test --workspace` : tests unitaires (schéma HCS, HRESULT, protocole, chemins, couverture des
@@ -67,6 +81,10 @@ Toute modification du provisionnement, du réseau ou de l'agent doit passer `tes
 
 - **Langue** : code et identifiants en anglais ; commentaires, commits, documentation en français ;
   interface en anglais par défaut avec traduction française complète (le test `locales.rs` vérifie la parité).
+  Le CLI n'a pas de fichiers de traduction : tout texte visible s'écrit dans les deux langues à l'endroit où il
+  sert, par `tr("English text", "Texte français")` de `crates/solon-cli/src/text.rs` ; un texte anglais seul
+  n'est pas accepté. Les identifiants de commandes, d'options et de réglages (`status`, `--json`, `memory=`)
+  restent en anglais dans les deux langues.
 - **Scripts PowerShell** : toujours enregistrés en UTF-8 **avec BOM** (PowerShell 5.1 lit sinon les accents dans la page de codes ANSI et échoue à l'analyse) ; ne pas nommer une variable `$svc` ou `$root` à côté de `common.ps1` (casse ignorée). Dans une chaîne, un nom de variable suivi de deux-points s'écrit `${nom}:` (sinon PowerShell lit `$nom:` comme un lecteur et **tout le script échoue à l'analyse**, sans journal : l'installeur laisse alors le service arrêté). Avant de livrer : `[System.Management.Automation.Language.Parser]::ParseFile("installer\setup.ps1", [ref]$null, [ref]$e)` doit laisser `$e` vide.
 - **Commits atomiques**, format `type(portée): résumé` (`feat(service): …`, `fix(app): …`, `docs: …`).
 - **Codes d'erreur** : tout nouvel échec visible par l'utilisateur ajoute une variante à `ErrorCode`,

@@ -10,6 +10,51 @@ Tout reste sur la machine. Rien n'est envoyé nulle part, rien n'est écrit en d
 
 Ce document suit les étapes. Une section par phase, écrite au moment où elle est livrée.
 
+## En ligne de commande
+
+Livré le 31 octobre 2026 avec la commande `solon` (voir `ARCHITECTURE.md`, § 8.1). Trois commandes lisent
+le même historique que l'écran, par le même abonnement au service ; rien n'a changé côté service.
+
+- `solon trace [nom] [-n N | --all] [-f] [--json]` : le journal, une ligne par échange, les 50 dernières
+  par défaut. `nom` filtre sur un projet, un service, un conteneur, un hôte ou une adresse. `-f` continue
+  en direct.
+
+  ```text
+  01:28:25  wordpress (wordpress) -> db (wordpress):3306  fermée après 48 ms  [apache2]
+  01:28:25  GET https://wordpress.wordpress.solon.local/wp-login.php  -> 302 en 170 ms  (wordpress (wordpress))
+  ```
+
+- `solon why [nom]` : ce qui ne va pas, en langage courant. Les connexions refusées sont regroupées par
+  source → destination : port, avec le nombre, la dernière heure, le programme appelant et un conseil ;
+  puis les erreurs 5xx par hôte, les refus 401/403, la requête la plus lente. Sinon : « Rien d'anormal
+  depuis HH:MM:SS : N connexions et M requêtes HTTP… ». Un cas réel, relevé le 31 octobre 2026 :
+
+  > 10.90.5.4 a essayé 4 fois de joindre db (wordpress) sur le port 9999 sans jamais obtenir de réponse
+  > (la dernière à 01:28:51, depuis le programme « wget »). Rien n'écoutait là. Le conteneur est-il
+  > démarré, et écoute-t-il bien ce port ? `docker logs` dessus dit en général pourquoi.
+
+- `solon clear [projet]` : oublier, un projet ou tout, comme le bouton « Effacer ».
+
+Quelques choix qui ne vont pas de soi :
+
+- **Le conseil dépend de ce qu'on sait de la cible.** Si l'appelé est un conteneur que le service a
+  endormi, la phrase dit qu'un appel direct d'un autre conteneur ne le réveille pas, et donne les deux
+  sorties (`docker unpause`, `solon settings never=…`). Si c'est un conteneur éveillé, rien n'écoutait sur
+  ce port. Si ce n'est pas un conteneur du tout, le problème est hors du moteur : réseau, DNS, pare-feu, ou
+  service distant arrêté. Trois phrases plutôt qu'une générique, parce que c'est précisément ce tri que
+  l'on fait de tête devant l'écran.
+- **Les cinq groupes d'échecs les plus fréquents, pas tous.** Une boucle de reconnexion produit des
+  centaines de refus identiques ; ce qui compte est le couple source → destination, pas chaque tentative.
+- **Un refus 401/403 n'est signalé que s'il touche au moins un quart des requêtes de l'hôte.** Quelques-uns
+  sont normaux (page de connexion, session expirée) ; la moitié, c'est un jeton qui manque.
+- **La lenteur n'est citée qu'au-dessus d'une seconde, et avec la médiane.** Une requête lente isolée au
+  milieu de requêtes rapides désigne un chemin ; une médiane elle-même lente désigne le service.
+- **L'historique est reconnu à son silence.** L'abonnement renvoie d'abord tout ce que le service garde,
+  puis le direct ; `trace` et `why` lisent jusqu'à 600 ms sans rien recevoir et s'arrêtent là. Pas de
+  marqueur de fin à ajouter au protocole, donc une application d'avant continue de fonctionner.
+- **`why` n'a pas de `--json`.** Son résultat est un texte pour un humain ; un programme lira `trace --json`,
+  qui donne les faits bruts, et fera son propre tri.
+
 ## Les corps, effacer par projet, et les noms de domaine
 
 Les restes de la note de mission, livrés le 28 octobre 2026. Les deux premiers tiennent au même

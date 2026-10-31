@@ -363,7 +363,7 @@ solon/
 └── tests/                     tests d'intégration (gated `SOLON_IT=1`, Windows + Hyper-V)
 ```
 
-**Arborescence réelle (28 octobre 2026, 0.1.16, d'après le `Cargo.toml` racine).** Les crates `solon-engine`, `solon-ipc` et `solon-bench` du plan n'ont pas vu le jour : l'accès à Docker passe par le mandataire HTTP de `solon-service` (`docker_proxy.rs`), le protocole app ↔ service dans `solon-core/src/ipc.rs`, et les bancs sont des scripts PowerShell dans `bench/`.
+**Arborescence réelle (28 octobre 2026, 0.1.16, d'après le `Cargo.toml` racine ; `solon-client` et `solon-cli` ajoutés le 31 octobre 2026).** Les crates `solon-engine`, `solon-ipc` et `solon-bench` du plan n'ont pas vu le jour : l'accès à Docker passe par le mandataire HTTP de `solon-service` (`docker_proxy.rs`), le protocole app ↔ service dans `solon-core/src/ipc.rs`, et les bancs sont des scripts PowerShell dans `bench/`.
 
 ```
 solon/
@@ -381,6 +381,11 @@ solon/
 │   ├── solon-agent/           [linux, musl statique] PID 1 invité : montages, dockerd, RPC, exec, shell,
 │   │                          client FUSE solonfs, lecture des sondes eBPF
 │   ├── solon-docker-shim/     [windows] `bin\docker.exe`, lanceur du CLI Docker officiel vers le moteur Solon
+│   ├── solon-client/          côté client du service, sans interface : canal de contrôle (`control.rs`),
+│   │                          détection Compose (`compose.rs`), sauvegarde et restauration (`backup.rs`),
+│   │                          export de diagnostic (`diag.rs`) ; partagé par l'application et le CLI
+│   ├── solon-cli/             [windows] la commande `solon` (`bin\solon.exe` installée ; `solon-cli.exe` dans
+│   │                          `target/`, l'application s'appelant déjà `solon.exe`)
 │   └── solon-trace-ebpf/      [hors workspace] sondes eBPF (cible bpfel-unknown-none, nightly figée, compilées
 │                              dans un conteneur : voir son Dockerfile)
 ├── apps/desktop/              Tauri v2 (src-tauri/ membre du workspace + src/ React)
@@ -393,6 +398,16 @@ solon/
 ├── docs/                      guide fonctionnel, mesures, captures
 └── tests/e2e/                 scénarios de bout en bout (PowerShell) contre le vrai service
 ```
+
+**31 octobre 2026 : la commande `solon` et le partage app ↔ CLI.** La direction prise ce jour-là tient en une phrase : « Docker sur Windows, en silence ». Le CLI `solon` (étape 1, livré dans la 0.1.17 en cours) devient la voie principale pour les nouvelles fonctions ; l'application de bureau reste, mais ses écrans Conteneurs, Images, Volumes et Réseaux ne seront plus développés.
+
+- `solon-client` est né en sortant de `apps/desktop/src-tauri` ce qui n'avait rien de Tauri : le client du canal de contrôle (`\\.\pipe\solon-control`, appel unique et flux d'événements), la détection d'un fichier Compose et du nom de projet, la mécanique de sauvegarde et de restauration (zip avec fichiers Compose, `.env` et volumes lus dans la machine), l'export de diagnostic. L'application enveloppe désormais ces fonctions dans ses commandes Tauri (`backup.rs`, `compose.rs`, `diag.rs`, `service.rs` y ont perdu près de 600 lignes) ; le CLI les appelle directement. Une seule implémentation, donc un seul comportement : `solon backup` produit le même zip que le bouton « Sauvegarder… ».
+- `solon-cli` ne contient que ce qui est propre à la console : analyse des arguments, tableaux, durées, heures locales, et les textes. Tout passe par le canal de contrôle, sans élévation ni requête sortante ; les questions à Docker (`docker ps`, `docker compose ls`) sont posées dans la machine par `Exec`, pas par le pipe Docker, pour que l'état vu par `solon` soit celui du service. Sortie console forcée en UTF-8 (`SetConsoleOutputCP(65001)`), sinon `cmd.exe` affiche les accents dans la page de codes ANSI ; `println!` remplacé par une macro qui se tait quand la sortie est fermée (`solon status | head`).
+- Deux langues, pas de fichiers de traduction : chaque texte est écrit en anglais et en français à l'endroit où il sert, par `tr(en, fr)` (`text.rs`). Le français est choisi si `SOLON_LANG`, `LC_ALL` ou `LANG` commence par `fr`, sinon d'après la langue d'interface de Windows (`GetUserDefaultUILanguage`).
+- `solon why` ne demande rien de nouveau au service : il s'abonne au flux de la Radiographie comme l'écran, lit l'historique (jusqu'à 20 000 faits) jusqu'à 600 ms de silence, et le résume. Voir `docs/radiographie.md`, « En ligne de commande ».
+- Compilation : `cargo build --release -p solon-service -p solon-cli` **avant** `npm run tauri build`. Comme le service, le CLI est copié comme ressource (`tauri.conf.json` : `target/release/solon-cli.exe` → `bin/solon.exe`) et Tauri ne le reconstruit pas. Le binaire s'appelle `solon-cli.exe` dans `target/` parce que la crate de l'application s'appelle déjà `solon`.
+
+Vérifié le 31 octobre 2026 sur le PC de développement (Windows 11 Pro, service 0.1.16 en place) : toutes les commandes, la sauvegarde puis la restauration d'un projet réel, le redémarrage du moteur par `solon restart`.
 
 ### 8.2 Traits pour la phase 2 (Linux natif)
 

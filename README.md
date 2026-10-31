@@ -53,6 +53,10 @@ volumes, networks, terminal, logs, a system-tray icon, and a few things nothing 
   connections with their outcome (a refused call shows in red), full HTTP exchanges for anything coming in
   through a `*.solon.local` address, names on outside addresses. A playback bar to pause, step and replay.
   Sensitive values are masked before they are stored; bodies are off by default and enabled per project.
+- **A `solon` command** next to `docker`: engine state and addresses, start and stop with the steps shown,
+  settings, project backup and restore, and `solon why`, which reads the Radiography and says in plain words
+  why a call failed. It talks to the service through its local pipe: no administrator prompt, no outgoing
+  request.
 - Compose projects: services, merged logs, Up / Down / Rebuild with live output, open in Explorer or VS Code.
 - Idle memory (engine + service): **430 to 520 MB** measured for 2 GB allocated; unused memory is returned
   to Windows automatically.
@@ -115,6 +119,7 @@ Solon as of 0.1.17; the others as documented in September 2026. "Partial" means 
 | Projects page: address, environment, ports checked before Up, filtered logs | yes | partial: Compose list | partial: Compose list | no |
 | One environment per Git branch, volumes copied | yes | no | no | no |
 | Project backup and restore, volumes included | yes | partial: third-party extension | no | no |
+| Command line for the engine itself: state, start and stop, settings, backup, why a call failed | yes (`solon`) | partial: `docker desktop start/stop/status` *(documented)* | partial: `podman machine` *(documented)* | partial: `rdctl` *(documented)* |
 | Idle containers paused, woken on demand | yes | partial: Resource Saver pauses the whole machine | no | no |
 | Windows folders shared with solonfs (3.6 to 94× faster than 9P, depending on the operation) | yes | no: 9P through WSL 2 | no: 9P | no: 9P |
 | Find Compose projects on the disk (7 s on 928 GB) | yes | no | no | no |
@@ -146,7 +151,7 @@ Solon coexists with WSL2 and Docker Desktop: it uses neither their pipe, nor the
 Download `Solon_<version>_x64-setup.exe` from the [releases](https://github.com/v94lere/solon/releases) and
 check its SHA-256 against the value published with the release. The installer asks for elevation once, then:
 enables the required Windows features (a reboot may be requested), installs the `SolonService` service, copies
-the Linux image and creates the shortcut. Silent install: `Solon_<version>_x64-setup.exe /S`.
+the Linux image and the `docker` and `solon` commands, and creates the shortcut. Silent install: `Solon_<version>_x64-setup.exe /S`.
 
 The installer is **not signed yet**: SmartScreen shows "Windows protected your PC"; click "More info" then
 "Run anyway". The signing chain is ready (`installer/sign.ps1`, `tauri.signed.conf.json`) and will be enabled
@@ -170,9 +175,10 @@ cargo build --release -p solon-agent --target x86_64-unknown-linux-musl
 docker run --rm -v "${PWD}:/work" -w /work public.ecr.aws/docker/library/alpine:3.24 sh -c "apk add -q bash curl python3 e2fsprogs coreutils tar grep findutils gzip; SKIP_KERNEL=1 SOLON_IMAGE_VERSION=0.1.0-dev.N bash image/build.sh /work/target/x86_64-unknown-linux-musl/release/solon-agent"
 #    (the kernel itself is compiled once with image/kernel/build-kernel.sh, ~7 min, in the same kind of container)
 
-# 3. Service and application (the installer embeds image/out/<version>, see tauri.conf.json)
-cargo build --release -p solon-service
+# 3. Service, `solon` command and application (the installer embeds image/out/<version>, see tauri.conf.json)
+cargo build --release -p solon-service -p solon-cli
 cd apps\desktop && npm install && npm run tauri build
+#    (the service and the CLI are copied as resources: `tauri build` does not rebuild them, hence the order)
 ```
 
 Development mode without installing: start the service in console mode, either by hand
@@ -270,6 +276,82 @@ docker context use solon
 > If Docker Desktop is installed, the CLI uses the Windows credential manager and may send stale Docker Hub
 > credentials ("unauthorized: incorrect username or password"). Run `docker logout` or test with an empty
 > `DOCKER_CONFIG`; this is not related to Solon.
+
+### Command line: `solon`
+
+The same folder holds `solon`, Solon's own command. `docker` talks to the containers; `solon` talks to the
+engine around them: its state, its addresses, its settings, the Radiography, backups. It goes through the
+service's local pipe, like the application: no administrator prompt, no outgoing request. Messages are in
+English, or in French when Windows is (`SOLON_LANG=fr` forces it). `solon help` lists every command; `--json`
+on `status`, `projects`, `domains`, `trace`, `settings`, `prereq` and `watch` prints machine-readable output.
+Exit codes: 0, 1 error, 2 usage, 3 service unreachable.
+
+`solon` alone is `solon status`. Outputs below are shortened:
+
+```text
+> solon
+Solon 0.1.17 · engine ready since 09:12:04 (2 h 31 min)
+  image 0.1.0-dev.22 · address 172.30.0.2
+  local domains *.solon.local : http and https
+
+2 containers running, 1 asleep (woken on demand)
+CONTAINER              PROJECT    STATUS      ADDRESS
+wordpress-db-1         wordpress  Up 2 hours  https://db.wordpress.solon.local
+wordpress-wordpress-1  wordpress  asleep      https://wordpress.wordpress.solon.local
+
+> solon restart
+Restarting the engine…
+  checking prerequisites…
+  cleaning up…
+  verifying the image…
+  preparing the data disk…
+  creating the network…
+  creating the engine…
+  booting…
+  waiting for the engine…
+  configuring the network…
+  waiting for Docker…
+Engine ready.
+
+> solon projects
+PROJECT    STATUS      FOLDER                     ADDRESSES
+wordpress  running(2)  C:\Users\me\wordpress      db.wordpress.solon.local, wordpress.wordpress.solon.local
+
+> solon why wordpress
+Since 01:27:40, … What stands out:
+
+- 10.90.5.4 tried 4 times to reach db (wordpress) on port 9999 and never got an answer (last at 01:28:51,
+  from the program "wget"). Nothing was listening there. Is the container up, and does it listen on that
+  port? `docker logs` on it usually says why.
+
+Detail: solon trace wordpress
+
+> solon trace wordpress -n 3
+01:28:25  wordpress (wordpress) -> db (wordpress):3306  closed after 48 ms  [apache2]
+01:28:25  GET https://wordpress.wordpress.solon.local/wp-login.php  -> 302 in 170 ms  (wordpress (wordpress))
+01:28:51  10.90.5.4 -> db (wordpress):9999  FAILED, no answer  [wget]
+
+> solon backup C:\Users\me\wordpress
+Backing up wordpress (C:\Users\me\wordpress)…
+Written: wordpress-20261031-1422.zip (2 volumes, …)
+
+> solon settings memory=4096 idle=20
+Saved.
+Memory, processors, disk and file sharing apply at the next engine start: solon restart
+```
+
+`solon why` reads the same history as the Radiography screen and groups what went wrong: refused calls by
+caller, destination and port, with a hint (container asleep, nothing listening, address outside the engine),
+server errors (5xx) per host, 401/403 refusals, the slowest request when it is above one second. When nothing
+stands out it says so, with the counts. `solon trace` is the journal (`-f` follows live, `--all` prints
+everything), `solon clear [project]` forgets it.
+
+`solon backup` and `solon restore` do exactly what the application's buttons do: one zip with the Compose
+file, the `.env` and the volumes, restored into the folder of your choice. `solon domains` lists every
+`*.solon.local` address answering right now; `solon exec` runs a command as root inside the engine;
+`solon logs` and `solon diag` give the service log and the zip to attach to a bug report; `solon watch`
+prints engine events as they happen; `solon prereq` checks the Windows prerequisites; `solon settings`
+alone shows every setting with its meaning.
 
 ### VS Code Dev Containers
 

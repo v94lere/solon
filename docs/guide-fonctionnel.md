@@ -1,7 +1,7 @@
 # Solon — guide fonctionnel
 
-*Version 0.1.17, 30 octobre 2026. Ce guide décrit ce que fait l'application, écran par écran, du point de vue de
-la personne qui l'utilise. Les choix techniques sont dans `ARCHITECTURE.md`, les mesures dans
+*Version 0.1.17, 30 octobre 2026 ; § 14 ter ajouté le 31 octobre 2026. Ce guide décrit ce que fait
+l'application, écran par écran, du point de vue de la personne qui l'utilise. Les choix techniques sont dans `ARCHITECTURE.md`, les mesures dans
 `docs/measurements.md`.*
 
 ## 1. Ce qu'est Solon, en une phrase
@@ -225,6 +225,12 @@ avant la version 0.1.16 gardent l'ancienne résolution tant qu'ils ne sont pas r
 Tout reste sur votre PC. Rien n'est envoyé nulle part, rien n'est écrit en dehors de `%ProgramData%\Solon`.
 Les appels de conteneur à conteneur montrent la connexion mais pas encore son contenu.
 
+**Dans un terminal**, `solon why [nom]` lit le même historique et dit en français courant ce qui ne va pas :
+les appels refusés regroupés par appelant, destination et port, avec le nombre, la dernière heure, le programme
+à l'origine et un conseil (conteneur endormi, rien n'écoute, adresse hors du moteur) ; les erreurs de serveur
+par hôte ; les refus 401/403 ; la requête la plus lente quand elle dépasse une seconde. Quand rien ne ressort,
+il le dit avec les comptes. `solon trace [nom]` imprime le journal, `solon clear [projet]` l'oublie (§ 14 ter).
+
 ## 10. Terminal
 
 Un shell **dans la machine du moteur** (`docker`, `ps`, `df`, `dmesg`…), pour les curieux et le dépannage. Ctrl+`
@@ -296,6 +302,33 @@ l'attend au lieu d'échouer : une fenêtre VS Code ouverte à l'ouverture de ses
 est mis à jour pendant que VS Code est ouvert, cette fenêtre retombe sur un rafraîchissement par minute ;
 *Developer: Reload Window* lui rend le direct. Quand Solon est arrêté, `docker` répond « Solon is stopped.
 Open the Solon app to start it. »
+
+## 14 ter. La commande `solon`
+
+À côté de `docker`, l'installateur place `solon` : `docker` parle aux conteneurs, `solon` parle au moteur qui
+les entoure. Elle passe par le même canal que l'application, sans demande d'administrateur et sans requête
+sortante. Les messages sont en anglais, ou en français quand Windows l'est (`SOLON_LANG=fr` force). `solon help`
+résume tout ; `--json` sur `status`, `projects`, `domains`, `trace`, `settings`, `prereq` et `watch` donne une
+sortie lisible par un programme. Codes de sortie : 0, 1 erreur, 2 usage, 3 service injoignable.
+
+| Commande | Ce qu'elle fait |
+|---|---|
+| `solon` ou `solon status` | État du moteur, image, adresse, domaines locaux, puis les conteneurs en marche avec leur projet, leur état (« endormi » si Solon l'a mis en veille) et leur adresse `https://service.projet.solon.local`. |
+| `solon start`, `solon stop [--force]`, `solon restart` | Démarrer ou arrêter le moteur ; chaque étape s'affiche (vérification des prérequis, nettoyage, vérification de l'image, préparation du disque, création du réseau, création de la machine, amorçage, attente de la machine, configuration du réseau, attente du moteur), puis « Moteur prêt. ». |
+| `solon projects` | Les projets Compose connus du moteur, avec leur dossier Windows et leurs adresses. |
+| `solon domains` | Toutes les adresses `*.solon.local` qui répondent en ce moment (`service.projet` et nom de conteneur). |
+| `solon why [nom]` | Ce qui ne va pas, en français courant, à partir de la Radiographie (§ 9 bis). |
+| `solon trace [nom] [-n N \| --all] [-f]` | Le journal des échanges, 50 dernières lignes par défaut ; `-f` suit le direct. |
+| `solon clear [projet]` | Oublier l'historique observé, d'un projet ou de tout. |
+| `solon backup [dossier] [fichier.zip] [--name projet]` | La sauvegarde du § 5.4, en un zip nommé `<projet>-AAAAMMJJ-HHMM.zip` par défaut. |
+| `solon restore <fichier.zip> [dossier]` | La restauration du § 5.4 ; il reste à faire `docker compose up -d`. |
+| `solon settings [clé=valeur…]` | Les réglages du § 11 : `memory` (Mo), `cpus`, `disk` (Gio), `autostart`, `resume`, `sleep`, `idle` (min), `never` (liste ou `none`), `bodies` (liste ou `none`), `legacy-9p`. Mémoire, processeurs, disque et partage s'appliquent au prochain démarrage. |
+| `solon prereq` | Les prérequis Windows, ligne par ligne. |
+| `solon logs [-n N] [-f]` | Le journal du service. |
+| `solon diag [fichier.zip]` | L'export de diagnostic du § 11. |
+| `solon exec <commande…>` | Une commande en root dans le moteur, comme le Terminal du § 10. |
+| `solon watch [--json]` | Les événements du moteur au fil de l'eau. |
+| `solon version` | Les versions de la commande, du service et de l'image. |
 
 ## 15. Limites connues
 
