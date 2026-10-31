@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
+PackageIdentifier: ValereNeveux.Solon
+PackageVersion: 0.2.0
+PackageLocale: en-US
+Publisher: Valère Neveux
+PublisherUrl: https://github.com/v94lere
+PublisherSupportUrl: https://github.com/v94lere/solon/issues
+Author: Valère Neveux
+PackageName: Solon
+PackageUrl: https://v94lere.github.io/solon/
+License: Apache-2.0
+LicenseUrl: https://github.com/v94lere/solon/blob/main/LICENSE
+Copyright: Copyright (c) 2026 Valère Neveux
+ShortDescription: Docker on Windows, quietly: the real docker and docker compose, no Docker Desktop, no WSL, a taskbar icon and a solon command.
+Description: |-
+  Solon is an open-source Docker engine for Windows. One installer provides dockerd, containerd and Docker Compose
+  running inside a small Linux machine that Solon creates and manages itself through the Windows Host Compute
+  Service, with no dependency on Docker Desktop or WSL. It starts in a few seconds, puts idle containers to sleep and
+  gives the memory back, and gives every container a trusted local HTTPS address (https://<name>.solon.local).
+  There is no window: a taskbar icon shows the engine state and restarts a project in two clicks, and the solon
+  command does the rest (status, projects, addresses, settings, backups, update) including Radiography, which
+  explains in plain words why a service does not answer (solon why). Solon sends no telemetry.
+  Requires Windows 10 22H2 or Windows 11, any edition including Home, with hardware virtualization enabled.
+Moniker: solon
+Tags:
+- container
+- containers
+- docker
+- docker-compose
+- docker-desktop
+- hyper-v
+- devops
+- developer-tools
+ReleaseNotesUrl: https://github.com/v94lere/solon/releases/tag/v0.2.0
+Documentations:
+- DocumentLabel: README
+  DocumentUrl: https://github.com/v94lere/solon#readme
+ManifestType: defaultLocale
+ManifestVersion: 1.9.0

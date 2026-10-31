@@ -1470,16 +1470,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gethostname"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bd49230192a3797a9a4d6abe9b3eed6f7fa4c8a8a4947977c6f80025f92cbd8"
-dependencies = [
- "rustix",
- "windows-link 0.2.1",
-]
-
-[[package]]
 name = "getrandom"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1602,24 +1592,6 @@ name = "glob"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b"
-
-[[package]]
-name = "global-hotkey"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c386b0a4a70cb2d39fffd74480f985b6f0bfbcb934b6a6b6b7e630e448f242e"
-dependencies = [
- "crossbeam-channel",
- "keyboard-types",
- "objc2",
- "objc2-app-kit",
- "once_cell",
- "serde",
- "thiserror 2.0.20",
- "windows-sys 0.59.0",
- "x11rb",
- "xkeysym",
-]
 
 [[package]]
 name = "gobject-sys"
@@ -3429,30 +3401,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rfd"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a15ad77d9e70a92437d8f74c35d99b4e4691128df018833e99f90bcd36152672"
-dependencies = [
- "block2",
- "dispatch2",
- "glib-sys",
- "gobject-sys",
- "gtk-sys",
- "js-sys",
- "log",
- "objc2",
- "objc2-app-kit",
- "objc2-core-foundation",
- "objc2-foundation",
- "raw-window-handle",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "windows-sys 0.60.2",
-]
-
-[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3997,25 +3945,16 @@ dependencies = [
 
 [[package]]
 name = "solon"
-version = "0.1.18"
+version = "0.2.0"
 dependencies = [
- "base64 0.22.1",
- "bollard",
- "futures-util",
- "reqwest",
- "serde",
  "serde_json",
- "sha2",
  "solon-client",
  "solon-core",
  "tauri",
  "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-global-shortcut",
  "tauri-plugin-notification",
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
- "tauri-plugin-window-state",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -4024,7 +3963,7 @@ dependencies = [
 
 [[package]]
 name = "solon-agent"
-version = "0.1.18"
+version = "0.2.0"
 dependencies = [
  "aya",
  "fuser",
@@ -4037,7 +3976,7 @@ dependencies = [
 
 [[package]]
 name = "solon-cli"
-version = "0.1.18"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "serde",
@@ -4050,18 +3989,23 @@ dependencies = [
 
 [[package]]
 name = "solon-client"
-version = "0.1.18"
+version = "0.2.0"
 dependencies = [
+ "bollard",
+ "futures-util",
+ "reqwest",
  "serde",
  "serde_json",
+ "sha2",
  "solon-core",
  "tokio",
+ "windows 0.62.2",
  "zip",
 ]
 
 [[package]]
 name = "solon-core"
-version = "0.1.18"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -4070,14 +4014,14 @@ dependencies = [
 
 [[package]]
 name = "solon-docker-shim"
-version = "0.1.18"
+version = "0.2.0"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "solon-hvsock"
-version = "0.1.18"
+version = "0.2.0"
 dependencies = [
  "tokio",
  "tracing",
@@ -4086,7 +4030,7 @@ dependencies = [
 
 [[package]]
 name = "solon-prereq"
-version = "0.1.18"
+version = "0.2.0"
 dependencies = [
  "solon-core",
  "solon-vm-hcs",
@@ -4097,7 +4041,7 @@ dependencies = [
 
 [[package]]
 name = "solon-service"
-version = "0.1.18"
+version = "0.2.0"
 dependencies = [
  "rcgen",
  "rustls",
@@ -4120,11 +4064,11 @@ dependencies = [
 
 [[package]]
 name = "solon-trace-common"
-version = "0.1.18"
+version = "0.2.0"
 
 [[package]]
 name = "solon-vm-hcs"
-version = "0.1.18"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -4476,63 +4420,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-dialog"
-version = "2.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61854a36651aa48381e5e209f69a01273b77f3f9f91f0c430b1b98d33bd47229"
-dependencies = [
- "log",
- "raw-window-handle",
- "rfd",
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin",
- "tauri-plugin-fs",
- "thiserror 2.0.20",
- "url",
-]
-
-[[package]]
-name = "tauri-plugin-fs"
-version = "2.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de22eef34fd78c0da050e748710edd50bf127e651d02ea1b2bfada1523cc5c51"
-dependencies = [
- "anyhow",
- "dunce",
- "glob",
- "log",
- "objc2-foundation",
- "percent-encoding",
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "serde_repr",
- "tauri",
- "tauri-plugin",
- "tauri-utils",
- "thiserror 2.0.20",
- "toml 1.1.5+spec-1.1.0",
- "url",
-]
-
-[[package]]
-name = "tauri-plugin-global-shortcut"
-version = "2.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4dd9f4c5136c09cd962da0c86dc4accd4666db2ea591cf16e6597435843bd2b"
-dependencies = [
- "global-hotkey",
- "log",
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin",
- "thiserror 2.0.20",
-]
-
-[[package]]
 name = "tauri-plugin-notification"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4587,21 +4474,6 @@ dependencies = [
  "tracing",
  "windows-sys 0.60.2",
  "zbus",
-]
-
-[[package]]
-name = "tauri-plugin-window-state"
-version = "2.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73736611e14142408d15353e21e3cca2f12a3cfb523ad0ce85999b6d2ef1a704"
-dependencies = [
- "bitflags 2.13.1",
- "log",
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin",
- "thiserror 2.0.20",
 ]
 
 [[package]]
@@ -6163,23 +6035,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "x11rb"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9993aa5be5a26815fe2c3eacfc1fde061fc1a1f094bf1ad2a18bf9c495dd7414"
-dependencies = [
- "gethostname",
- "rustix",
- "x11rb-protocol",
-]
-
-[[package]]
-name = "x11rb-protocol"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea6fc2961e4ef194dcbfe56bb845534d0dc8098940c7e5c012a258bfec6701bd"
-
-[[package]]
 name = "x509-parser"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6196,12 +6051,6 @@ dependencies = [
  "thiserror 2.0.20",
  "time",
 ]
-
-[[package]]
-name = "xkeysym"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9cc00251562a284751c9973bace760d86c0276c471b4be569fe6b068ee97a56"
 
 [[package]]
 name = "yasna"
