@@ -9,7 +9,6 @@ redistribute the following components, each under its own licence. Nothing below
 |---|---|---|---|
 | Docker CLI (`bin\docker-cli.exe`) | 29.7.2 | Apache-2.0 | <https://github.com/docker/cli> — downloaded unmodified by `installer/fetch-docker-cli.ps1` |
 | Docker Compose plugin (`bin\cli-plugins\docker-compose.exe`) | 5.1.4 | Apache-2.0 | <https://github.com/docker/compose> |
-| Urbanist font (`apps/desktop/src/assets/fonts`) | variable | SIL Open Font License 1.1 (`OFL.txt`) | <https://github.com/coreyhu/Urbanist> |
 | WebView2 runtime | system | Microsoft licence | provided by Windows; not redistributed |
 
 ## The engine image (`image\vmlinuz`, `initrd.img`, `rootfs.vhd`)
@@ -540,21 +539,3 @@ a handful of unmodified crates). Generated from `cargo metadata`; regenerate wit
 | `zvariant` | MIT |
 | `zvariant_derive` | MIT |
 | `zvariant_utils` | MIT |
-
-## npm dependencies (desktop application)
-
-Runtime dependencies bundled in the application (development tooling excluded):
-
-| Package | Licence |
-|---|---|
-| `@tanstack/react-query` | MIT |
-| `@tauri-apps/api` | Apache-2.0 OR MIT |
-| `@tauri-apps/plugin-dialog` | MIT OR Apache-2.0 |
-| `@tauri-apps/plugin-notification` | MIT OR Apache-2.0 |
-| `@tauri-apps/plugin-opener` | MIT OR Apache-2.0 |
-| `@xterm/addon-fit` | MIT |
-| `@xterm/xterm` | MIT |
-| `i18next` | MIT |
-| `react` | MIT |
-| `react-dom` | MIT |
-| `react-i18next` | MIT |

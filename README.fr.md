@@ -1,30 +1,31 @@
-# Solon
+# <img src="apps/desktop/src-tauri/icons/128x128.png" alt="Solon" width="60"> Solon
 
 *English version: [README.md](README.md).*
 
 [![CI](https://github.com/v94lere/solon/actions/workflows/ci.yml/badge.svg)](https://github.com/v94lere/solon/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/v94lere/solon?label=release&color=f860c0)](https://github.com/v94lere/solon/releases/latest) [![Downloads](https://img.shields.io/github/downloads/v94lere/solon/total?color=e01818)](https://github.com/v94lere/solon/releases) [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE) [![Website](https://img.shields.io/badge/website-v94lere.github.io%2Fsolon-1a0d14)](https://v94lere.github.io/solon/)
 
-![Nouvelle pile : n8n créé et démarré, puis ouvert sur https://n8n.n8n.solon.local](docs/media/new-stack.gif)
+**Docker sur Windows, en silence.** Solon est un moteur Docker autonome pour Windows : une installation,
+aucun prérequis logiciel à installer soi-même, et un moteur Docker complet qui démarre en quelques secondes
+dans une machine minuscule et invisible, gérée entièrement par Solon. Le vrai `docker` et le vrai
+`docker compose`, pas de WSL, Windows Famille compris.
 
-*Une pile en un clic : New stack… → n8n → Create and start → le navigateur s'ouvre sur son adresse https://…solon.local.*
-
-
-**Solon est un gestionnaire de conteneurs autonome pour Windows**, dans l'esprit d'OrbStack : une
-installation, aucun prérequis logiciel à installer soi-même, et un moteur Docker complet qui démarre
-en quelques secondes dans une machine minuscule et invisible, gérée entièrement par Solon.
+Solon **n'a pas de fenêtre**. Depuis la 0.2.0, c'est trois choses : un service Windows qui fait tourner le
+moteur, une icône dans le coin de la barre des tâches (état, une entrée de menu par projet, notifications),
+et une commande `solon` à côté de `docker` pour tout le reste, dont `solon why`, qui lit la Radiographie et
+dit en français courant pourquoi un appel a échoué. L'application de bureau et ses écrans ont été retirés
+en 0.2.0 ; ce qui remplace chaque écran est listé dans [Ce qui a changé en 0.2.0](#ce-qui-a-changé-en-020).
 
 Solon **n'est pas** une interface pour un Docker Desktop déjà installé. Il remplace Docker Desktop :
-moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une icône dans la barre des tâches.
+moteur Docker, Compose, adresses https locales, dossiers partagés rapides, et quelques choses que rien
+d'autre ne fait sur Windows.
 
-> État du projet (31 octobre 2026) : **0.1.18**, dix-huit versions en deux mois, écrit par une seule
+> État du projet (31 octobre 2026) : **0.2.0**, dix-neuf versions en deux mois, écrit par une seule
 > personne. Solon fait tourner mes propres projets tous les jours, et n'a été testé que sur deux machines :
 > un PC Windows 11 Pro et une machine virtuelle Windows 11 Famille neuve. L'installeur n'est **pas encore
 > signé** (avertissement SmartScreen ; empreinte SHA-256 publiée avec chaque version). Il reste sûrement des
 > aspérités sur du matériel que je n'ai pas :
 > [dites-moi ce qui casse chez vous](https://github.com/v94lere/solon/issues/1). Les idées et les
 > contributions sont tout aussi bienvenues.
-
-![Liste des conteneurs](docs/screenshots/containers.png)
 
 ## Ce que Solon fait
 
@@ -36,9 +37,9 @@ moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une ic
 - Partage vos dossiers Windows à la demande : `docker run -v C:\...`, `--mount`, projets Compose, exactement
   comme avec Docker Desktop, par **solonfs**, le partage de fichiers de Solon, mesuré 3,6 à 94× plus rapide
   que le partage 9P de WSL2 et de Docker Desktop selon l'opération (`docs/measurements.md`).
-- **Import depuis Docker Desktop** : s'il est installé et démarré, Solon liste ses volumes et ses images
-  avec leur taille et copie ceux que vous cochez dans son propre moteur. Rien n'est modifié ni supprimé
-  du côté de Docker Desktop, et ce qui porte déjà le même nom dans Solon n'est pas touché.
+- **Import depuis Docker Desktop** : `solon import` liste ses volumes et ses images avec leur taille et
+  copie ceux que vous nommez dans le moteur de Solon. Rien n'est modifié ni supprimé du côté de Docker
+  Desktop, et ce qui porte déjà le même nom dans Solon n'est pas touché.
 - **Des adresses qui marchent toujours** : chaque conteneur en marche est joignable sur
   `https://<nom>.solon.local` (et `https://<service>.<projet>.solon.local` pour Compose), **qu'il publie un
   port ou non**, avec un certificat reconnu par le navigateur (une autorité de certification locale créée à
@@ -48,28 +49,26 @@ moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une ic
   en pause (zéro processeur, mémoire conservée) ; la requête suivante le réveille en une fraction de seconde
   avant d'être servie. Les bases de données et les tâches de fond qui ne parlent qu'en interne ne sont jamais
   concernées.
-- Onglet **Fichiers** pour les conteneurs et les volumes : parcourir, copier vers Windows, envoyer des
-  fichiers ou des dossiers (boutons ou glisser-déposer depuis l'Explorateur), créer un dossier, supprimer.
-  Fonctionne même quand l'image n'a pas de shell.
-- **Debug shell** dans n'importe quel conteneur, y compris les images « distroless » sans shell : une boîte à
-  outils (bash, curl, dig, ps, strace, tcpdump, jq, vim…) qui partage les processus, le réseau et les volumes
-  du conteneur.
-- **Activity** : processeur, mémoire, stockage et réseau du moteur et de chaque conteneur, en direct.
-- **Radiographie** : une carte en direct de qui appelle qui dans vos projets, et un journal de chaque
-  échange — connexions TCP avec leur issue (un appel refusé apparaît en rouge), échanges HTTP complets pour ce
-  qui entre par une adresse `*.solon.local`, noms sur les adresses extérieures. Une barre de lecture pour
-  figer, avancer pas à pas, rejouer. Les valeurs sensibles sont masquées avant d'être gardées ; les corps
-  sont désactivés par défaut et s'activent par projet.
+- **Radiographie** : un journal de chaque échange dans vos projets — connexions TCP avec leur issue,
+  échanges HTTP complets pour ce qui entre par une adresse `*.solon.local`, noms sur les adresses
+  extérieures. `solon trace` l'imprime, `solon why` le lit et dit en français courant pourquoi un appel a
+  échoué. Les valeurs sensibles sont masquées avant d'être gardées ; les corps sont désactivés par défaut et
+  s'activent par projet.
 - **Une commande `solon`** à côté de `docker` : état du moteur et adresses, démarrage et arrêt avec les étapes
-  affichées, réglages, sauvegarde et restauration d'un projet, et `solon why`, qui lit la Radiographie et dit
-  en français courant pourquoi un appel a échoué. Elle parle au service par son pipe local : aucune demande
-  d'administrateur, aucune requête sortante.
-- Projets Compose : services, journaux mêlés, Up / Down / Reconstruire avec la sortie en direct, ouverture
-  dans l'Explorateur ou VS Code.
+  affichées, réglages, sauvegarde et restauration d'un projet, recherche des projets sur ce PC, import depuis
+  Docker Desktop, un environnement par branche Git, un shell root dans le moteur, mise à jour. Elle parle au
+  service par son pipe local : aucune demande d'administrateur, et aucune requête sortante hors
+  `solon update`, que vous lancez vous-même.
+- **Une icône dans le coin de la barre des tâches** : état du moteur, nombre de conteneurs en marche, un
+  sous-menu par projet Compose (ouvrir son adresse, démarrer, redémarrer, arrêter), un terminal avec `solon`
+  et `docker` prêts, des notifications Windows quand quelque chose se passe.
+- **Relance de ce qui tournait** : quand le moteur s'arrête (redémarrage de Windows, mise à jour,
+  `solon stop`), Solon retient les projets et conteneurs en marche et les redémarre une fois le moteur revenu.
 - Mémoire au repos (moteur + service) : **430 à 520 Mo** mesurés pour 2 Go alloués ; la mémoire inutilisée
   est rendue à Windows automatiquement.
 - **Aucune télémétrie, aucune requête réseau sortante** en dehors de ce que vos conteneurs et vos
-  `docker pull` demandent.
+  `docker pull` demandent, et de `solon update`, qui demande à github.com la dernière version seulement quand
+  vous le lancez.
 
 ## Comparatif : performances, empreinte et fonctionnalités
 
@@ -118,7 +117,7 @@ le 3 septembre ; les deux autres d'après leur documentation (marqués *publié*
 
 ### Fonctionnalités comparées
 
-Solon en 0.1.18 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.
+Solon en 0.2.0 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.
 
 | | Solon | Docker Desktop | Podman Desktop | Rancher Desktop |
 |---|---|---|---|---|
@@ -126,13 +125,15 @@ Solon en 0.1.18 ; les autres d'après leur documentation en septembre 2026. « P
 | Fonctionne sans WSL 2 | oui | partiel : ancien moteur Hyper-V | non | non |
 | Windows Famille | oui (Plateforme de machine virtuelle) | oui (WSL 2) | oui | oui |
 | `https://<service>.<projet>.solon.local` pour chaque conteneur, certificat local reconnu | oui | non | non | non |
-| Page Projets : adresse, environnement, ports vérifiés avant Up, journaux filtrés | oui | partiel : liste Compose | partiel : liste Compose | non |
-| Un environnement par branche Git, volumes copiés | oui | non | non | non |
-| Sauvegarde et restauration d'un projet, volumes compris | oui | partiel : extension tierce | non | non |
-| Ligne de commande pour le moteur lui-même : état, démarrage et arrêt, réglages, sauvegarde, pourquoi un appel a échoué | oui (`solon`) | partiel : `docker desktop start/stop/status` *(documenté)* | partiel : `podman machine` *(documenté)* | partiel : `rdctl` *(documenté)* |
+| Interface graphique (fenêtre, écrans) | non, par choix : une icône dans la barre des tâches et la commande `solon` | oui | oui | oui |
+| Projets Compose listés avec leurs adresses, démarrés et arrêtés depuis l'icône de la barre des tâches | oui | partiel : liste Compose | partiel : liste Compose | non |
+| Un environnement par branche Git, volumes copiés | oui (`solon clone`) | non | non | non |
+| Sauvegarde et restauration d'un projet, volumes compris | oui (`solon backup`, `solon restore`) | partiel : extension tierce | non | non |
+| Ligne de commande pour le moteur lui-même : état, démarrage et arrêt, réglages, sauvegarde, pourquoi un appel a échoué, mise à jour | oui (`solon`) | partiel : `docker desktop start/stop/status` *(documenté)* | partiel : `podman machine` *(documenté)* | partiel : `rdctl` *(documenté)* |
+| Dit pourquoi un appel entre conteneurs a échoué, en français courant | oui (`solon why`) | non | non | non |
 | Conteneurs inactifs mis en veille, réveil à la demande | oui | partiel : Resource Saver met toute la machine en pause | non | non |
 | Dossiers Windows partagés par solonfs (3,6 à 94× plus rapide que 9P selon l'opération) | oui | non : 9P via WSL 2 | non : 9P | non : 9P |
-| Recherche des projets Compose sur le disque (7 s sur 928 Go) | oui | non | non | non |
+| Recherche des projets Compose sur le disque (7 s sur 928 Go) | oui (`solon scan`) | non | non | non |
 | Projets relancés après un redémarrage de Windows ou une mise à jour | oui | partiel : politique `restart` de Docker | partiel | partiel |
 | VS Code Dev Containers | oui, vérifié | oui | partiel : réglage du chemin docker | oui |
 | Kubernetes intégré | non | oui | partiel : extensions Kind / Minikube | oui (K3s) |
@@ -147,7 +148,7 @@ Solon en 0.1.18 ; les autres d'après leur documentation en septembre 2026. « P
 |---|---|
 | Windows | **Windows 11 ou Windows 10 22H2, toutes éditions, Famille comprise.** Pro, Entreprise et Éducation utilisent Hyper-V ; Famille utilise la Plateforme de machine virtuelle, que l'installateur active (un redémarrage). Vérifié sur Windows 11 Famille 25H2. Sur Famille, le repli de partage de fichiers 9P n'est pas disponible ; le partage par défaut fonctionne. |
 | Processeur | Virtualisation matérielle **activée dans le BIOS/UEFI** : Intel VT-x (souvent « Intel Virtualization Technology ») ou AMD-V (« SVM Mode »). |
-| Mémoire | 8 Go recommandés (4 Go minimum). Solon alloue 2 Go au moteur par défaut, ajustable dans les réglages. |
+| Mémoire | 8 Go recommandés (4 Go minimum). Solon alloue 2 Go au moteur par défaut, ajustable par `solon settings memory=…`. |
 | Disque | ~400 Mo pour Solon et son image Linux, plus un disque de données dynamique (64 Go maximum par défaut, occupé à la demande). |
 | Composants Windows | « Hyper-V » et « Plateforme de machine virtuelle ». L'installeur les active ; un redémarrage peut être demandé. |
 
@@ -162,7 +163,8 @@ Téléchargez `Solon_<version>_x64-setup.exe` depuis les [releases](https://gith
 et vérifiez son empreinte SHA-256 avec la valeur publiée avec la version. L'installeur demande l'élévation une
 fois, puis : active les composants Windows nécessaires (un redémarrage peut être demandé), installe le service
 `SolonService`, copie l'image Linux et les commandes `docker` et `solon`, et crée le raccourci. Installation silencieuse :
-`Solon_<version>_x64-setup.exe /S`.
+`Solon_<version>_x64-setup.exe /S`. Installer la 0.2.0 par-dessus une 0.1.x conserve tout : images, conteneurs,
+volumes, réglages, historique de la Radiographie.
 
 L'installeur **n'est pas encore signé** : SmartScreen affiche « Windows a protégé votre ordinateur » ; cliquez
 « Informations complémentaires » puis « Exécuter quand même ». La chaîne de signature est prête
@@ -173,8 +175,9 @@ Désinstallation : Paramètres → Applications → Solon. Le désinstalleur arr
 
 ### Depuis les sources (développeurs)
 
-Prérequis : Rust stable (≥ 1.85), Node 22, et **Solon lui-même** installé (l'image Linux du moteur se construit
-dans un conteneur Solon : pas besoin de WSL). Une session Windows **administrateur** sert seulement au mode console.
+Prérequis : Rust stable (≥ 1.85), Node 22 (seulement pour l'empaqueteur Tauri : il ne reste aucun JavaScript
+dans Solon), et **Solon lui-même** installé (l'image Linux du moteur se construit dans un conteneur Solon : pas
+besoin de WSL). Une session Windows **administrateur** sert seulement au mode console.
 
 ```powershell
 # 1. Agent invité (compilation croisée depuis Windows, sans chaîne C)
@@ -185,7 +188,7 @@ cargo build -p solon-agent --release --target x86_64-unknown-linux-musl
 docker run --rm -v "${PWD}:/work" -w /work public.ecr.aws/docker/library/alpine:3.24 sh -c "apk add -q bash curl python3 e2fsprogs coreutils tar grep findutils gzip; SKIP_KERNEL=1 SOLON_IMAGE_VERSION=0.1.0-dev.N bash image/build.sh /work/target/x86_64-unknown-linux-musl/release/solon-agent"
 #    (le noyau lui-même se compile une fois avec image/kernel/build-kernel.sh, ~7 min, dans le même genre de conteneur)
 
-# 3. Service, commande `solon` et application (l'installeur embarque image/out/<version>, voir tauri.conf.json)
+# 3. Service, commande `solon` et icône de la barre des tâches (l'installeur embarque image/out/<version>, voir tauri.conf.json)
 cargo build --release -p solon-service -p solon-cli
 cd apps\desktop && npm install && npm run tauri build
 #    (le service et le CLI sont copiés comme ressources : `tauri build` ne les reconstruit pas, d'où l'ordre)
@@ -193,116 +196,44 @@ cd apps\desktop && npm install && npm run tauri build
 
 Mode développement sans installer : le service se lance en mode console, à la main
 (`solon-service.exe console --start` dans un terminal administrateur) ou par le script ci-dessous (une
-fenêtre UAC), puis l'application en mode dev :
+fenêtre UAC), puis la commande depuis `target\release` et l'icône en mode dev :
 
 ```powershell
 .\tests\e2e\start-console.ps1 -ImageDir .\image\out\<version> -Release
+.\target\release\solon-cli.exe status
 cd apps\desktop; npm run tauri dev
 ```
 
 ## Utilisation
 
-Le bloc en bas du menu montre l'état du moteur, son temps de fonctionnement et deux mini-jauges (processeur, mémoire).
-L'icône de la barre des tâches porte un point vert, orange, rouge ou gris selon l'état. La taille et la position de la
-fenêtre sont mémorisées.
+Il n'y a rien à ouvrir. Après l'installation, le moteur démarre, `docker` fonctionne dans tout nouveau
+terminal, et l'icône de Solon est dans le coin de la barre des tâches. Tout le reste est une des commandes
+`solon` ci-dessous.
 
-Le menu de gauche a deux parties : **Docker** (Projects, Containers, Volumes, Images, Networks) et **General** (Activity,
-Radiography, Terminal, Settings). Le bouton en haut du menu (ou `Ctrl+B`) le replie en icônes seules ; le choix est mémorisé.
+### L'icône
 
-- **Projets** (accueil) : une carte par projet Compose avec son état, son **adresse principale**
-  (`https://web.blog.solon.local`, copiable, avec le cadenas), ses services, Ouvrir / Up / Arrêter / Détails. Les dossiers ouverts auparavant mais arrêtés sont listés aussi ; les
-  conteneurs lancés hors projet sont dans « Autres conteneurs ». Sans rien encore, la page propose quatre
-  départs : ouvrir un dossier, choisir une pile, chercher les projets déjà présents sur ce PC, essayer
-  hello-world. La page d'un projet gagne un onglet
-  **Environnement** : le `.env` et les blocs `environment:` du `compose.yaml`, plus les ports publiés,
-  modifiables sans toucher au YAML.
-- **Sauvegarder et restaurer un projet** : « Sauvegarder… » sur la page d'un projet écrit un seul zip avec les
-  fichiers Compose, le `.env` et les données de chaque volume (prises directement dans le moteur, projet en
-  marche ou non) ; « Restaurer une sauvegarde… » sur l'accueil Projets recrée volumes et fichiers dans le
-  dossier de votre choix, puis Up.
-- **Ports vérifiés avant Up** : un port hôte déjà pris sur ce PC arrête Up avant tout démarrage, avec
-  « Utiliser 8081 au lieu de 8080 » (le fichier est modifié pour vous) ou « Up quand même ».
-- **Chercher les projets sur ce PC** : un clic lit la table des fichiers des disques internes (quelques
-  secondes, droits administrateur du service, rien ne quitte le PC) et liste chaque dossier avec un
-  `compose.yaml`, un `Dockerfile` ou un `devcontainer.json`, hors dossiers de dépendances, de cache et
-  système. On coche ceux à garder.
-- **Un environnement par branche Git** : sur un projet dont le dossier est un dépôt Git, cochez « Un
-  environnement par branche » à côté du nom de la branche. Chaque branche a alors ses conteneurs, ses volumes
-  et ses adresses (`web.blog-feature-login.solon.local`). Changez de branche dans votre terminal : Solon propose
-  d'arrêter l'ancien environnement et de démarrer le nouveau, avec ou sans copie des données de l'ancienne branche.
-- **Relance de ce qui tournait** : quand le moteur s'arrête (redémarrage de Windows, installation, Stop depuis
-  Solon), Solon retient les projets et conteneurs en marche et les redémarre une fois le moteur revenu ; Docker
-  seul ne le fait que pour les conteneurs `restart: always`. Réglages → moteur, activé par défaut.
-- **Conteneurs** : liste temps réel avec CPU et mémoire, filtre, groupes Compose, actions en icônes, journaux en
-  flux, terminal, inspection. Un **port publié est un lien** vers `http://localhost:<port>`, le domaine local aussi.
-  Les **projets Compose** vivent ici : « Ouvrir un projet… » choisit un dossier contenant `compose.yaml`, la liste
-  déroulante rappelle les projets récents, et un clic sur l'en-tête d'un groupe Compose ouvre l'écran du projet :
-  services et leur état, **journaux de tous les services mêlés**, Up / Down / Reconstruire avec la **sortie en
-  direct**, ouverture du dossier dans l'**Explorateur** ou dans **VS Code**.
-- **Réveil à la demande** : un conteneur joint via Solon (adresse `solon.local` ou port publié) qui ne reçoit plus
-  rien pendant dix minutes (réglable) est **mis en pause** : zéro processeur, mémoire conservée. La première requête
-  suivante le réveille en une fraction de seconde, avant d'être servie. Les bases de données et les tâches de fond
-  qui ne parlent qu'en interne ne sont jamais concernées ; un bouton « Keep awake » dans la fiche exclut un
-  conteneur ; l'état « Asleep » apparaît dans la liste.
-- **Piles prêtes et détection de projet** : « New stack… » ouvre une galerie : des kits de
-  démarrage qui génèrent un projet au premier lancement (Django + PostgreSQL, Flask + Redis, FastAPI +
-  PostgreSQL, Next.js), des applications prêtes (WordPress, Odoo 18, PostgreSQL, MariaDB, MongoDB, Redis, n8n,
-  Nextcloud, Ghost, Gitea, Uptime Kuma, Jupyter Lab, site statique Nginx) et des outils de développement (Mailpit) : on
-  choisit, on désigne un dossier, on relit le `compose.yaml` généré, « Créer et démarrer ». Ouvrir un dossier sans fichier
-  Compose fait regarder à Solon ce qu'il contient (package.json, requirements.txt, Dockerfile, composer.json,
-  go.mod, Cargo.toml, pom.xml, .csproj, Gemfile…) et proposer un environnement, modifiable
-  avant création. Rien n'est jamais écrasé.
-- **Fiche d'un conteneur** (clic sur son nom) : onglet **Overview** avec image, commande, dates, politique de
-  redémarrage, réseaux (adresse, passerelle, alias), ports, montages, variables d'environnement, étiquettes, et
-  **copie de fichiers** dans les deux sens (`docker cp` sans ligne de commande). Onglets Logs (filtres Tout /
-  Avertissements / Erreurs avec compteurs, recherche, retour à la ligne, couleurs), Files, Terminal, Debug shell,
-  Inspect. Démarrer, arrêter, redémarrer, supprimer et « Keep awake » dans l'en-tête.
-- **Fichiers** (onglet de la fiche d'un conteneur, et bouton « Files » ou clic sur le nom d'un volume) : un
-  explorateur des fichiers du conteneur ou du volume : parcourir, copier vers Windows, envoyer des fichiers ou un
-  dossier (bouton ou **glisser-déposer** depuis l'Explorateur), créer un dossier, supprimer. Fonctionne sans shell
-  dans l'image ; les conteneurs doivent être en marche pour être parcourus, les volumes toujours.
-- **Debug shell** (onglet de la fiche) : un shell d'outils (bash, curl, dig, ps, strace, tcpdump, jq, vim…) qui
-  partage les processus, le réseau et les volumes du conteneur **même si son image n'a aucun shell** (images
-  « distroless », Go, .NET). Le système de fichiers du conteneur est visible sous `/proc/1/root`. Rien n'est
-  modifié dans le conteneur ; la boîte à outils (`solon-debug`) se construit au premier usage.
-- **Images, Volumes, Réseaux** : liste, création, inspection, suppression (toujours avec confirmation).
-- **Des adresses qui marchent, toujours** : chaque conteneur en marche est joignable sur
-  `https://<nom>.solon.local` (et `https://<service>.<projet>.solon.local` pour Compose), **qu'il publie un port
-  ou non**. Solon lit le port que l'image expose (80, 8080, 3000, 8069…), tient à jour un bloc dans le fichier
-  `hosts` de Windows, et route les requêtes depuis `127.0.0.1:80` (HTTP) et `127.0.0.1:443` (HTTPS) d'après le nom
-  demandé. Le HTTPS repose sur une autorité de certification locale « Solon Local CA », créée à la première
-  utilisation et installée dans le magasin racine de la machine : le navigateur n'affiche aucun avertissement.
-  Les **adresses des conteneurs** (`10.90.x.y`) sont aussi joignables directement depuis Windows (`curl
-  http://10.90.0.2/`, un client PostgreSQL vers `10.90.1.2:5432`…). Si un autre logiciel occupe le port 80 ou
-  443, la partie correspondante est désactivée et les ports publiés restent utilisables. `curl.exe` de Windows
-  refuse les certificats sans point de révocation : ajouter `--ssl-no-revoke` (comme avec mkcert).
-- **Notifications Windows** : conteneur arrêté avec une erreur (hors actions faites dans Solon), moteur en échec
-  ou en redémarrage, disque du moteur plein à 90 %.
-- **Diagnostic** (Réglages → Exporter un diagnostic) : une archive zip avec les journaux, l'état, les réglages,
-  les prérequis et `docker info`, à joindre à un rapport de bug. Aucun identifiant n'y figure.
-- **Activity** : performances en temps réel. En haut, le moteur : processeur, mémoire (utilisée / totale, réservée),
-  stockage des données, réseau, avec les courbes sur 1 min, 10 min ou 1 h au choix. En dessous, chaque conteneur en marche :
-  processeur, mémoire, débit réseau, courbe du processeur ; colonnes triables. Rien n'est installé dans les conteneurs.
-- **Radiography** (`Ctrl+7`) : qui appelle qui, en temps réel. Une carte (un cercle par service, un trait par
-  relation, rouge quand des appels échouent) et un journal (un échange par ligne, dépliable pour voir les
-  en-têtes). Ce qui entre par une adresse `*.solon.local` est montré comme l'échange HTTP complet ; les appels
-  entre conteneurs montrent la connexion et son issue ; les adresses extérieures portent le nom qui a été
-  résolu. La barre de lecture fige, passe d'un échange à l'autre et rejoue à ×0,25, ×1 ou ×4. « Capturer les
-  corps », par projet, garde les 4 premiers Ko des corps texte. En-têtes, paramètres d'URL, champs de
-  formulaire et clés JSON au nom sensible, courriels et téléphones sont masqués à la capture. Tout reste sur
-  votre PC.
-- **Terminal** (section, ou `Ctrl+\``) : un shell root dans le moteur Linux lui-même, pour `docker`, `ps`, `df`,
-  `dmesg`… La session reste ouverte quand on change de section ; « Nouvelle session » en relance une.
-- **Recherche globale `Ctrl+K`** : conteneurs, images, volumes, réseaux, projets, actions du moteur, sections.
-  `Ctrl+1` à `Ctrl+9` changent de section dans l'ordre du menu.
-- **Réglages** : langue (anglais par défaut, français), apparence (clair, sombre, Windows), couleur d'accent (rose
-  Solon ou couleur de Windows), mémoire et processeurs du moteur (par défaut tous les cœurs moins deux), limite
-  de stockage, démarrage à l'ouverture de session, mise en veille des conteneurs inactifs, repli sur l'ancien
-  partage de fichiers, export de diagnostic.
-- **Barre des tâches** : un clic sur l'icône ouvre le menu : état du moteur, nombre de conteneurs en marche,
-  **chaque projet avec Démarrer / Redémarrer / Arrêter**, puis les conteneurs hors projet, ouvrir Solon,
-  démarrer ou arrêter le moteur, quitter. Dans la langue de l'interface. Fermer la fenêtre laisse Solon actif
-  dans la barre des tâches.
+Un clic, gauche ou droit, ouvre un menu natif :
+
+- **Moteur : en marche / arrêté / en échec…** Cliquer dessus ouvre un terminal.
+- **N conteneurs en marche.**
+- **Un sous-menu par projet Compose**, « ● blog (2/2) » : *Ouvrir https://web.blog.solon.local*, *Démarrer
+  le projet*, *Redémarrer le projet*, *Arrêter le projet*. Les conteneurs lancés hors projet ont le même
+  sous-menu (Ouvrir, Démarrer, Redémarrer, Arrêter).
+- **Ouvrir un terminal (solon, docker)** : une console dans votre dossier personnel, avec `solon` et `docker`
+  dans le PATH.
+- **Pourquoi ça casse ? (solon why)** : le même terminal, la réponse déjà affichée.
+- **Mettre à jour Solon…** : lance `solon update`.
+- **Démarrer avec Windows** : au premier lancement, Solon s'inscrit au démarrage de votre session Windows
+  (clé Run de votre compte) et une notification le signale, parce qu'une icône absente quand le moteur tombe
+  ne sert à rien. Décocher la case, c'est dire non ; ce non est retenu, Solon ne se réinscrit pas. La
+  désinstallation retire l'entrée.
+- **Démarrer le moteur** / **Arrêter le moteur**, **Quitter Solon**.
+
+Le point de l'icône est vert, orange, rouge ou gris selon l'état du moteur. Notifications Windows, rares
+par choix : moteur en échec, redémarrage de Docker, disque du moteur presque plein, projets relancés après
+le démarrage du moteur, action du menu qui a échoué. Lancer `Solon.exe` une seconde fois ne fait que
+notifier « Solon tourne déjà ». Les libellés sont en anglais, ou en français quand Windows l'est
+(`SOLON_LANG=fr` force).
 
 ### CLI `docker` et `docker compose` intégrés
 
@@ -332,17 +263,41 @@ docker context use solon
 ### Ligne de commande : `solon`
 
 Le même dossier contient `solon`, la commande propre à Solon. `docker` parle aux conteneurs ; `solon` parle au
-moteur qui les entoure : son état, ses adresses, ses réglages, la Radiographie, les sauvegardes. Elle passe par
-le pipe local du service, comme l'application : aucune demande d'administrateur, aucune requête sortante. Les
-messages sont en anglais, ou en français quand Windows l'est (`SOLON_LANG=fr` force). `solon help` liste toutes
-les commandes ; `--json` sur `status`, `projects`, `domains`, `trace`, `settings`, `prereq` et `watch` donne une
-sortie lisible par un programme. Codes de sortie : 0, 1 erreur, 2 usage, 3 service injoignable.
+moteur qui les entoure : son état, ses adresses, ses réglages, la Radiographie, les sauvegardes, les mises à
+jour. Elle passe par le pipe local du service : aucune demande d'administrateur, aucune requête sortante (hors
+`solon update`, voir plus bas). Les messages sont en anglais, ou en français quand Windows l'est
+(`SOLON_LANG=fr` force). `solon help` liste toutes les commandes ; `--json` sur `status`, `projects`,
+`domains`, `trace`, `settings`, `prereq`, `watch`, `scan`, `import` et `update` donne une sortie lisible par
+un programme. Codes de sortie : 0, 1 erreur, 2 usage, 3 service injoignable.
+
+| Commande | Ce qu'elle fait |
+|---|---|
+| `solon` ou `solon status` | État du moteur, image, adresse, domaines locaux, puis les conteneurs en marche avec leur projet, leur état (« endormi » si Solon l'a mis en veille) et leur adresse `https://service.projet.solon.local`. |
+| `solon start`, `solon stop [--force]`, `solon restart` | Démarrer ou arrêter le moteur, chaque étape affichée. |
+| `solon projects` | Les projets Compose connus du moteur, avec leur dossier Windows et leurs adresses. |
+| `solon domains` | Toutes les adresses `*.solon.local` qui répondent en ce moment. |
+| `solon why [nom]` | Ce qui ne va pas, en français courant, à partir de la Radiographie. |
+| `solon trace [nom] [-n N \| --all] [-f]` | Le journal des échanges, 50 dernières lignes par défaut ; `-f` suit le direct. |
+| `solon clear [projet]` | Oublier l'historique observé, d'un projet ou de tout. |
+| `solon backup [dossier] [fichier.zip] [--force]` | Un zip avec les fichiers Compose, le `.env` et chaque volume du projet, en marche ou non. |
+| `solon restore <fichier.zip> [dossier]` | Recrée les volumes et les fichiers ; il reste `docker compose up -d`. |
+| `solon clone <source> <cible>` | Copie les volumes d'un projet sous un autre nom : un environnement par branche Git (`blog` → `blog-feature-login`), rien n'est écrasé. |
+| `solon scan` | Trouver les projets Docker de ce PC : le service lit la table des fichiers des disques internes (quelques secondes, rien ne quitte le PC) et liste chaque dossier avec un `compose.yaml`, un `Dockerfile` ou un `devcontainer.json`. |
+| `solon import [--all \| --volumes a,b --images x:tag]` | Copier volumes et images depuis un Docker Desktop en marche, sans y toucher ; sans option, lister ce qu'il contient. |
+| `solon shell` | Un shell root dans le moteur (`docker`, `ps`, `df`, `dmesg`…), par un conteneur busybox privilégié et `nsenter`. |
+| `solon exec <commande…>` | Une commande en root dans le moteur ; un seul mot entre guillemets vaut une ligne shell. |
+| `solon settings [clé=valeur…]` | Voir ou changer les réglages : `memory` (Mo), `cpus`, `disk` (Gio), `autostart`, `resume`, `sleep`, `idle` (min), `never` (liste ou `none`), `bodies` (liste ou `none`), `legacy-9p`. Mémoire, processeurs, disque et partage s'appliquent au prochain démarrage du moteur. |
+| `solon update [--check]` | La dernière version publiée sur GitHub ; sans `--check`, télécharge l'installateur, vérifie son SHA-256 contre le `SHA256SUMS.txt` de la version et le lance (Windows demande l'autorisation). C'est la seule requête sortante de Solon, et seulement quand vous la demandez. Depuis le Microsoft Store, répond « les mises à jour viennent du Store ». |
+| `solon prereq` | Les prérequis Windows, ligne par ligne. |
+| `solon logs [-n N] [-f]`, `solon diag [fichier.zip]` | Le journal du service ; le zip à joindre à un signalement (journaux, état, réglages, prérequis, `docker info` ; aucun identifiant). |
+| `solon watch [--json]` | Les événements du moteur au fil de l'eau. |
+| `solon version` | Les versions de la commande, du service et de l'image. |
 
 `solon` seul vaut `solon status`. Les sorties ci-dessous sont abrégées :
 
 ```text
 > solon
-Solon 0.1.17 · moteur prêt depuis 09:12:04 (2 h 31 min)
+Solon 0.2.0 · moteur prêt depuis 09:12:04 (2 h 31 min)
   image 0.1.0-dev.22 · adresse 172.30.0.2
   domaines locaux *.solon.local : http et https
 
@@ -392,18 +347,31 @@ Enregistré.
 Mémoire, processeurs, disque et partage de fichiers s'appliquent au prochain démarrage du moteur : solon restart
 ```
 
-`solon why` lit le même historique que l'écran Radiographie et regroupe ce qui a mal tourné : les appels
+`solon why` lit l'historique de la Radiographie et regroupe ce qui a mal tourné : les appels
 refusés par appelant, destination et port, avec un conseil (conteneur endormi, rien n'écoute, adresse hors du
 moteur), les erreurs de serveur (5xx) par hôte, les refus 401/403, la requête la plus lente quand elle dépasse
 une seconde. Quand rien ne ressort, il le dit, avec les comptes. `solon trace` est le journal (`-f` suit le
 direct, `--all` imprime tout), `solon clear [projet]` l'oublie.
 
-`solon backup` et `solon restore` font exactement ce que font les boutons de l'application : un zip avec le
-fichier Compose, le `.env` et les volumes, restauré dans le dossier de votre choix. `solon domains` liste
-toutes les adresses `*.solon.local` qui répondent en ce moment ; `solon exec` lance une commande en root dans le
-moteur ; `solon logs` et `solon diag` donnent le journal du service et le zip à joindre à un signalement ;
-`solon watch` affiche les événements du moteur au fil de l'eau ; `solon prereq` vérifie les prérequis Windows ;
-`solon settings` seul montre chaque réglage avec sa signification.
+`solon backup` écrit un zip avec le fichier Compose, le `.env` et les volumes ; `solon restore` le remet dans
+le dossier de votre choix, sur le même PC ou un autre. `solon settings` seul montre chaque réglage avec sa
+signification.
+
+### Ce qui a changé en 0.2.0
+
+L'application de bureau (fenêtre, écrans) a été retirée le 31 octobre 2026. Le moteur, le service, vos
+données (images, conteneurs, volumes, réglages, historique) et la commande `docker` n'ont pas bougé. Ce que
+faisait chaque écran, et ce qui le fait maintenant :
+
+| Disparu | À la place |
+|---|---|
+| Écrans Conteneurs, Images, Volumes, Réseaux | `docker ps`, `docker images`, `docker volume`, `docker network` |
+| Page Projets : cartes, éditeur de compose et de `.env` avec vérification des ports, journaux filtrés, panneau Fichiers, modèles de projets, recherche sur le PC, import Docker Desktop, un environnement par branche, sauvegarde et restauration | `solon projects`, `solon scan`, `solon import`, `solon clone`, `solon backup` / `solon restore`, votre éditeur, `docker compose logs`, `docker cp` |
+| Terminal dans la machine | `solon shell` |
+| Écran Activité (courbes processeur, mémoire, disque, réseau) | `docker stats` ; pas d'équivalent graphique |
+| Écran Radiographie (carte, journal, barre de lecture, corps par projet) | `solon trace`, `solon why`, `solon settings bodies=…` ; la carte et la relecture visuelle n'ont plus d'équivalent pour l'instant : une extension VS Code est l'étape suivante |
+| Écran Réglages | `solon settings` |
+| Palette de commandes, `Ctrl+Alt+S`, visite de bienvenue, thème et couleur d'accent, bannière de mise à jour | disparus |
 
 ### VS Code Dev Containers
 
@@ -411,8 +379,8 @@ L'extension **Dev Containers** fonctionne avec Solon telle quelle : elle utilise
 qui est celui de Solon. Ouvrez un dossier qui contient `.devcontainer/devcontainer.json`, lancez « Dev Containers :
 Rouvrir dans un conteneur », et VS Code construit ou tire l'image, démarre le conteneur avec le dossier monté
 dans `/workspaces/<nom>`, installe son serveur dedans et s'y connecte. Les ports transmis fonctionnent, le
-`postCreateCommand` s'exécute, et le conteneur apparaît dans la liste des conteneurs de Solon (et dans
-« Chercher les projets sur ce PC »). Rien à configurer ; si vous aviez réglé `dev.containers.dockerPath` pour
+`postCreateCommand` s'exécute, et le conteneur apparaît dans `solon status` (et son dossier dans
+`solon scan`). Rien à configurer ; si vous aviez réglé `dev.containers.dockerPath` pour
 Docker Desktop, retirez-le. Testé avec `@devcontainers/cli` 0.89 et l'image
 `mcr.microsoft.com/devcontainers/base:alpine`.
 
@@ -439,18 +407,17 @@ Ce qu'il faut savoir :
 - Un changement fait côté Windows est vu dans le conteneur au plus 1,5 s plus tard.
 - Pour les dépendances et les bases de données, préférez toujours des **volumes Docker** : ils vivent sur le disque de
   Solon, à vitesse native (20 à 50 ms pour les mêmes 5 000 fichiers).
-- Repli : Réglages → « Utiliser l'ancien partage de fichiers Windows (9P) » remet l'ancien mécanisme au prochain
-  démarrage du moteur. L'ancien partage reste aussi monté en secours sous `/mnt/host9p/<lettre>` dans la machine.
+- Repli : `solon settings legacy-9p=on` remet l'ancien mécanisme au prochain démarrage du moteur. L'ancien partage reste aussi monté en secours sous `/mnt/host9p/<lettre>` dans la machine.
 
 ## Dépannage
 
 Guide pas à pas des problèmes les plus fréquents (SmartScreen, redémarrage après l'activation d'Hyper-V, port
 déjà pris, conteneur qui se termine aussitôt, réseau et adresses `solon.local`, espace disque) :
-**<https://v94lere.github.io/solon/fr/depannage/>**. Pour signaler un problème, joignez le zip de
-Réglages → Diagnostic → « Exporter un diagnostic… » (journaux, état, réglages, `docker info` ; aucun identifiant).
+**<https://v94lere.github.io/solon/fr/depannage/>**. Pour signaler un problème, joignez le zip écrit par
+`solon diag` (journaux, état, réglages, `docker info` ; aucun identifiant).
 
-Les messages de l'interface portent un **code stable** ; les journaux sont dans
-`%ProgramData%\Solon\logs` (service) et se copient depuis l'écran d'erreur.
+Les messages d'erreur portent un **code stable**, affiché par `solon status` et dans la notification de la
+barre des tâches ; les journaux sont dans `%ProgramData%\Solon\logs` (service, `solon logs`).
 
 | Code | Cause | Que faire |
 |---|---|---|
@@ -475,17 +442,20 @@ Coupure de courant ou arrêt brutal : au démarrage suivant, Solon vérifie et r
 (`fsck`), puis redémarre le moteur. Les écritures non synchronisées des deux dernières secondes peuvent être
 perdues, comme sur toute machine Linux.
 
-## Limites connues (version 0.1)
+## Limites connues (version 0.2)
 
+- **Pas d'interface graphique** : ni fenêtre, ni courbes, ni carte. Un choix assumé pour la 0.2.0 : Solon,
+  c'est le moteur, l'icône et la commande ; la partie visuelle de la Radiographie reviendra sous la forme
+  d'une extension VS Code.
 - **Ports UDP** publiés non relayés vers `localhost` (TCP seulement).
 - **Un seul moteur par machine**, pas de profils multiples.
-- **Installeur non signé** (avertissement SmartScreen). **Pas de mise à jour silencieuse** : Solon signale
-  qu'une nouvelle version existe (Réglages → Mises à jour, une requête vers github.com, désactivable).
-  « Installer la mise à jour » télécharge l'installateur, vérifie son SHA-256 avec le `SHA256SUMS.txt` de la
-  version, puis Windows demande l'autorisation ; Solon se rouvre et relance ce qui tournait. Rien ne
-  s'installe sans vous.
-- Un conteneur endormi n'exécute pas ses tâches planifiées internes tant que rien ne l'appelle ; « Keep
-  awake » sur sa fiche si cela compte.
+- **Installeur non signé** (avertissement SmartScreen). **Pas de mise à jour automatique, pas même de
+  vérification** : `solon update --check` demande à github.com si une version plus récente existe,
+  `solon update` (ou « Mettre à jour Solon… » dans le menu de l'icône) télécharge l'installateur, vérifie
+  son SHA-256 avec le `SHA256SUMS.txt` de la version, puis Windows demande l'autorisation ; le service
+  relance ce qui tournait. Rien ne s'installe sans vous.
+- Un conteneur endormi n'exécute pas ses tâches planifiées internes tant que rien ne l'appelle ;
+  `solon settings never=<nom>` l'exclut de la mise en veille si cela compte.
 - `curl.exe` de Windows refuse les certificats HTTPS locaux sans `--ssl-no-revoke` (comme avec mkcert) ; les
   navigateurs et .NET les acceptent.
 
@@ -494,8 +464,10 @@ perdues, comme sur toute machine Linux.
 Solon est jeune, et la liste de ce qui reste à faire est plus longue que celle de ce qui est fait. Voici les
 prochains chantiers, chacun avec une issue où commenter ou se lancer :
 
-- **Mettre à jour les images depuis l'application** ([#3](https://github.com/v94lere/solon/issues/3)) : une
-  pastille quand une version plus récente existe, un bouton pour la tirer et recréer les conteneurs.
+- **Une extension VS Code** pour la Radiographie : la carte de qui appelle qui et la barre de lecture,
+  parties avec la fenêtre en 0.2.0, ont leur place à côté du code.
+- **Mettre à jour les images en une commande** ([#3](https://github.com/v94lere/solon/issues/3)) : dire
+  qu'une version plus récente existe, la tirer et recréer les conteneurs.
 - **Relayer les ports UDP publiés** ([#5](https://github.com/v94lere/solon/issues/5)), le dernier écart face à
   `docker run -p`.
 - **Rechargement à chaud depuis Windows** ([#7](https://github.com/v94lere/solon/issues/7)) : prévenir le
@@ -512,7 +484,8 @@ une commande, et la documentation, les traductions et les reproductions de bogue
 
 - `ARCHITECTURE.md` : choix techniques (virtualisation HCS, image Linux, HvSocket, solonfs, réseau), résultats
   mesurés bloc par bloc, registre des risques.
-- `docs/guide-fonctionnel.md` : le guide fonctionnel de l'application, écran par écran.
+- `docs/guide-fonctionnel.md` : le guide fonctionnel : l'icône, les commandes, ce que le moteur fait tout seul.
+- `docs/radiographie.md` : la Radiographie, phase par phase.
 - `docs/measurements.md` : toutes les mesures et les faits établis.
 - `bench/` : le script de comparaison et sa pile Compose (voir le comparatif plus haut).
 - `site/` : le site de présentation (Astro, statique), publié sur GitHub Pages par le workflow « Site ».
@@ -523,5 +496,4 @@ une commande, et la documentation, les traductions et les reproductions de bogue
 ## Licence
 
 Apache 2.0, voir `LICENSE` et `NOTICE`. Solon embarque des logiciels tiers (CLI Docker, Docker Compose, un noyau
-Linux, des paquets Alpine, des dépendances Rust et npm, la police Urbanist) sous leurs propres licences : voir
-`THIRD-PARTY.md`. Pour contribuer : `CONTRIBUTING.md` ; pour signaler une faille : `SECURITY.md`.
+Linux, des paquets Alpine, des dépendances Rust) sous leurs propres licences : voir `THIRD-PARTY.md`. Pour contribuer : `CONTRIBUTING.md` ; pour signaler une faille : `SECURITY.md`.

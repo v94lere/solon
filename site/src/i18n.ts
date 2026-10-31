@@ -9,8 +9,8 @@ const en = {
   nav: { features: "Features", compare: "Benchmark", stacks: "Stacks", releases: "Releases", help: "Help", github: "GitHub", download: "Download" },
   hero: {
     kicker: "Open source · Windows 10 & 11, any edition · Apache 2.0",
-    title: "Docker on Windows, without Docker Desktop or WSL.",
-    lead: "Solon is a standalone container manager: one installer, a complete Docker engine running in a tiny Linux machine that Solon creates and manages itself. No licence, no telemetry, no WSL.",
+    title: "Docker on Windows, quietly.",
+    lead: "Solon is a standalone Docker engine for Windows: one installer, the real docker and docker compose, no WSL, Windows Home included. No window: an icon in the taskbar corner, a solon command next to docker, and solon why, which says in plain words why a call failed. Since 0.2.0 (31 October 2026).",
     download: "Download for Windows",
     winget: "winget coming soon",
     requirements: "Windows 11 or 10 22H2, any edition (Home included), hardware virtualization enabled. Check the SHA-256 published with each release.",
@@ -24,9 +24,9 @@ const en = {
   clips: {
     title: "See it in action",
     items: [
-      { title: "A stack in one click", body: "New stack… → n8n → Create and start. Twenty seconds later the browser opens on https://n8n.n8n.solon.local with a trusted certificate. No port to publish, nothing to install on Windows." },
-      { title: "Look inside", body: "A container's page: logs, the Files tab to browse and exchange files with Windows, and the debug shell with ps, curl and friends, even in images that ship no shell." },
-      { title: "Activity", body: "CPU, memory and network per container, hover for exact values, click a name to isolate it, 1 min / 10 min / 1 h windows." },
+      { title: "docker compose up, and an address", body: "cd into a project, docker compose up -d. The project appears in the taskbar icon's menu with its https://service.project.solon.local address, trusted certificate included. No port to publish, nothing to install on Windows. (Clip to be recorded for 0.2.0: it still shows the former window.)" },
+      { title: "Why is it broken?", body: "solon why reads the Radiography and says in plain words what failed: who called whom, on which port, how many times, and what to check first. (Clip to be recorded for 0.2.0: it still shows the former window.)" },
+      { title: "The icon", body: "One click: engine state, one sub-menu per project with Open, Start, Restart, Stop, a terminal with solon and docker ready, Update Solon. (Clip to be recorded for 0.2.0: it still shows the former window.)" },
     ],
   },
   features: {
@@ -35,10 +35,10 @@ const en = {
       { title: "Addresses that always work", body: "Every container answers at https://<name>.solon.local, published port or not, with a certificate your browser trusts. Compose services get <service>.<project>.solon.local." },
       { title: "Fast Windows folders", body: "Folders mounted into containers go through solonfs, Solon's own file sharing: 3.6 to 94× faster than the 9P sharing used by WSL2 and Docker Desktop, depending on the operation (docs/measurements.md)." },
       { title: "Wake on demand", body: "A container that receives no traffic for ten minutes is paused; the next request wakes it in a fraction of a second. Databases that only talk internally are never touched." },
-      { title: "Ready-made stacks", body: "WordPress, Odoo 18, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Uptime Kuma, Jupyter Lab, Mailpit… and starter kits for Django, Flask, FastAPI and Next.js that generate a project on first start." },
-      { title: "Compose, all of it", body: "Open a folder, Solon detects the stack or proposes one. Services, merged logs, Up / Down / Rebuild, and the compose file editable in place with Save and Up." },
-      { title: "See inside", body: "Files tab with drag-and-drop, terminal, debug shell that works even in images without a shell, live CPU, memory and network charts per container. VS Code Dev Containers work as is." },
-      { title: "Radiography", body: "Who calls whom, live: a map of your services and a journal of every exchange, refused calls in red, full HTTP for what comes through a local address, names on outside hosts. Pause, step, replay. Sensitive values masked before they are stored; everything stays on your PC." },
+      { title: "The real docker, nothing else to learn", body: "The official docker CLI and Compose plugin, on your PATH, pointed at Solon. VS Code Dev Containers work as is. Solon does not duplicate docker: it runs the engine and adds what docker cannot do." },
+      { title: "The solon command", body: "solon status, start, stop, projects, domains, settings, backup and restore with volumes, clone for one environment per Git branch, scan to find the projects already on this PC, import from Docker Desktop, shell inside the engine, update. No administrator prompt, no outgoing request unless you ask." },
+      { title: "An icon, no window", body: "In the taskbar corner: engine state, one sub-menu per Compose project (Open its address, Start, Restart, Stop), a terminal with solon and docker ready, Windows notifications when the engine fails or a project comes back. Nothing to open." },
+      { title: "Radiography: solon why", body: "A journal of every exchange inside your projects: connections with their outcome, full HTTP for what comes through a local address, names on outside hosts. solon trace prints it; solon why reads it and says in plain words why a call failed. Sensitive values masked before they are stored; everything stays on your PC." },
     ],
   },
   compare: {
@@ -71,19 +71,21 @@ const en = {
     },
     features: {
       title: "Features compared",
-      lead: "Solon as of 0.1.18; the others as documented in September 2026. “Partial” means the feature exists with a caveat.",
+      lead: "Solon as of 0.2.0; the others as documented in September 2026. “Partial” means the feature exists with a caveat.",
       cols: ["", "Solon", "Docker Desktop", "Podman Desktop", "Rancher Desktop"],
       rows: [
         ["Official docker CLI and Compose, no alias", "yes", "yes", "partial: compatible socket", "yes (moby)"],
         ["Works without WSL 2", "yes", "partial: legacy Hyper-V", "no", "no"],
         ["Windows Home", "yes", "yes", "yes", "yes"],
         ["https://service.project.solon.local for every container, trusted certificate", "yes", "no", "no", "no"],
-        ["Projects page: address, environment, ports checked before Up, filtered logs", "yes", "partial: Compose list", "partial: Compose list", "no"],
-        ["One environment per Git branch, volumes copied", "yes", "no", "no", "no"],
-        ["Project backup and restore, volumes included", "yes", "partial: extension", "no", "no"],
+        ["Graphical interface (windows, screens)", "no, by choice: taskbar icon and solon command", "yes", "yes", "yes"],
+        ["Compose projects with their addresses, started and stopped from the taskbar icon", "yes", "partial: Compose list", "partial: Compose list", "no"],
+        ["Says why a call between containers failed, in plain words", "yes (solon why)", "no", "no", "no"],
+        ["One environment per Git branch, volumes copied", "yes (solon clone)", "no", "no", "no"],
+        ["Project backup and restore, volumes included", "yes (solon backup / restore)", "partial: extension", "no", "no"],
         ["Idle containers paused, woken on demand", "yes", "partial: whole machine (Resource Saver)", "no", "no"],
         ["Windows folders shared with solonfs, 3.6 to 94× faster than 9P depending on the operation", "yes", "no: 9P", "no: 9P", "no: 9P"],
-        ["Find Compose projects on the disk", "yes", "no", "no", "no"],
+        ["Find Compose projects on the disk", "yes (solon scan)", "no", "no", "no"],
         ["VS Code Dev Containers", "yes, verified", "yes", "partial: path setting", "yes"],
         ["Kubernetes built in", "no", "yes", "partial: extensions", "yes (K3s)"],
         ["Windows containers", "no", "yes", "no", "no"],
@@ -95,7 +97,7 @@ const en = {
   },
   stacks: {
     title: "Stacks and starter kits",
-    lead: "“New stack…” opens a gallery. Pick one, choose a folder, review the generated compose.yaml, “Create and start”. Opening a folder without a Compose file makes Solon look at what it contains and propose an environment.",
+    lead: "The gallery left with the window in 0.2.0. The ready-made compose files remain in the repository's examples/ folder: copy one into a folder, docker compose up -d, and the project appears in the icon's menu with its address.",
     kits: "Starter kits",
     kitsBody: "The project folder is mounted in the container; on the first Up a small script installs the dependencies, generates the official skeleton if the folder is empty, then runs the development server with live reload. Nothing to install on Windows.",
     apps: "Ready-made apps",
@@ -108,7 +110,8 @@ const en = {
       "Windows Home works too: the installer enables the Virtual Machine Platform, which is enough for Solon.",
       "No Kubernetes, no separate Linux machines, no ARM images (x86-64 only).",
       "The installer is not signed yet; signing is the next step before a wider launch.",
-      "No silent update: Solon tells you when a new version exists (Settings → Updates, can be turned off). One click downloads the installer, checks its SHA-256 and lets Windows ask you before installing.",
+      "No graphical interface since 0.2.0: no window, no charts, no map. A deliberate choice; the visual part of the Radiography will come back as a VS Code extension.",
+      "No automatic update, not even a check: solon update --check asks github.com for the latest version, solon update (or “Update Solon…” in the icon's menu) downloads the installer, checks its SHA-256 and lets Windows ask you before installing.",
       "Tested on the development machine and one fresh machine. Reports from other configurations are very welcome.",
     ],
   },
@@ -131,21 +134,21 @@ const en = {
       },
       {
         title: "The engine does not start after installation",
-        symptom: "Solon shows “Engine failed to start” with a code such as WINDOWS_FEATURE_MISSING, HYPERVISOR_NOT_RUNNING or VIRTUALIZATION_DISABLED_IN_FIRMWARE.",
+        symptom: "The icon turns red, a notification says the engine did not start, and solon status shows a code such as WINDOWS_FEATURE_MISSING, HYPERVISOR_NOT_RUNNING or VIRTUALIZATION_DISABLED_IN_FIRMWARE.",
         steps: [
           "<b>Reboot first.</b> The installer enables Hyper-V and the Virtual Machine Platform when they were off; they only work after a restart. Most first-start failures end here.",
           "If the code is <code>VIRTUALIZATION_DISABLED_IN_FIRMWARE</code>: enable hardware virtualization in the BIOS/UEFI (called Intel VT-x, AMD-V or SVM, usually under Advanced, CPU or Security), save, reboot.",
           "Windows Home is supported since 0.1.12: the installer enables the Virtual Machine Platform and asks for one restart. Solon needs Windows 10 22H2 or 11, any edition.",
           "If the code is <code>HYPERVISOR_NOT_RUNNING</code>: an old VirtualBox or VMware, or a <code>bcdedit</code> setting, turned the Windows hypervisor off. Remove or update them (VirtualBox ≥ 6.1, VMware ≥ 15.5), then in an administrator PowerShell: <code>bcdedit /set hypervisorlaunchtype auto</code> and reboot.",
-          "Still stuck: Settings → Diagnostic → Export a diagnostic, and open a bug report with the zip (see below).",
+          "Still stuck: run <code>solon diag</code>, and open a bug report with the zip (see below).",
         ],
         note: null,
       },
       {
         title: "A stack refuses to start: a port is already in use",
-        symptom: "Up fails and the output says “port is already allocated” or “address already in use”, or Solon says “Port 8080 is already in use on this PC”.",
+        symptom: "docker compose up fails and the output says “port is already allocated” or “address already in use”.",
         steps: [
-          "Another program (another stack, IIS, a dev server, Docker Desktop) already listens on that port. Solon names the port and proposes the next free one: click <b>Use 8081 instead</b> in the gallery, or in the project's <b>Compose</b> tab change the host port (the left number in <code>\"8080:80\"</code>) and click <b>Save and Up</b>.",
+          "Another program (another stack, IIS, a dev server, Docker Desktop) already listens on that port. Change the host port in your compose file (the left number in <code>\"8080:80\"</code>) and run <code>docker compose up -d</code> again; <code>netstat -ano | findstr :8080</code> names the culprit.",
           "You may not need a published port at all: every container answers at <code>https://&lt;name&gt;.solon.local</code>, port or not. Comment the <code>ports:</code> lines and use that address.",
           "Two copies of the same stack (two WordPress, two Odoo) always collide on the same port: give the second one another host port, or drop the ports and use the two solon.local addresses.",
         ],
@@ -153,11 +156,11 @@ const en = {
       },
       {
         title: "A container “does nothing” or stops at once",
-        symptom: "You click Run or Start, the container appears for a second and goes to Exited; hello-world is the classic case.",
+        symptom: "You start a container, it appears for a second in docker ps and goes to Exited; hello-world is the classic case.",
         steps: [
-          "That is normal for a program that does its job and quits: hello-world prints its message and exits in a tenth of a second. Solon opens its logs and shows “exited immediately with code 0”; the message is in the Logs tab.",
-          "A server that exits with a non-zero code is a real failure: read the last lines of its logs (Logs tab, or <code>docker logs &lt;name&gt;</code>). The usual causes are a missing environment variable, a wrong volume path or a port the container itself cannot bind.",
-          "A container that Solon put to sleep (moon icon) is not stopped: the next request wakes it. Use <b>Keep awake</b> on its page if it runs scheduled tasks.",
+          "That is normal for a program that does its job and quits: hello-world prints its message and exits in a tenth of a second. <code>docker ps -a</code> shows “Exited (0)” and <code>docker logs</code> shows the message.",
+          "A server that exits with a non-zero code is a real failure: read the last lines of its logs (<code>docker logs &lt;name&gt;</code>). The usual causes are a missing environment variable, a wrong volume path or a port the container itself cannot bind.",
+          "A container that Solon put to sleep (“asleep” in <code>solon status</code>) is not stopped: the next request wakes it. <code>solon settings never=&lt;name&gt;</code> excludes it from sleep if it runs scheduled tasks.",
         ],
         note: null,
       },
@@ -166,7 +169,7 @@ const en = {
         symptom: "apt or pip time out inside a container, or the browser cannot reach https://name.solon.local.",
         steps: [
           "<b>Corporate VPN.</b> Some VPN clients (AnyConnect, GlobalProtect, Zscaler) block traffic to virtual adapters. Disconnect the VPN and try again; if it works, add it to your bug report so a workaround can be found.",
-          "<b>The address.</b> A container has an address only while it runs; the name is the container's (<code>web.solon.local</code>) or <code>service.project.solon.local</code> for Compose. Open <code>http://anything.solon.local</code>: the page lists every address currently available.",
+          "<b>The address.</b> A container has an address only while it runs; the name is the container's (<code>web.solon.local</code>) or <code>service.project.solon.local</code> for Compose. <code>solon domains</code> lists every address currently available, and so does <code>http://anything.solon.local</code>. <code>solon why</code> says whether the call reached the container at all.",
           "<b>The certificate.</b> Browsers and .NET trust the local certificates. <code>curl.exe</code> on Windows needs <code>--ssl-no-revoke</code>, like with mkcert.",
           "<b>Links that point to http://.</b> WordPress, Nextcloud and friends generate links from the request: Solon passes <code>X-Forwarded-Proto: https</code>, which the official images honour. For an existing WordPress installed over http, update the site URL in Settings → General.",
           "<b>The hosts file.</b> Solon writes the names into <code>C:\\Windows\\System32\\drivers\\etc\\hosts</code> between <code># solon-begin</code> and <code># solon-end</code>. A security product that protects that file blocks the addresses: allow Solon or add the names by hand.",
@@ -175,11 +178,11 @@ const en = {
       },
       {
         title: "The disk fills up",
-        symptom: "Windows warns that drive C: is almost full, or Solon shows “Engine disk almost full”.",
+        symptom: "Windows warns that drive C: is almost full, or Solon notifies “Engine disk almost full”.",
         steps: [
           "Solon keeps everything in one file, <code>%ProgramData%\\Solon\\data.vhdx</code>, which grows with images, containers and volumes and only shrinks after a clean-up.",
-          "Settings → <b>Disk</b> → <b>Reclaim space</b>: removes the images no container uses and the build cache, then gives the freed space back to Windows. Containers and volumes are never touched.",
-          "Still large? Images → “Unused only” shows what remains; Volumes → “Unused only” shows volumes no container references (data you may want to keep: check before removing).",
+          "<code>docker system prune</code> removes the stopped containers, the images no container uses and the build cache; Solon then gives the freed space back to Windows. Volumes are never touched unless you add <code>--volumes</code>.",
+          "Still large? <code>docker system df -v</code> shows what remains; <code>docker volume ls -f dangling=true</code> lists volumes no container references (data you may want to keep: check before removing).",
         ],
         note: null,
       },
@@ -198,7 +201,7 @@ const en = {
       title: "Report a problem",
       lead: "One zip file tells more than a screenshot. It takes ten seconds.",
       steps: [
-        "In Solon: <b>Settings → Diagnostic → Export a diagnostic…</b>, save the zip.",
+        "In a terminal: <code>solon diag</code> (or the icon's menu → Open a terminal, then the same command). It writes the zip and prints its path.",
         "Open a bug report on GitHub and drop the zip into the form, with what you did and what you expected.",
         "Mention your Windows version (<code>winver</code>), whether a VPN, another antivirus, Docker Desktop or WSL are present.",
       ],
@@ -207,7 +210,7 @@ const en = {
     },
     codes: {
       title: "Error codes",
-      lead: "Every error shown by Solon carries a stable code. Logs are in %ProgramData%\\Solon\\logs and can be copied from the error screen.",
+      lead: "Every error shown by Solon carries a stable code, printed by solon status and in the taskbar notification. Logs are in %ProgramData%\\Solon\\logs (solon logs).",
       cols: ["Code", "Cause", "What to do"],
       power: "Power loss or hard shutdown: at the next start Solon checks and repairs the data disk (<code>fsck</code>), then restarts the engine. Unsynced writes of the last two seconds may be lost, as on any Linux machine.",
       rows: [
@@ -234,14 +237,14 @@ const en = {
     kicker: "Privacy",
     title: "Solon collects nothing",
     lead: "No account, no telemetry, no analytics, no crash reporting. This page says exactly what leaves your PC, which is almost nothing, and where the rest is kept.",
-    updated: "Last updated 26 September 2026.",
+    updated: "Last updated 31 October 2026.",
     sections: [
       {
         title: "What Solon sends",
         body: [
           "The Solon background service makes no outgoing network request of any kind. Not one.",
-          "The desktop application makes exactly one, and only while you leave it enabled: it asks github.com whether a newer version of Solon has been published. That request carries no identifier, nothing about you and nothing about your machine — it is the same request your browser makes by opening the releases page. Turn it off in Settings → Updates and Solon stops asking.",
-          "If you press Install update, the application then downloads that release's installer from github.com and checks its SHA-256 against the checksums published beside it. Nothing is sent in the other direction.",
+          "The solon command makes exactly one, and only when you run it: solon update (or “Update Solon…” in the taskbar icon's menu) asks github.com for the latest published version. That request carries no identifier, nothing about you and nothing about your machine — it is the same request your browser makes by opening the releases page. Solon never checks on its own.",
+          "solon update then downloads that release's installer from github.com and checks its SHA-256 against the checksums published beside it. Nothing is sent in the other direction.",
         ],
       },
       {
@@ -255,7 +258,7 @@ const en = {
       {
         title: "The diagnostic export",
         body: [
-          "Settings → Diagnostic writes a zip file on your disk: logs, engine state, your settings, the system prerequisites and docker info. It is created only when you press the button, it is never sent anywhere automatically, and you decide whether to attach it to a bug report.",
+          "solon diag writes a zip file on your disk: logs, engine state, your settings, the system prerequisites and docker info. It is created only when you run the command, it is never sent anywhere automatically, and you decide whether to attach it to a bug report.",
         ],
       },
       {
@@ -267,21 +270,21 @@ const en = {
       {
         title: "No account, no third parties",
         body: [
-          "Solon has no sign-in, no licence server and no paid tier. No advertising identifier, no analytics library, no third-party service embedded in the application.",
+          "Solon has no sign-in, no licence server and no paid tier. No advertising identifier, no analytics library, no third-party service embedded in the service, the icon or the command.",
         ],
       },
     ],
     questions: "Questions about any of this? Open an issue and ask.",
   },
-  footer: { made: "Made in Luxembourg. No telemetry; the only outgoing request is an optional check for new versions, which you can turn off.", licence: "Apache 2.0", source: "Source code", issues: "Report a problem", security: "Security", privacy: "Privacy" },
+  footer: { made: "Made in Luxembourg. No telemetry; the only outgoing request is solon update, which you run yourself.", licence: "Apache 2.0", source: "Source code", issues: "Report a problem", security: "Security", privacy: "Privacy" },
 };
 
 const fr: typeof en = {
   nav: { features: "Fonctions", compare: "Comparatif", stacks: "Piles", releases: "Versions", help: "Aide", github: "GitHub", download: "Télécharger" },
   hero: {
     kicker: "Open source · Windows 10 et 11, toutes éditions · Apache 2.0",
-    title: "Docker sur Windows, sans Docker Desktop ni WSL.",
-    lead: "Solon est un gestionnaire de conteneurs autonome : un installateur, un moteur Docker complet dans une petite machine Linux que Solon crée et gère lui-même. Pas de licence, pas de télémétrie, pas de WSL.",
+    title: "Docker sur Windows, en silence.",
+    lead: "Solon est un moteur Docker autonome pour Windows : un installateur, le vrai docker et le vrai docker compose, pas de WSL, Windows Famille compris. Pas de fenêtre : une icône dans le coin de la barre des tâches, une commande solon à côté de docker, et solon why, qui dit en français courant pourquoi un appel a échoué. Depuis la 0.2.0 (31 octobre 2026).",
     download: "Télécharger pour Windows",
     winget: "winget bientôt",
     requirements: "Windows 11 ou 10 22H2, toutes éditions (Famille comprise), virtualisation matérielle activée. Vérifiez le SHA-256 publié avec chaque version.",
@@ -295,9 +298,9 @@ const fr: typeof en = {
   clips: {
     title: "En action",
     items: [
-      { title: "Une pile en un clic", body: "New stack… → n8n → Create and start. Vingt secondes plus tard, le navigateur s'ouvre sur https://n8n.n8n.solon.local avec un certificat reconnu. Aucun port à publier, rien à installer sur Windows." },
-      { title: "Voir dedans", body: "La fiche d'un conteneur : journaux, onglet Fichiers pour parcourir et échanger des fichiers avec Windows, et le shell de débogage avec ps, curl et compagnie, même dans les images sans shell." },
-      { title: "Activity", body: "CPU, mémoire et réseau par conteneur, survol pour les valeurs exactes, clic sur un nom pour l'isoler, fenêtres 1 min / 10 min / 1 h." },
+      { title: "docker compose up, et une adresse", body: "cd dans un projet, docker compose up -d. Le projet apparaît dans le menu de l'icône avec son adresse https://service.projet.solon.local, certificat reconnu compris. Aucun port à publier, rien à installer sur Windows. (Clip à enregistrer pour la 0.2.0 : il montre encore l'ancienne fenêtre.)" },
+      { title: "Pourquoi ça casse ?", body: "solon why lit la Radiographie et dit en français courant ce qui a échoué : qui a appelé qui, sur quel port, combien de fois, et quoi vérifier d'abord. (Clip à enregistrer pour la 0.2.0 : il montre encore l'ancienne fenêtre.)" },
+      { title: "L'icône", body: "Un clic : état du moteur, un sous-menu par projet avec Ouvrir, Démarrer, Redémarrer, Arrêter, un terminal avec solon et docker prêts, Mettre à jour Solon. (Clip à enregistrer pour la 0.2.0 : il montre encore l'ancienne fenêtre.)" },
     ],
   },
   features: {
@@ -306,10 +309,10 @@ const fr: typeof en = {
       { title: "Des adresses qui marchent toujours", body: "Chaque conteneur répond sur https://<nom>.solon.local, port publié ou non, avec un certificat reconnu par votre navigateur. Les services Compose ont <service>.<projet>.solon.local." },
       { title: "Dossiers Windows rapides", body: "Les dossiers montés dans les conteneurs passent par solonfs, le partage de fichiers de Solon : 3,6 à 94× plus rapide que le 9P utilisé par WSL2 et Docker Desktop, selon l'opération (docs/measurements.md)." },
       { title: "Réveil à la demande", body: "Un conteneur sans trafic pendant dix minutes est mis en pause ; la requête suivante le réveille en une fraction de seconde. Les bases qui ne parlent qu'en interne ne sont jamais touchées." },
-      { title: "Piles prêtes", body: "WordPress, Odoo 18, PostgreSQL, MariaDB, MongoDB, Redis, n8n, Nextcloud, Ghost, Gitea, Uptime Kuma, Jupyter Lab, Mailpit… et des kits de démarrage Django, Flask, FastAPI et Next.js qui génèrent un projet au premier lancement." },
-      { title: "Compose, en entier", body: "Ouvrez un dossier, Solon reconnaît la pile ou en propose une. Services, journaux mêlés, Up / Down / Rebuild, et le fichier Compose modifiable sur place avec Save and Up." },
-      { title: "Voir dedans", body: "Onglet Fichiers avec glisser-déposer, terminal, shell de débogage même dans les images sans shell, courbes CPU, mémoire et réseau par conteneur. VS Code Dev Containers fonctionne tel quel." },
-      { title: "Radiographie", body: "Qui appelle qui, en direct : une carte de vos services et un journal de chaque échange, appels refusés en rouge, HTTP complet pour ce qui entre par une adresse locale, des noms sur les hôtes extérieurs. Pause, pas à pas, relecture. Valeurs sensibles masquées avant d'être gardées ; tout reste sur votre PC." },
+      { title: "Le vrai docker, rien d'autre à apprendre", body: "Le CLI docker officiel et le plugin Compose, dans votre PATH, dirigés vers Solon. VS Code Dev Containers fonctionne tel quel. Solon ne double pas docker : il fait tourner le moteur et ajoute ce que docker ne sait pas faire." },
+      { title: "La commande solon", body: "solon status, start, stop, projects, domains, settings, backup et restore avec les volumes, clone pour un environnement par branche Git, scan pour retrouver les projets déjà sur ce PC, import depuis Docker Desktop, shell dans le moteur, update. Aucune demande d'administrateur, aucune requête sortante sans votre geste." },
+      { title: "Une icône, pas de fenêtre", body: "Dans le coin de la barre des tâches : état du moteur, un sous-menu par projet Compose (Ouvrir son adresse, Démarrer, Redémarrer, Arrêter), un terminal avec solon et docker prêts, des notifications Windows quand le moteur tombe ou qu'un projet repart. Rien à ouvrir." },
+      { title: "Radiographie : solon why", body: "Un journal de chaque échange dans vos projets : connexions avec leur issue, HTTP complet pour ce qui entre par une adresse locale, des noms sur les hôtes extérieurs. solon trace l'imprime ; solon why le lit et dit en français courant pourquoi un appel a échoué. Valeurs sensibles masquées avant d'être gardées ; tout reste sur votre PC." },
     ],
   },
   compare: {
@@ -342,19 +345,21 @@ const fr: typeof en = {
     },
     features: {
       title: "Fonctionnalités comparées",
-      lead: "Solon en 0.1.18 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.",
+      lead: "Solon en 0.2.0 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.",
       cols: ["", "Solon", "Docker Desktop", "Podman Desktop", "Rancher Desktop"],
       rows: [
         ["CLI docker et Compose officiels, sans alias", "oui", "oui", "partiel : socket compatible", "oui (moby)"],
         ["Fonctionne sans WSL 2", "oui", "partiel : ancien moteur Hyper-V", "non", "non"],
         ["Windows Famille", "oui", "oui", "oui", "oui"],
         ["https://service.projet.solon.local pour chaque conteneur, certificat reconnu", "oui", "non", "non", "non"],
-        ["Page Projets : adresse, environnement, ports vérifiés avant Up, journaux filtrés", "oui", "partiel : liste Compose", "partiel : liste Compose", "non"],
-        ["Un environnement par branche Git, volumes copiés", "oui", "non", "non", "non"],
-        ["Sauvegarde et restauration d'un projet, volumes compris", "oui", "partiel : extension", "non", "non"],
+        ["Interface graphique (fenêtre, écrans)", "non, par choix : icône de la barre des tâches et commande solon", "oui", "oui", "oui"],
+        ["Projets Compose avec leurs adresses, démarrés et arrêtés depuis l'icône", "oui", "partiel : liste Compose", "partiel : liste Compose", "non"],
+        ["Dit pourquoi un appel entre conteneurs a échoué, en français courant", "oui (solon why)", "non", "non", "non"],
+        ["Un environnement par branche Git, volumes copiés", "oui (solon clone)", "non", "non", "non"],
+        ["Sauvegarde et restauration d'un projet, volumes compris", "oui (solon backup / restore)", "partiel : extension", "non", "non"],
         ["Conteneurs inactifs en veille, réveil à la demande", "oui", "partiel : toute la machine (Resource Saver)", "non", "non"],
         ["Dossiers Windows partagés par solonfs, 3,6 à 94× plus rapide que 9P selon l'opération", "oui", "non : 9P", "non : 9P", "non : 9P"],
-        ["Recherche des projets Compose sur le disque", "oui", "non", "non", "non"],
+        ["Recherche des projets Compose sur le disque", "oui (solon scan)", "non", "non", "non"],
         ["VS Code Dev Containers", "oui, vérifié", "oui", "partiel : réglage du chemin", "oui"],
         ["Kubernetes intégré", "non", "oui", "partiel : extensions", "oui (K3s)"],
         ["Conteneurs Windows", "non", "oui", "non", "non"],
@@ -366,7 +371,7 @@ const fr: typeof en = {
   },
   stacks: {
     title: "Piles et kits de démarrage",
-    lead: "« New stack… » ouvre une galerie. On choisit, on désigne un dossier, on relit le compose.yaml généré, « Créer et démarrer ». Ouvrir un dossier sans fichier Compose fait regarder à Solon ce qu'il contient pour proposer un environnement.",
+    lead: "La galerie est partie avec la fenêtre en 0.2.0. Les fichiers Compose prêts restent dans le dossier examples/ du dépôt : copiez-en un dans un dossier, docker compose up -d, et le projet apparaît dans le menu de l'icône avec son adresse.",
     kits: "Kits de démarrage",
     kitsBody: "Le dossier du projet est monté dans le conteneur ; au premier Up, un petit script installe les dépendances, génère le squelette officiel si le dossier est vide, puis lance le serveur de développement avec rechargement à chaud. Rien à installer sur Windows.",
     apps: "Applications prêtes",
@@ -379,7 +384,8 @@ const fr: typeof en = {
       "Windows Famille fonctionne aussi : l'installateur active la Plateforme de machine virtuelle, qui suffit à Solon.",
       "Pas de Kubernetes, pas de machines Linux séparées, pas d'images ARM (x86-64 seulement).",
       "L'installateur n'est pas encore signé ; c'est la prochaine étape avant un lancement plus large.",
-      "Pas de mise à jour silencieuse : Solon signale qu'une nouvelle version existe (Réglages → Mises à jour, désactivable). Un clic télécharge l'installateur, vérifie son SHA-256 et laisse Windows vous demander l'autorisation avant d'installer.",
+      "Pas d'interface graphique depuis la 0.2.0 : ni fenêtre, ni courbes, ni carte. Un choix assumé ; la partie visuelle de la Radiographie reviendra sous la forme d'une extension VS Code.",
+      "Pas de mise à jour automatique, pas même de vérification : solon update --check demande à github.com la dernière version, solon update (ou « Mettre à jour Solon… » dans le menu de l'icône) télécharge l'installateur, vérifie son SHA-256 et laisse Windows vous demander l'autorisation avant d'installer.",
       "Testé sur la machine de développement et une machine vierge. Les retours d'autres configurations sont bienvenus.",
     ],
   },
@@ -402,21 +408,21 @@ const fr: typeof en = {
       },
       {
         title: "Le moteur ne démarre pas après l'installation",
-        symptom: "Solon affiche « Le moteur n'a pas démarré » avec un code comme WINDOWS_FEATURE_MISSING, HYPERVISOR_NOT_RUNNING ou VIRTUALIZATION_DISABLED_IN_FIRMWARE.",
+        symptom: "L'icône passe au rouge, une notification dit que le moteur n'a pas démarré, et solon status montre un code comme WINDOWS_FEATURE_MISSING, HYPERVISOR_NOT_RUNNING ou VIRTUALIZATION_DISABLED_IN_FIRMWARE.",
         steps: [
           "<b>Redémarrez d'abord.</b> L'installateur active Hyper-V et la Plateforme de machine virtuelle s'ils étaient éteints ; ils ne fonctionnent qu'après un redémarrage. La plupart des échecs du premier démarrage s'arrêtent là.",
           "Code <code>VIRTUALIZATION_DISABLED_IN_FIRMWARE</code> : activez la virtualisation matérielle dans le BIOS/UEFI (Intel VT-x, AMD-V ou SVM, en général sous Advanced, CPU ou Security), enregistrez, redémarrez.",
           "Windows Famille est pris en charge depuis 0.1.12 : l'installateur active la Plateforme de machine virtuelle et demande un redémarrage. Il faut Windows 10 22H2 ou 11, toutes éditions.",
           "Code <code>HYPERVISOR_NOT_RUNNING</code> : un vieux VirtualBox ou VMware, ou un réglage <code>bcdedit</code>, a éteint l'hyperviseur Windows. Retirez-les ou mettez-les à jour (VirtualBox ≥ 6.1, VMware ≥ 15.5), puis en PowerShell administrateur : <code>bcdedit /set hypervisorlaunchtype auto</code> et redémarrez.",
-          "Toujours bloqué : Réglages → Diagnostic → Exporter un diagnostic, et ouvrez un rapport avec le zip (voir plus bas).",
+          "Toujours bloqué : lancez <code>solon diag</code>, et ouvrez un rapport avec le zip (voir plus bas).",
         ],
         note: null,
       },
       {
         title: "Une pile refuse de démarrer : un port est déjà pris",
-        symptom: "Up échoue et la sortie dit « port is already allocated » ou « address already in use », ou Solon affiche « Le port 8080 est déjà utilisé sur ce PC ».",
+        symptom: "docker compose up échoue et la sortie dit « port is already allocated » ou « address already in use ».",
         steps: [
-          "Un autre programme (une autre pile, IIS, un serveur de développement, Docker Desktop) écoute déjà sur ce port. Solon nomme le port et propose le suivant libre : cliquez sur <b>Utiliser 8081 au lieu de 8080</b> dans la galerie, ou dans l'onglet <b>Compose</b> du projet changez le port hôte (le nombre de gauche dans <code>\"8080:80\"</code>) puis <b>Save and Up</b>.",
+          "Un autre programme (une autre pile, IIS, un serveur de développement, Docker Desktop) écoute déjà sur ce port. Changez le port hôte dans votre fichier Compose (le nombre de gauche dans <code>\"8080:80\"</code>) et relancez <code>docker compose up -d</code> ; <code>netstat -ano | findstr :8080</code> nomme le coupable.",
           "Vous n'avez peut-être pas besoin de publier un port : chaque conteneur répond sur <code>https://&lt;nom&gt;.solon.local</code>, port ou pas. Commentez les lignes <code>ports:</code> et utilisez cette adresse.",
           "Deux exemplaires de la même pile (deux WordPress, deux Odoo) se heurtent toujours sur le même port : donnez un autre port hôte au second, ou retirez les ports et utilisez les deux adresses solon.local.",
         ],
@@ -424,11 +430,11 @@ const fr: typeof en = {
       },
       {
         title: "Un conteneur « ne fait rien » ou s'arrête aussitôt",
-        symptom: "Vous cliquez sur Run ou Start, le conteneur apparaît une seconde puis passe en Exited ; hello-world est le cas classique.",
+        symptom: "Vous démarrez un conteneur, il apparaît une seconde dans docker ps puis passe en Exited ; hello-world est le cas classique.",
         steps: [
-          "C'est normal pour un programme qui fait son travail et se termine : hello-world affiche son message et sort en un dixième de seconde. Solon ouvre ses journaux et indique « terminé aussitôt avec le code 0 » ; le message est dans l'onglet Logs.",
-          "Un serveur qui sort avec un code non nul est un vrai échec : lisez les dernières lignes de ses journaux (onglet Logs, ou <code>docker logs &lt;nom&gt;</code>). Les causes habituelles : une variable d'environnement manquante, un chemin de volume faux, un port que le conteneur lui-même ne peut pas ouvrir.",
-          "Un conteneur que Solon a endormi (icône lune) n'est pas arrêté : la requête suivante le réveille. Utilisez <b>Keep awake</b> sur sa page s'il exécute des tâches planifiées.",
+          "C'est normal pour un programme qui fait son travail et se termine : hello-world affiche son message et sort en un dixième de seconde. <code>docker ps -a</code> montre « Exited (0) » et <code>docker logs</code> le message.",
+          "Un serveur qui sort avec un code non nul est un vrai échec : lisez les dernières lignes de ses journaux (<code>docker logs &lt;nom&gt;</code>). Les causes habituelles : une variable d'environnement manquante, un chemin de volume faux, un port que le conteneur lui-même ne peut pas ouvrir.",
+          "Un conteneur que Solon a endormi (« endormi » dans <code>solon status</code>) n'est pas arrêté : la requête suivante le réveille. <code>solon settings never=&lt;nom&gt;</code> l'exclut de la mise en veille s'il exécute des tâches planifiées.",
         ],
         note: null,
       },
@@ -437,7 +443,7 @@ const fr: typeof en = {
         symptom: "apt ou pip expirent dans un conteneur, ou le navigateur n'atteint pas https://nom.solon.local.",
         steps: [
           "<b>VPN d'entreprise.</b> Certains clients VPN (AnyConnect, GlobalProtect, Zscaler) bloquent le trafic des cartes virtuelles. Déconnectez le VPN et réessayez ; si ça marche, indiquez-le dans votre rapport pour qu'un contournement soit trouvé.",
-          "<b>L'adresse.</b> Un conteneur n'a une adresse que pendant qu'il tourne ; le nom est celui du conteneur (<code>web.solon.local</code>) ou <code>service.projet.solon.local</code> pour Compose. Ouvrez <code>http://nimportequoi.solon.local</code> : la page liste toutes les adresses disponibles.",
+          "<b>L'adresse.</b> Un conteneur n'a une adresse que pendant qu'il tourne ; le nom est celui du conteneur (<code>web.solon.local</code>) ou <code>service.projet.solon.local</code> pour Compose. <code>solon domains</code> liste toutes les adresses disponibles, et <code>http://nimportequoi.solon.local</code> aussi. <code>solon why</code> dit si l'appel a seulement atteint le conteneur.",
           "<b>Le certificat.</b> Les navigateurs et .NET reconnaissent les certificats locaux. <code>curl.exe</code> sur Windows a besoin de <code>--ssl-no-revoke</code>, comme avec mkcert.",
           "<b>Des liens en http://.</b> WordPress, Nextcloud et compagnie construisent leurs liens à partir de la requête : Solon transmet <code>X-Forwarded-Proto: https</code>, que les images officielles respectent. Pour un WordPress déjà installé en http, changez l'adresse du site dans Réglages → Général.",
           "<b>Le fichier hosts.</b> Solon écrit les noms dans <code>C:\\Windows\\System32\\drivers\\etc\\hosts</code> entre <code># solon-begin</code> et <code># solon-end</code>. Un produit de sécurité qui protège ce fichier bloque les adresses : autorisez Solon ou ajoutez les noms à la main.",
@@ -446,11 +452,11 @@ const fr: typeof en = {
       },
       {
         title: "Le disque se remplit",
-        symptom: "Windows prévient que le lecteur C: est presque plein, ou Solon affiche « Disque du moteur presque plein ».",
+        symptom: "Windows prévient que le lecteur C: est presque plein, ou Solon notifie « Disque du moteur presque plein ».",
         steps: [
           "Solon garde tout dans un seul fichier, <code>%ProgramData%\\Solon\\data.vhdx</code>, qui grossit avec les images, conteneurs et volumes et ne se réduit qu'après un nettoyage.",
-          "Réglages → <b>Disque</b> → <b>Récupérer l'espace</b> : supprime les images qu'aucun conteneur n'utilise et le cache de construction, puis rend l'espace libéré à Windows. Les conteneurs et les volumes ne sont jamais touchés.",
-          "Toujours gros ? Images → « Inutilisées seulement » montre ce qui reste ; Volumes → « Inutilisés seulement » montre les volumes qu'aucun conteneur ne référence (des données que vous voulez peut-être garder : vérifiez avant de supprimer).",
+          "<code>docker system prune</code> supprime les conteneurs arrêtés, les images qu'aucun conteneur n'utilise et le cache de construction ; Solon rend ensuite l'espace libéré à Windows. Les volumes ne sont jamais touchés sans <code>--volumes</code>.",
+          "Toujours gros ? <code>docker system df -v</code> montre ce qui reste ; <code>docker volume ls -f dangling=true</code> liste les volumes qu'aucun conteneur ne référence (des données que vous voulez peut-être garder : vérifiez avant de supprimer).",
         ],
         note: null,
       },
@@ -469,7 +475,7 @@ const fr: typeof en = {
       title: "Signaler un problème",
       lead: "Un fichier zip en dit plus qu'une capture d'écran. Cela prend dix secondes.",
       steps: [
-        "Dans Solon : <b>Réglages → Diagnostic → Exporter un diagnostic…</b>, enregistrez le zip.",
+        "Dans un terminal : <code>solon diag</code> (ou menu de l'icône → Ouvrir un terminal, puis la même commande). Il écrit le zip et affiche son chemin.",
         "Ouvrez un rapport de bug sur GitHub et déposez le zip dans le formulaire, avec ce que vous avez fait et ce que vous attendiez.",
         "Indiquez votre version de Windows (<code>winver</code>), et si un VPN, un autre antivirus, Docker Desktop ou WSL sont présents.",
       ],
@@ -478,7 +484,7 @@ const fr: typeof en = {
     },
     codes: {
       title: "Codes d'erreur",
-      lead: "Chaque erreur affichée par Solon porte un code stable. Les journaux sont dans %ProgramData%\\Solon\\logs et se copient depuis l'écran d'erreur.",
+      lead: "Chaque erreur affichée par Solon porte un code stable, imprimé par solon status et dans la notification de la barre des tâches. Les journaux sont dans %ProgramData%\\Solon\\logs (solon logs).",
       cols: ["Code", "Cause", "Que faire"],
       power: "Coupure de courant ou arrêt brutal : au démarrage suivant, Solon vérifie et répare le disque de données (<code>fsck</code>), puis redémarre le moteur. Les écritures non synchronisées des deux dernières secondes peuvent être perdues, comme sur toute machine Linux.",
       rows: [
@@ -505,14 +511,14 @@ const fr: typeof en = {
     kicker: "Confidentialité",
     title: "Solon ne collecte rien",
     lead: "Aucun compte, aucune télémétrie, aucune statistique d'usage, aucun rapport d'incident. Cette page dit exactement ce qui sort de votre PC, c'est-à-dire presque rien, et où le reste est conservé.",
-    updated: "Mise à jour le 26 septembre 2026.",
+    updated: "Mise à jour le 31 octobre 2026.",
     sections: [
       {
         title: "Ce que Solon envoie",
         body: [
           "Le service Solon en arrière-plan ne fait aucune requête réseau sortante. Aucune.",
-          "L'application de bureau en fait exactement une, et seulement tant que vous la laissez activée : elle demande à github.com si une version plus récente de Solon existe. Cette requête ne porte aucun identifiant, rien sur vous et rien sur votre machine — c'est la même que celle de votre navigateur ouvrant la page des versions. Décochez-la dans Réglages → Mises à jour et Solon ne demande plus rien.",
-          "Si vous cliquez sur « Installer la mise à jour », l'application télécharge alors l'installateur de cette version depuis github.com et vérifie son empreinte SHA-256 avec les empreintes publiées à côté. Rien ne part dans l'autre sens.",
+          "La commande solon en fait exactement une, et seulement quand vous la lancez : solon update (ou « Mettre à jour Solon… » dans le menu de l'icône) demande à github.com la dernière version publiée. Cette requête ne porte aucun identifiant, rien sur vous et rien sur votre machine — c'est la même que celle de votre navigateur ouvrant la page des versions. Solon ne vérifie jamais de lui-même.",
+          "solon update télécharge alors l'installateur de cette version depuis github.com et vérifie son empreinte SHA-256 avec les empreintes publiées à côté. Rien ne part dans l'autre sens.",
         ],
       },
       {
@@ -526,7 +532,7 @@ const fr: typeof en = {
       {
         title: "L'export de diagnostic",
         body: [
-          "Réglages → Diagnostic écrit un fichier zip sur votre disque : journaux, état du moteur, vos réglages, les prérequis système et docker info. Il n'est créé que si vous appuyez sur le bouton, n'est jamais envoyé automatiquement, et c'est vous qui décidez de le joindre ou non à un rapport de bogue.",
+          "solon diag écrit un fichier zip sur votre disque : journaux, état du moteur, vos réglages, les prérequis système et docker info. Il n'est créé que si vous lancez la commande, n'est jamais envoyé automatiquement, et c'est vous qui décidez de le joindre ou non à un rapport de bogue.",
         ],
       },
       {
@@ -538,13 +544,13 @@ const fr: typeof en = {
       {
         title: "Aucun compte, aucun tiers",
         body: [
-          "Solon n'a ni connexion, ni serveur de licences, ni offre payante. Aucun identifiant publicitaire, aucune bibliothèque de statistiques, aucun service tiers embarqué dans l'application.",
+          "Solon n'a ni connexion, ni serveur de licences, ni offre payante. Aucun identifiant publicitaire, aucune bibliothèque de statistiques, aucun service tiers embarqué dans le service, l'icône ou la commande.",
         ],
       },
     ],
     questions: "Une question là-dessus ? Ouvrez une issue et demandez.",
   },
-  footer: { made: "Fait au Luxembourg. Aucune télémétrie ; la seule requête sortante est une vérification facultative des nouvelles versions, désactivable.", licence: "Apache 2.0", source: "Code source", issues: "Signaler un problème", security: "Sécurité", privacy: "Confidentialité" },
+  footer: { made: "Fait au Luxembourg. Aucune télémétrie ; la seule requête sortante est solon update, que vous lancez vous-même.", licence: "Apache 2.0", source: "Code source", issues: "Signaler un problème", security: "Sécurité", privacy: "Confidentialité" },
 };
 
 export const dict: Record<Lang, typeof en> = { en, fr };

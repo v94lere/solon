@@ -1,6 +1,6 @@
 # Solon — Plan d'architecture
 
-> **Statut : documentation technique de référence. Dernière mise à jour : 31 octobre 2026 (version 0.1.18).**
+> **Statut : documentation technique de référence. Dernière mise à jour : 31 octobre 2026 (version 0.2.0).**
 > Le plan v0.1 a été validé le 2 septembre 2026 (six décisions de la section 0 acceptées) ; les sections « Résultats du bloc » et les paragraphes datés consignent ce qui a été construit depuis, sans réécrire le plan initial. Quand le plan et un paragraphe daté divergent, le paragraphe daté a raison.
 
 Solon est un gestionnaire de conteneurs autonome pour Windows, dans l'esprit d'OrbStack : une VM Linux minuscule, invisible, entièrement gérée par nous, avec des chemins de communication optimisés. Ce plan fixe les choix de virtualisation, de construction de l'image Linux, de communication hôte↔VM, de partage de fichiers, et le découpage du code. Il liste aussi, sans les cacher, les points pour lesquels il n'existe pas aujourd'hui de solution mature sur Windows.
@@ -363,7 +363,7 @@ solon/
 └── tests/                     tests d'intégration (gated `SOLON_IT=1`, Windows + Hyper-V)
 ```
 
-**Arborescence réelle (28 octobre 2026, 0.1.16, d'après le `Cargo.toml` racine ; `solon-client` et `solon-cli` ajoutés le 31 octobre 2026).** Les crates `solon-engine`, `solon-ipc` et `solon-bench` du plan n'ont pas vu le jour : l'accès à Docker passe par le mandataire HTTP de `solon-service` (`docker_proxy.rs`), le protocole app ↔ service dans `solon-core/src/ipc.rs`, et les bancs sont des scripts PowerShell dans `bench/`.
+**Arborescence réelle (31 octobre 2026, 0.2.0, d'après le `Cargo.toml` racine).** Les crates `solon-engine`, `solon-ipc` et `solon-bench` du plan n'ont pas vu le jour : l'accès à Docker passe par le mandataire HTTP de `solon-service` (`docker_proxy.rs`), le protocole app ↔ service dans `solon-core/src/ipc.rs`, et les bancs sont des scripts PowerShell dans `bench/`.
 
 ```
 solon/
@@ -382,13 +382,18 @@ solon/
 │   │                          client FUSE solonfs, lecture des sondes eBPF
 │   ├── solon-docker-shim/     [windows] `bin\docker.exe`, lanceur du CLI Docker officiel vers le moteur Solon
 │   ├── solon-client/          côté client du service, sans interface : canal de contrôle (`control.rs`),
-│   │                          détection Compose (`compose.rs`), sauvegarde et restauration (`backup.rs`),
-│   │                          export de diagnostic (`diag.rs`) ; partagé par l'application et le CLI
+│   │                          détection Compose (`compose.rs`), `docker ps` partagé (`containers.rs`),
+│   │                          sauvegarde et restauration (`backup.rs`), copie de volumes (`volumes.rs`),
+│   │                          import Docker Desktop (`import.rs`, bollard), mise à jour (`update.rs`, reqwest,
+│   │                          sha2), export de diagnostic (`diag.rs`) ; partagé par l'icône et le CLI
 │   ├── solon-cli/             [windows] la commande `solon` (`bin\solon.exe` installée ; `solon-cli.exe` dans
-│   │                          `target/`, l'application s'appelant déjà `solon.exe`)
+│   │                          `target/`, l'icône s'appelant déjà `solon.exe`) : `engine.rs`, `project.rs`,
+│   │                          `trace.rs`, `more.rs` (update, scan, shell, clone, import), `text.rs`
 │   └── solon-trace-ebpf/      [hors workspace] sondes eBPF (cible bpfel-unknown-none, nightly figée, compilées
 │                              dans un conteneur : voir son Dockerfile)
-├── apps/desktop/              Tauri v2 (src-tauri/ membre du workspace + src/ React)
+├── apps/desktop/              l'icône de la barre des tâches : Tauri v2 sans fenêtre (src-tauri/ membre du
+│                              workspace : `main.rs`, `lib.rs`, `service.rs`, `tray.rs`, `lang.rs`) ; `ui/` vide
+│                              exigé par l'empaqueteur ; `package.json` ne garde que `@tauri-apps/cli`
 ├── image/                     noyau, système racine Alpine, initrd, manifeste, scripts de construction
 ├── installer/                 hooks NSIS, `setup.ps1` (composants Windows, service, PATH), `sign.ps1`
 ├── packaging/                 msix/ (Microsoft Store) et winget/
@@ -408,6 +413,16 @@ solon/
 - Compilation : `cargo build --release -p solon-service -p solon-cli` **avant** `npm run tauri build`. Comme le service, le CLI est copié comme ressource (`tauri.conf.json` : `target/release/solon-cli.exe` → `bin/solon.exe`) et Tauri ne le reconstruit pas. Le binaire s'appelle `solon-cli.exe` dans `target/` parce que la crate de l'application s'appelle déjà `solon`.
 
 Vérifié le 31 octobre 2026 sur le PC de développement (Windows 11 Pro, service 0.1.16 en place) : toutes les commandes, la sauvegarde puis la restauration d'un projet réel, le redémarrage du moteur par `solon restart`.
+
+**31 octobre 2026 : plus de fenêtre (0.2.0).** Décision de Valère, prise le jour même : l'application de bureau est retirée. Solon, c'est désormais trois programmes : le service Windows (inchangé), la commande `solon` (étoffée : `update`, `scan`, `shell`, `clone`, `import`), et une icône dans le coin de la barre des tâches, programme Tauri sans fenêtre toujours nommé `Solon.exe`, avec un menu natif. Le paragraphe précédent disait que les écrans Docker « ne seraient plus développés » ; ils n'existent plus. Ce qui a changé dans le code :
+
+- `apps/desktop` n'a plus de frontend : plus de React, de Vite ni de TypeScript, `package.json` ne garde que `@tauri-apps/cli`, et un dossier `ui/` avec un `index.html` vide reste parce que l'empaqueteur exige un `frontendDist`. `src-tauri/src` tient en cinq fichiers : `main.rs`, `lib.rs` (un `Builder` sans fenêtre ; `RunEvent::ExitRequested` répond `prevent_exit` tant que « Quitter » n'a pas été choisi, sinon Tauri sortirait aussitôt faute de fenêtre), `service.rs` (canal de contrôle, abonnement aux événements), `tray.rs` (menu reconstruit entièrement à chaque changement d'état ou de liste de conteneurs, notifications, clé Run), `lang.rs`. Plugins Tauri restants : `opener`, `notification`, `single-instance` (un second `Solon.exe` ne fait que notifier « Solon tourne déjà »). Dépendances retirées de l'application : bollard, reqwest, sha2, zip, dialog, window-state, global-shortcut.
+- `crates/solon-client` reçoit ce que l'application faisait encore seule et que l'icône et le CLI partagent maintenant : `containers.rs` (le `docker ps` qui alimente le menu et `solon status`), `update.rs` (dernière version sur GitHub, téléchargement, SHA-256 contre `SHA256SUMS.txt`, lancement élevé de l'installateur ; détection du paquet Store), `volumes.rs` (copie des volumes d'un projet, base de `solon clone`), `import.rs` (volumes et images de Docker Desktop par son pipe, sans y toucher). bollard et reqwest vivent donc là, et nulle part ailleurs ; le service, lui, ne fait toujours aucune requête sortante.
+- Les fichiers de langue `apps/desktop/src/locales/*.json` et le test `locales.rs` qui vérifiait leur parité disparaissent. Tout texte visible est écrit dans les deux langues à l'endroit où il sert, par `tr(en, fr)` : `crates/solon-cli/src/text.rs` pour la commande, `apps/desktop/src-tauri/src/lang.rs` pour l'icône (même règle : `SOLON_LANG`, sinon la langue d'interface de Windows). La recherche des projets sur le PC (`solon scan`) est faite par le service, qui a les droits de lire la table des fichiers ; `solon shell` passe par `docker run -it` d'un conteneur busybox privilégié et `nsenter -t 1`, donc par le `docker` livré à côté.
+- CI : le job TypeScript est supprimé ; le job Rust vérifie l'icône comme les autres crates. Ordre de compilation inchangé : `cargo build --release -p solon-service -p solon-cli` puis `npm run tauri build`.
+- Ce que la fenêtre faisait et qui n'a pas d'équivalent : la carte de la Radiographie et sa barre de lecture (prévues dans une extension VS Code, étape suivante), les courbes de l'écran Activité, la galerie de piles, l'éditeur de Compose avec vérification des ports, la détection du changement de branche Git (remplacée par `solon clone`, manuel). Les données et les réglages ne bougent pas : installer la 0.2.0 par-dessus une 0.1.x conserve tout.
+
+Les sections 8.3 (commandes Tauri), 8.4 et 9 (frontend) ci-dessous décrivent l'application telle qu'elle a existé du 2 septembre au 31 octobre 2026 ; elles restent comme historique.
 
 ### 8.2 Traits pour la phase 2 (Linux natif)
 

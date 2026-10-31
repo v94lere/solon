@@ -10,6 +10,14 @@ Tout reste sur la machine. Rien n'est envoyé nulle part, rien n'est écrit en d
 
 Ce document suit les étapes. Une section par phase, écrite au moment où elle est livrée.
 
+**31 octobre 2026 (0.2.0) : l'écran disparaît.** L'application de bureau est retirée avec la 0.2.0 ; la
+Radiographie reste, côté service, et se lit par `solon trace` (le journal), `solon why` (ce qui ne va pas, en
+clair) et `solon clear` ; les corps s'activent par projet avec `solon settings bodies=…`. La carte de qui
+appelle qui et la barre de lecture (pause, pas à pas, relecture) n'ont pas d'équivalent en ligne de commande
+et reviendront dans une extension VS Code, l'étape suivante. Les sections ci-dessous qui parlent de l'écran
+(`RadiographyView.tsx`, « Capturer les corps », la chronologie) décrivent ce qui a existé jusqu'à la 0.1.18 ;
+elles restent telles quelles.
+
 ## En ligne de commande
 
 Livré le 31 octobre 2026 avec la commande `solon` (voir `ARCHITECTURE.md`, § 8.1). Trois commandes lisent
