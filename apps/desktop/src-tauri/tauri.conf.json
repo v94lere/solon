@@ -57,6 +57,7 @@
       "../../../installer/setup.ps1": "installer/setup.ps1",
         "../../../installer/setup-features.ps1": "installer/setup-features.ps1",
       "../../../target/release/docker.exe": "bin/docker.exe",
+      "../../../target/release/solon-cli.exe": "bin/solon.exe",
       "../../../installer/vendor/docker-cli.exe": "bin/docker-cli.exe",
       "../../../installer/vendor/cli-plugins/docker-compose.exe": "bin/cli-plugins/docker-compose.exe",
       "../../../installer/vendor/NOTICE-third-party.txt": "bin/NOTICE-third-party.txt",

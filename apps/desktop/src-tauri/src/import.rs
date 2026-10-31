@@ -25,7 +25,7 @@ use serde::Serialize;
 use tauri::ipc::Channel;
 use tokio::io::AsyncWriteExt;
 
-use crate::backup::{exec, shared_temp, shell_quote};
+use solon_client::control::{exec, shared_temp, shell_quote};
 
 /// Le pipe de Docker Desktop. Solon ne s'en sert qu'ici, et seulement en lecture.
 const DOCKER_DESKTOP_PIPE: &str = r"\\.\pipe\docker_engine";

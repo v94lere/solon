@@ -110,48 +110,12 @@ async fn open_exec_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeCl
     }
 }
 
-pub const COMPOSE_FILES: &[&str] = &[
-    "compose.yaml",
-    "compose.yml",
-    "docker-compose.yaml",
-    "docker-compose.yml",
-];
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ComposeProject {
-    pub dir: String,
-    pub file: String,
-    /// Nom de projet par défaut de Compose : nom du dossier en minuscules.
-    pub name: String,
-}
+pub use solon_client::compose::ComposeProject;
 
 /// Cherche un fichier Compose dans `dir`.
 #[tauri::command]
 pub fn compose_detect(dir: String) -> Result<Option<ComposeProject>, String> {
-    let path = Path::new(&dir);
-    if !path.is_dir() {
-        return Err(format!("dossier introuvable : {dir}"));
-    }
-    for f in COMPOSE_FILES {
-        if path.join(f).is_file() {
-            let name = path
-                .file_name()
-                .map(|n| {
-                    n.to_string_lossy()
-                        .to_lowercase()
-                        .chars()
-                        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
-                        .collect()
-                })
-                .unwrap_or_default();
-            return Ok(Some(ComposeProject {
-                dir: dir.clone(),
-                file: (*f).to_owned(),
-                name,
-            }));
-        }
-    }
-    Ok(None)
+    solon_client::compose::detect(&dir)
 }
 
 fn compose_file(dir: &str) -> Result<PathBuf, String> {

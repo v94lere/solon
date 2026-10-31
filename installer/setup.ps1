@@ -17,7 +17,7 @@ $svc = Join-Path $InstallDir "solon-service.exe"
 
 $binDir = Join-Path $InstallDir "bin"
 function Set-MachinePath($present) {
-    # Ajoute (ou retire) <install>in en tête du PATH machine : `docker` et `docker compose` de Solon.
+    # Ajoute (ou retire) <install>in en tête du PATH machine : `docker`, `docker compose` et `solon` de Solon.
     $key = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
     $current = (Get-ItemProperty -Path $key -Name Path).Path
     $parts = @($current -split ";" | Where-Object { $_ -and ($_.TrimEnd("\") -ne $binDir.TrimEnd("\")) })

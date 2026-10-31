@@ -4006,6 +4006,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "solon-client",
  "solon-core",
  "tauri",
  "tauri-build",
@@ -4019,7 +4020,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "windows 0.62.2",
- "zip",
 ]
 
 [[package]]
@@ -4033,6 +4033,30 @@ dependencies = [
  "serde_json",
  "solon-core",
  "solon-trace-common",
+]
+
+[[package]]
+name = "solon-cli"
+version = "0.1.17"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "solon-client",
+ "solon-core",
+ "tokio",
+ "windows 0.62.2",
+]
+
+[[package]]
+name = "solon-client"
+version = "0.1.17"
+dependencies = [
+ "serde",
+ "serde_json",
+ "solon-core",
+ "tokio",
+ "zip",
 ]
 
 [[package]]
