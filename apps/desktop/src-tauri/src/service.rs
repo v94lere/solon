@@ -17,12 +17,6 @@ pub async fn subscribe(channel: Channel<Value>) {
     stream(channel, ServiceCommand::Subscribe).await
 }
 
-/// Abonnement à la radiographie, sur sa propre connexion : le flux des faits observés est bien
-/// plus bavard que les événements du moteur, et la vue qui l'écoute s'ouvre et se ferme seule.
-pub async fn trace_subscribe(channel: Channel<Value>) {
-    stream(channel, ServiceCommand::TraceSubscribe).await
-}
-
 async fn stream(channel: Channel<Value>, command: ServiceCommand) {
     loop {
         let result = solon_client::control::stream(command.clone(), None, |value| {

@@ -63,7 +63,7 @@ pub async fn projects(args: &Args) {
             .unwrap_or_default();
         let mut addresses: Vec<String> = all
             .iter()
-            .filter(|c| c.state == "running" && c.project.as_deref() == Some(&name))
+            .filter(|c| c.running() && c.project.as_deref() == Some(&name))
             .map(|c| c.domains()[0].clone())
             .collect();
         addresses.sort();
@@ -82,7 +82,7 @@ pub async fn domains(args: &Args) {
         "http"
     };
     let mut rows: Vec<Vec<String>> = Vec::new();
-    for c in all.iter().filter(|c| c.state == "running") {
+    for c in all.iter().filter(|c| c.running()) {
         for d in c.domains() {
             rows.push(vec![format!("{scheme}://{d}"), c.name.clone()]);
         }

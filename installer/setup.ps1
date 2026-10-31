@@ -34,6 +34,14 @@ if ($Uninstall) {
     Log "uninstall: stopping and removing the service"
     & $svc uninstall 2>&1 | ForEach-Object { Log $_ }
     try { Set-MachinePath $false; Log "PATH: $binDir removed" } catch { Log "PATH: $($_.Exception.Message)" }
+    # L'icône s'inscrit au démarrage de session de l'utilisateur (HKCU\...\Run) : retirée pour chaque profil chargé.
+    try {
+        Get-ChildItem Registry::HKEY_USERS -ErrorAction SilentlyContinue | ForEach-Object {
+            $runKey = "Registry::$($_.Name)\Software\Microsoft\Windows\CurrentVersion\Run"
+            if (Test-Path $runKey) { Remove-ItemProperty -Path $runKey -Name Solon -ErrorAction SilentlyContinue }
+        }
+        Log "Run: autostart entries removed"
+    } catch { Log "Run: $($_.Exception.Message)" }
     # Nettoyage des enregistrements HvSocket créés par une ancienne version de ce script.
     $base = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Virtualization\GuestCommunicationServices"
     Get-ChildItem $base -ErrorAction SilentlyContinue | Where-Object { ($_ | Get-ItemProperty).ElementName -like "Solon vsock *" -or ($_ | Get-ItemProperty).ElementName -like "Monodon vsock *" } | Remove-Item -Force

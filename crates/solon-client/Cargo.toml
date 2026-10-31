@@ -13,3 +13,12 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 zip = { version = "2", default-features = false, features = ["deflate"] }
+# Mise à jour : téléchargement de l'installateur publié et SHA-256 (seule requête sortante de Solon).
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "stream", "json"] }
+sha2 = "0.10"
+futures-util = "0.3"
+# Import depuis Docker Desktop : son API sur `\\.\pipe\docker_engine`.
+bollard = "0.21"
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Storage_Packaging_Appx"] }

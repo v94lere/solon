@@ -7,11 +7,11 @@
 //! Comment : Docker Desktop expose son API sur `\\.\pipe\docker_engine` comme Solon sur
 //! `\\.\pipe\solon`. On lui fait écrire chaque volume dans une archive posée dans un dossier
 //! temporaire **Windows**, que Solon voit par son propre partage de fichiers ; Solon la déballe dans
-//! un volume neuf. Rien ne transite par l'application, et les deux moteurs peuvent tourner en même
-//! temps. Les images passent par `docker save` d'un côté et `docker load` de l'autre.
+//! un volume neuf. Rien ne transite par le programme appelant, et les deux moteurs peuvent tourner en
+//! même temps. Les images passent par `docker save` d'un côté et `docker load` de l'autre.
 //!
 //! Non importés, volontairement : les conteneurs, qui se recréent depuis le fichier Compose, et les
-//! projets eux-mêmes, que « Chercher les projets sur ce PC » retrouve déjà.
+//! projets eux-mêmes, que `solon scan` retrouve déjà.
 
 use std::path::Path;
 
@@ -22,15 +22,14 @@ use bollard::query_parameters::{
 use bollard::{API_DEFAULT_VERSION, Docker};
 use futures_util::StreamExt;
 use serde::Serialize;
-use tauri::ipc::Channel;
 use tokio::io::AsyncWriteExt;
 
-use solon_client::control::{exec, shared_temp, shell_quote};
+use crate::control::{exec, shared_temp, shell_quote};
 
 /// Le pipe de Docker Desktop. Solon ne s'en sert qu'ici, et seulement en lecture.
 const DOCKER_DESKTOP_PIPE: &str = r"\\.\pipe\docker_engine";
 /// Image minuscule utilisée côté Docker Desktop pour lire un volume (4 Mo).
-const HELPER_IMAGE: &str = "busybox:latest";
+const HELPER_IMAGE: &str = "public.ecr.aws/docker/library/busybox:1.37";
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ImportItem {
@@ -54,17 +53,7 @@ pub struct ImportSource {
     pub images: Vec<ImportItem>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum ImportProgress {
-    Step {
-        label: String,
-        done: usize,
-        total: usize,
-    },
-}
-
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ImportReport {
     pub volumes_imported: Vec<String>,
     pub images_imported: Vec<String>,
@@ -94,8 +83,7 @@ async fn existing_here() -> (Vec<String>, Vec<String>) {
 }
 
 /// Docker Desktop est-il là, et que contient-il ? Ne modifie rien.
-#[tauri::command]
-pub async fn import_probe() -> ImportSource {
+pub async fn probe() -> ImportSource {
     let none = |reason: String| ImportSource {
         available: false,
         version: None,
@@ -179,12 +167,12 @@ async fn ensure_helper(docker: &Docker) -> Result<(), String> {
         return Ok(());
     }
     let options = CreateImageOptionsBuilder::default()
-        .from_image("busybox")
-        .tag("latest")
+        .from_image("public.ecr.aws/docker/library/busybox")
+        .tag("1.37")
         .build();
     let mut stream = docker.create_image(Some(options), None, None);
     while let Some(item) = stream.next().await {
-        item.map_err(|e| format!("téléchargement de {HELPER_IMAGE} : {e}"))?;
+        item.map_err(|e| format!("pulling {HELPER_IMAGE}: {e}"))?;
     }
     Ok(())
 }
@@ -213,11 +201,9 @@ async fn export_volume(
         }),
         ..Default::default()
     };
-    let options = CreateContainerOptionsBuilder::default()
-        .name(&format!("solon-import-{}", std::process::id()))
-        .build();
-    // Un reste d'un essai précédent empêcherait la création : on nettoie d'abord.
     let name = format!("solon-import-{}", std::process::id());
+    let options = CreateContainerOptionsBuilder::default().name(&name).build();
+    // Un reste d'un essai précédent empêcherait la création : on nettoie d'abord.
     let _ = docker
         .remove_container(
             &name,
@@ -228,7 +214,7 @@ async fn export_volume(
     let created = docker
         .create_container(Some(options), body)
         .await
-        .map_err(|e| format!("création du conteneur d'export : {e}"))?;
+        .map_err(|e| format!("creating the export container: {e}"))?;
     let id = created.id;
     let result = async {
         docker
@@ -237,7 +223,7 @@ async fn export_volume(
                 None::<bollard::query_parameters::StartContainerOptions>,
             )
             .await
-            .map_err(|e| format!("démarrage : {e}"))?;
+            .map_err(|e| format!("start: {e}"))?;
         let mut waits =
             docker.wait_container(&id, None::<bollard::query_parameters::WaitContainerOptions>);
         let mut code = 0i64;
@@ -249,7 +235,7 @@ async fn export_volume(
             }
         }
         if code != 0 {
-            return Err(format!("l'archive de {volume} a échoué (code {code})"));
+            return Err(format!("archiving {volume} failed (code {code})"));
         }
         Ok(())
     }
@@ -264,43 +250,31 @@ async fn export_volume(
 }
 
 /// Copie les volumes et images choisis de Docker Desktop vers Solon. Ne modifie rien chez la source.
-#[tauri::command]
-pub async fn import_run(
-    volumes: Vec<String>,
-    images: Vec<String>,
-    progress: Channel<ImportProgress>,
+/// `progress(label, done, total)` est appelé avant chaque élément.
+pub async fn run<F: FnMut(&str, usize, usize)>(
+    volumes: &[String],
+    images: &[String],
+    mut progress: F,
 ) -> Result<ImportReport, String> {
     let docker = connect()?;
     docker
         .version()
         .await
-        .map_err(|e| format!("Docker Desktop ne répond pas : {e}"))?;
+        .map_err(|e| format!("Docker Desktop does not answer: {e}"))?;
 
     let (host_dir, guest_dir) = shared_temp("solon-import").await?;
     let total = volumes.len() + images.len();
     let mut done = 0usize;
-    let mut report = ImportReport {
-        volumes_imported: Vec::new(),
-        images_imported: Vec::new(),
-        skipped: Vec::new(),
-    };
+    let mut report = ImportReport::default();
     let (here_volumes, here_images) = existing_here().await;
 
     if !volumes.is_empty() {
-        let _ = progress.send(ImportProgress::Step {
-            label: HELPER_IMAGE.to_owned(),
-            done,
-            total,
-        });
+        progress(HELPER_IMAGE, done, total);
         ensure_helper(&docker).await?;
     }
 
-    for name in &volumes {
-        let _ = progress.send(ImportProgress::Step {
-            label: name.clone(),
-            done,
-            total,
-        });
+    for name in volumes {
+        progress(name, done, total);
         done += 1;
         if here_volumes.iter().any(|h| h == name) {
             report
@@ -317,7 +291,7 @@ pub async fn import_run(
             "docker volume create {n} >/dev/null && tar xzf {t}/{f} -C /var/lib/docker/volumes/{n}/_data",
             n = shell_quote(name),
             t = shell_quote(&guest_dir),
-            f = file
+            f = shell_quote(&file)
         );
         match exec(command, 1800).await {
             Ok((0, _, _)) => report.volumes_imported.push(name.clone()),
@@ -329,12 +303,8 @@ pub async fn import_run(
         let _ = std::fs::remove_file(host_dir.join(&file));
     }
 
-    for name in &images {
-        let _ = progress.send(ImportProgress::Step {
-            label: name.clone(),
-            done,
-            total,
-        });
+    for name in images {
+        progress(name, done, total);
         done += 1;
         if here_images.iter().any(|h| h == name) {
             report
@@ -347,10 +317,10 @@ pub async fn import_run(
         let written = async {
             let mut out = tokio::fs::File::create(&path)
                 .await
-                .map_err(|e| format!("{} : {e}", path.display()))?;
+                .map_err(|e| format!("{}: {e}", path.display()))?;
             let mut stream = docker.export_image(name);
             while let Some(chunk) = stream.next().await {
-                let chunk = chunk.map_err(|e| format!("docker save : {e}"))?;
+                let chunk = chunk.map_err(|e| format!("docker save: {e}"))?;
                 out.write_all(&chunk).await.map_err(|e| e.to_string())?;
             }
             out.flush().await.map_err(|e| e.to_string())
@@ -376,11 +346,7 @@ pub async fn import_run(
         let _ = std::fs::remove_file(&path);
     }
 
-    let _ = progress.send(ImportProgress::Step {
-        label: String::new(),
-        done: total,
-        total,
-    });
+    progress("", total, total);
     let _ = std::fs::remove_dir_all(&host_dir);
     Ok(report)
 }

@@ -1,14 +1,20 @@
 //! Côté client du service Solon, sans interface : ce que l'application de bureau et le CLI `solon`
 //! font pareil. Parler au canal de contrôle ([`control`]), reconnaître un projet Compose
-//! ([`compose`]), sauvegarder et restaurer un projet ([`backup`]), exporter un diagnostic ([`diag`]).
+//! ([`compose`]), lister les conteneurs ([`containers`]), sauvegarder et restaurer un projet
+//! ([`backup`]), exporter un diagnostic ([`diag`]), mettre à jour ([`update`]), copier les volumes
+//! d'un projet ([`volumes`]), importer depuis Docker Desktop ([`import`]).
 //!
 //! Aucune dépendance à Tauri ici : l'application enveloppe ces fonctions dans ses commandes, le
 //! CLI les appelle directement.
 
 pub mod backup;
 pub mod compose;
+pub mod containers;
 pub mod control;
 pub mod diag;
+pub mod import;
+pub mod update;
+pub mod volumes;
 
 use std::process::Command;
 

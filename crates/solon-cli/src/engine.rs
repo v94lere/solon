@@ -17,64 +17,7 @@ pub async fn snapshot() -> Result<EngineSnapshot, String> {
     from_value(call(ServiceCommand::Status).await?)
 }
 
-/// Un conteneur tel que `docker ps` le décrit, avec ses étiquettes Compose.
-#[derive(Debug, Clone)]
-pub struct Container {
-    pub id: String,
-    pub name: String,
-    pub project: Option<String>,
-    pub service: Option<String>,
-    pub state: String,
-    pub status: String,
-    pub ports: String,
-}
-
-impl Container {
-    /// Les domaines locaux du conteneur : `service.projet.solon.local` pour un service Compose,
-    /// `nom.solon.local` toujours.
-    pub fn domains(&self) -> Vec<String> {
-        let mut d = Vec::new();
-        if let (Some(p), Some(s)) = (&self.project, &self.service) {
-            d.push(format!("{s}.{p}.solon.local"));
-        }
-        d.push(format!("{}.solon.local", self.name));
-        d
-    }
-}
-
-/// Tous les conteneurs (`docker ps -a`), lus dans la machine.
-pub async fn containers() -> Result<Vec<Container>, String> {
-    let (code, out, err) = exec(
-        "docker ps -a --no-trunc --format '{{.ID}}|{{.Names}}|{{.Label \"com.docker.compose.project\"}}|{{.Label \"com.docker.compose.service\"}}|{{.State}}|{{.Status}}|{{.Ports}}'".into(),
-        30,
-    )
-    .await?;
-    if code != 0 {
-        return Err(format!("docker ps : {}", err.trim()));
-    }
-    let opt = |s: &str| {
-        if s.is_empty() {
-            None
-        } else {
-            Some(s.to_owned())
-        }
-    };
-    Ok(out
-        .lines()
-        .filter_map(|l| {
-            let f: Vec<&str> = l.splitn(7, '|').collect();
-            (f.len() == 7).then(|| Container {
-                id: f[0].to_owned(),
-                name: f[1].to_owned(),
-                project: opt(f[2]),
-                service: opt(f[3]),
-                state: f[4].to_owned(),
-                status: f[5].to_owned(),
-                ports: f[6].to_owned(),
-            })
-        })
-        .collect())
-}
+pub use solon_client::containers::{Container, list as containers};
 
 fn state_word(s: Option<EngineState>) -> &'static str {
     match s {
@@ -185,7 +128,7 @@ pub async fn status(args: &Args) {
             return;
         }
     };
-    let running: Vec<&Container> = list.iter().filter(|c| c.state == "running").collect();
+    let running: Vec<&Container> = list.iter().filter(|c| c.running()).collect();
     let sleeping = snap.sleeping.len();
     out!();
     if running.is_empty() {

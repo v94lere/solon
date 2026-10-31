@@ -1,6 +1,6 @@
 # Intégration continue : compilation et tests sur Windows à chaque contribution.
 # Ne construit pas l'installeur (image du moteur non disponible sur les agents GitHub) ;
-# vérifie le service, les crates partagées, l'agent (cible musl) et l'application.
+# vérifie le service, les crates partagées, l'agent (cible musl), le CLI et l'icône de la barre des tâches.
 name: CI
 
 on:
@@ -46,23 +46,6 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Tests
         run: cargo test --workspace
-
-  desktop:
-    name: Desktop app (TypeScript)
-    runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: apps/desktop
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: apps/desktop/package-lock.json
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run build
 
   installer-scripts:
     name: Installer scripts

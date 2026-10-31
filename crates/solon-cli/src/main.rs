@@ -28,6 +28,7 @@ macro_rules! outp {
 }
 
 mod engine;
+mod more;
 mod project;
 mod text;
 mod trace;
@@ -115,6 +116,31 @@ fn help() {
             "Les événements du moteur au fil de l'eau",
         ),
         (
+            "update [--check]",
+            "Install the latest published version (asks Windows for permission)",
+            "Installer la dernière version publiée (Windows demande l'autorisation)",
+        ),
+        (
+            "scan",
+            "Find the Docker projects on this PC",
+            "Trouver les projets Docker de ce PC",
+        ),
+        (
+            "shell",
+            "A root shell inside the engine",
+            "Un shell root dans le moteur",
+        ),
+        (
+            "clone <from> <to>",
+            "Copy the volumes of a project to another name (one environment per branch)",
+            "Copier les volumes d'un projet sous un autre nom (un environnement par branche)",
+        ),
+        (
+            "import [--all | --volumes a,b --images x]",
+            "Copy volumes and images from Docker Desktop, without touching it",
+            "Copier volumes et images depuis Docker Desktop, sans y toucher",
+        ),
+        (
             "version",
             "Versions of the CLI, the service and the image",
             "Versions du CLI, du service et de l'image",
@@ -175,6 +201,11 @@ fn main() {
             "trace" => trace::trace(&args).await,
             "why" => trace::why(&args).await,
             "clear" => trace::clear(&args).await,
+            "update" => more::update(&args).await,
+            "scan" => more::scan(&args).await,
+            "shell" => more::shell(&args),
+            "clone" => more::clone(&args).await,
+            "import" => more::import(&args).await,
             other => {
                 eprintln!(
                     "{} {other}. {}",
