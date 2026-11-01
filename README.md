@@ -16,12 +16,16 @@ tiny, invisible Linux machine managed entirely by Solon.
 Solon **is not** a front-end for an existing Docker Desktop. It replaces it: Docker engine, Compose, images,
 volumes, networks, terminal, logs, a system-tray icon, and a few things nothing else does on Windows.
 
-> Project status (31 October 2026): **0.1.18**, eighteen releases in two months, written by one person.
+> Project status (1 November 2026): **0.2.1**, twenty releases in two months, written by one person.
 > It runs my own projects every day, and it has been tested on exactly two machines: a Windows 11 Pro PC and a
 > fresh Windows 11 Home VM. The installer is **not code-signed yet** (SmartScreen warning; SHA-256 published
 > with every release). Expect rough edges on hardware I do not have — and please
 > [tell me where it breaks](https://github.com/v94lere/solon/issues/1). That issue is the most useful place to
 > start; ideas and pull requests are just as welcome.
+>
+> 0.2.0 (31 October 2026) had removed the window and kept only the tray icon and the `solon` command; 0.2.1
+> (1 November 2026) brings the window and every screen back as they were in 0.1.18. What 0.2.0 added stays,
+> see the [release notes](https://github.com/v94lere/solon/releases/tag/v0.2.1).
 
 ![Containers list](docs/screenshots/containers.png)
 
@@ -56,7 +60,7 @@ volumes, networks, terminal, logs, a system-tray icon, and a few things nothing 
 - **A `solon` command** next to `docker`: engine state and addresses, start and stop with the steps shown,
   settings, project backup and restore, and `solon why`, which reads the Radiography and says in plain words
   why a call failed. It talks to the service through its local pipe: no administrator prompt, no outgoing
-  request.
+  request (except `solon update`, on demand).
 - Compose projects: services, merged logs, Up / Down / Rebuild with live output, open in Explorer or VS Code.
 - Idle memory (engine + service): **430 to 520 MB** measured for 2 GB allocated; unused memory is returned
   to Windows automatically.
@@ -108,7 +112,7 @@ on 3 September; the other two from their documentation (marked *published*).
 
 ### Features compared
 
-Solon as of 0.1.18; the others as documented in September 2026. "Partial" means it exists with a caveat.
+Solon as of 0.2.1; the others as documented in September 2026. "Partial" means it exists with a caveat.
 
 | | Solon | Docker Desktop | Podman Desktop | Rancher Desktop |
 |---|---|---|---|---|
@@ -253,6 +257,10 @@ dot depending on the engine state.
   `docker info` to attach to a bug report. No credentials are included.
 - **Tray**: one click opens the menu: engine state, **each project with Start / Restart / Stop**, then the
   loose containers, open Solon, start or stop the engine, quit. Closing the window keeps Solon in the tray.
+- **The icon starts with Windows** (since 0.2.0): on first launch, Solon registers itself in your user's startup
+  entries (`Solon.exe --tray`: minimized to the tray, no window opened) and says so in a notification. Untick
+  "Start with Windows" in the icon's menu to say no; that no is remembered (`%LOCALAPPDATA%\Solon\no-autostart`).
+  Uninstalling removes the entry for every profile.
 
 ### Bundled `docker` and `docker compose`
 
@@ -281,9 +289,10 @@ docker context use solon
 
 The same folder holds `solon`, Solon's own command. `docker` talks to the containers; `solon` talks to the
 engine around them: its state, its addresses, its settings, the Radiography, backups. It goes through the
-service's local pipe, like the application: no administrator prompt, no outgoing request. Messages are in
-English, or in French when Windows is (`SOLON_LANG=fr` forces it). `solon help` lists every command; `--json`
-on `status`, `projects`, `domains`, `trace`, `settings`, `prereq` and `watch` prints machine-readable output.
+service's local pipe, like the application: no administrator prompt, no outgoing request (except `solon update`,
+below). Messages are in English, or in French when Windows is (`SOLON_LANG=fr` forces it). `solon help` lists
+every command; `--json` on `status`, `projects`, `domains`, `trace`, `settings`, `prereq`, `watch`, `scan`,
+`import` and `update` prints machine-readable output.
 Exit codes: 0, 1 error, 2 usage, 3 service unreachable.
 
 `solon` alone is `solon status`. Outputs below are shortened:
@@ -352,6 +361,16 @@ file, the `.env` and the volumes, restored into the folder of your choice. `solo
 `solon logs` and `solon diag` give the service log and the zip to attach to a bug report; `solon watch`
 prints engine events as they happen; `solon prereq` checks the Windows prerequisites; `solon settings`
 alone shows every setting with its meaning.
+
+Five commands added in 0.2.0 and kept in 0.2.1. `solon update` reads the latest version published on GitHub,
+downloads its installer, checks the SHA-256 against the `SHA256SUMS.txt` of that release and runs it with
+elevation (`--check` only tells whether there is one). Together with the application's own update check, it
+is the only outgoing request Solon makes, and always on demand; from the Store it answers that updates come
+from the Store. `solon scan` lists the Docker projects on your internal disks (the service does the search).
+`solon shell` opens a root shell inside the engine (`docker run -it --privileged --pid=host busybox nsenter`).
+`solon clone <from> <to>` copies the volumes of a project under another name: one environment per Git branch.
+`solon import` lists what Docker Desktop holds and, with `--all` or `--volumes a,b --images x:tag`, copies it
+without touching Docker Desktop.
 
 ### VS Code Dev Containers
 

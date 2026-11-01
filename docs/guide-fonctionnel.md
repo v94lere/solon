@@ -1,6 +1,6 @@
 # Solon — guide fonctionnel
 
-*Version 0.1.18, 31 octobre 2026. Ce guide décrit ce que fait
+*Version 0.2.1, 1er novembre 2026. Ce guide décrit ce que fait
 l'application, écran par écran, du point de vue de la personne qui l'utilise. Les choix techniques sont dans `ARCHITECTURE.md`, les mesures dans
 `docs/measurements.md`.*
 
@@ -269,6 +269,11 @@ l'ouvre et le referme depuis n'importe quelle vue ; la session reste vivante en 
   terminée.
 - **Barre des tâches** : état du moteur, un sous-menu par projet avec Démarrer / Redémarrer / Arrêter, les
   conteneurs isolés, démarrer ou arrêter le moteur. Fermer la fenêtre garde Solon dans la barre.
+- **L'icône démarre avec Windows** : au premier lancement, Solon s'inscrit au démarrage de votre session
+  (`Solon.exe --tray` : réduit dans la barre des tâches, sans ouvrir la fenêtre) et le dit par une
+  notification. La case « Démarrer avec Windows » du menu de l'icône permet de dire non ; ce non est retenu
+  (fichier `%LOCALAPPDATA%\Solon\no-autostart`), Solon ne se réinscrit pas au lancement suivant. La
+  désinstallation retire l'entrée pour chaque profil.
 
 ## 13. Raccourcis
 
@@ -307,9 +312,9 @@ Open the Solon app to start it. »
 
 À côté de `docker`, l'installateur place `solon` : `docker` parle aux conteneurs, `solon` parle au moteur qui
 les entoure. Elle passe par le même canal que l'application, sans demande d'administrateur et sans requête
-sortante. Les messages sont en anglais, ou en français quand Windows l'est (`SOLON_LANG=fr` force). `solon help`
-résume tout ; `--json` sur `status`, `projects`, `domains`, `trace`, `settings`, `prereq` et `watch` donne une
-sortie lisible par un programme. Codes de sortie : 0, 1 erreur, 2 usage, 3 service injoignable.
+sortante (sauf `solon update`). Les messages sont en anglais, ou en français quand Windows l'est
+(`SOLON_LANG=fr` force). `solon help` résume tout ; `--json` sur `status`, `projects`, `domains`, `trace`,
+`settings`, `prereq`, `watch`, `scan`, `import` et `update` donne une sortie lisible par un programme. Codes de sortie : 0, 1 erreur, 2 usage, 3 service injoignable.
 
 | Commande | Ce qu'elle fait |
 |---|---|
@@ -329,6 +334,16 @@ sortie lisible par un programme. Codes de sortie : 0, 1 erreur, 2 usage, 3 servi
 | `solon exec <commande…>` | Une commande en root dans le moteur, comme le Terminal du § 10. |
 | `solon watch [--json]` | Les événements du moteur au fil de l'eau. |
 | `solon version` | Les versions de la commande, du service et de l'image. |
+
+Cinq commandes de plus depuis la 0.2.0, conservées en 0.2.1 :
+
+| Commande | Ce qu'elle fait |
+|---|---|
+| `solon update [--check]` | La dernière version publiée sur GitHub : `--check` dit seulement s'il y en a une ; sans option, la télécharge, vérifie son SHA-256 contre le `SHA256SUMS.txt` de la même version et lance l'installateur (Windows demande l'autorisation). Avec la vérification de mise à jour de l'application (§ 11), c'est la seule requête sortante de Solon, toujours à la demande. Depuis le Store, répond que les mises à jour viennent du Store. |
+| `solon scan` | Les projets Docker des disques internes, comme « retrouver les projets déjà présents sur le PC » de l'accueil (§ 4) ; la recherche est faite par le service. |
+| `solon shell` | Un shell root dans le moteur (`docker run -it --privileged --pid=host busybox nsenter`). |
+| `solon clone <projet-source> <projet-cible>` | Copier les volumes d'un projet sous un autre nom : un environnement par branche Git (§ 5.5). Les volumes déjà présents à l'arrivée ne sont jamais écrasés. |
+| `solon import [--all \| --volumes a,b --images x:tag]` | Copier volumes et images depuis Docker Desktop, sans y toucher ; sans option, liste ce qu'il contient. Les conteneurs ne sont pas copiés : `docker compose up` les recrée. |
 
 ## 15. Limites connues
 

@@ -1,6 +1,6 @@
 # Solon — Plan d'architecture
 
-> **Statut : documentation technique de référence. Dernière mise à jour : 31 octobre 2026 (version 0.1.18).**
+> **Statut : documentation technique de référence. Dernière mise à jour : 1er novembre 2026 (version 0.2.1).**
 > Le plan v0.1 a été validé le 2 septembre 2026 (six décisions de la section 0 acceptées) ; les sections « Résultats du bloc » et les paragraphes datés consignent ce qui a été construit depuis, sans réécrire le plan initial. Quand le plan et un paragraphe daté divergent, le paragraphe daté a raison.
 
 Solon est un gestionnaire de conteneurs autonome pour Windows, dans l'esprit d'OrbStack : une VM Linux minuscule, invisible, entièrement gérée par nous, avec des chemins de communication optimisés. Ce plan fixe les choix de virtualisation, de construction de l'image Linux, de communication hôte↔VM, de partage de fichiers, et le découpage du code. Il liste aussi, sans les cacher, les points pour lesquels il n'existe pas aujourd'hui de solution mature sur Windows.
@@ -363,7 +363,7 @@ solon/
 └── tests/                     tests d'intégration (gated `SOLON_IT=1`, Windows + Hyper-V)
 ```
 
-**Arborescence réelle (28 octobre 2026, 0.1.16, d'après le `Cargo.toml` racine ; `solon-client` et `solon-cli` ajoutés le 31 octobre 2026).** Les crates `solon-engine`, `solon-ipc` et `solon-bench` du plan n'ont pas vu le jour : l'accès à Docker passe par le mandataire HTTP de `solon-service` (`docker_proxy.rs`), le protocole app ↔ service dans `solon-core/src/ipc.rs`, et les bancs sont des scripts PowerShell dans `bench/`.
+**Arborescence réelle (28 octobre 2026, 0.1.16, d'après le `Cargo.toml` racine ; `solon-client` et `solon-cli` ajoutés le 31 octobre 2026 ; modules de la 0.2.0 ajoutés le 1er novembre 2026).** Les crates `solon-engine`, `solon-ipc` et `solon-bench` du plan n'ont pas vu le jour : l'accès à Docker passe par le mandataire HTTP de `solon-service` (`docker_proxy.rs`), le protocole app ↔ service dans `solon-core/src/ipc.rs`, et les bancs sont des scripts PowerShell dans `bench/`.
 
 ```
 solon/
@@ -383,9 +383,12 @@ solon/
 │   ├── solon-docker-shim/     [windows] `bin\docker.exe`, lanceur du CLI Docker officiel vers le moteur Solon
 │   ├── solon-client/          côté client du service, sans interface : canal de contrôle (`control.rs`),
 │   │                          détection Compose (`compose.rs`), sauvegarde et restauration (`backup.rs`),
-│   │                          export de diagnostic (`diag.rs`) ; partagé par l'application et le CLI
+│   │                          export de diagnostic (`diag.rs`), `docker ps` partagé (`containers.rs`),
+│   │                          mise à jour (`update.rs`), copie des volumes d'un projet (`volumes.rs`),
+│   │                          import depuis Docker Desktop (`import.rs`) ; partagé par l'application et le CLI
 │   ├── solon-cli/             [windows] la commande `solon` (`bin\solon.exe` installée ; `solon-cli.exe` dans
-│   │                          `target/`, l'application s'appelant déjà `solon.exe`)
+│   │                          `target/`, l'application s'appelant déjà `solon.exe`) ; `more.rs` : update,
+│   │                          scan, shell, clone, import
 │   └── solon-trace-ebpf/      [hors workspace] sondes eBPF (cible bpfel-unknown-none, nightly figée, compilées
 │                              dans un conteneur : voir son Dockerfile)
 ├── apps/desktop/              Tauri v2 (src-tauri/ membre du workspace + src/ React)
@@ -408,6 +411,12 @@ solon/
 - Compilation : `cargo build --release -p solon-service -p solon-cli` **avant** `npm run tauri build`. Comme le service, le CLI est copié comme ressource (`tauri.conf.json` : `target/release/solon-cli.exe` → `bin/solon.exe`) et Tauri ne le reconstruit pas. Le binaire s'appelle `solon-cli.exe` dans `target/` parce que la crate de l'application s'appelle déjà `solon`.
 
 Vérifié le 31 octobre 2026 sur le PC de développement (Windows 11 Pro, service 0.1.16 en place) : toutes les commandes, la sauvegarde puis la restauration d'un projet réel, le redémarrage du moteur par `solon restart`.
+
+**1er novembre 2026 : 0.2.0 et 0.2.1.** La 0.2.0 (31 octobre 2026) avait retiré le frontend et réduit `apps/desktop` à une icône dans la barre des tâches : plus de fenêtre, tout passait par l'icône et la commande `solon`. La 0.2.1 (1er novembre 2026) restaure l'application de la 0.1.18, fenêtre et écrans compris ; les sections 8.3 et 9 décrivent de nouveau ce qui est livré. Ce qui reste de la 0.2.0 :
+
+- `solon-client` étendu de quatre modules : `containers.rs` (le `docker ps` lu dans la machine par `Exec`, partagé par l'icône et le CLI), `update.rs` (dernière version publiée sur GitHub, téléchargement sous `github.com/v94lere/solon/releases/download/` seulement, SHA-256 vérifié contre le `SHA256SUMS.txt` de la même version, installateur lancé avec élévation), `volumes.rs` (copie des volumes nommés d'un projet Compose vers un autre, avec les étiquettes que Compose attend, sans écraser), `import.rs` (lecture des volumes et images de Docker Desktop par son pipe `\\.\pipe\docker_engine`, sans rien y modifier). `bollard` et `reqwest` sont donc des dépendances de `solon-client` aussi. L'application garde pour l'instant ses propres `import.rs`, `update.rs` et `git.rs` dans `src-tauri` : un doublon à résorber en faisant passer ses commandes Tauri par `solon-client`, comme pour `backup.rs` et `diag.rs`.
+- `crates/solon-cli/src/more.rs` : `update [--check]`, `scan`, `shell`, `clone`, `import`, les cinq commandes que l'icône seule ne pouvait pas offrir. `shell` passe par `docker run -it --privileged --pid=host busybox nsenter` ; `scan` demande la recherche au service.
+- Le mode `--tray` de l'application (`lib.rs` : la fenêtre principale est cachée au lancement, elle s'ouvre au premier clic sur l'icône) et l'inscription au démarrage de session (`tray.rs`) : au premier lancement, si la valeur `Solon` de `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` est absente et que le marqueur `%LOCALAPPDATA%\Solon\no-autostart` n'existe pas, l'application écrit `"<exe>" --tray` dans cette valeur par `reg.exe` et le dit par une notification. La case « Démarrer avec Windows » du menu retire la valeur et pose le marqueur ; la recocher fait l'inverse. `installer/setup.ps1` retire la valeur dans chaque ruche de `HKEY_USERS` chargée à la désinstallation.
 
 ### 8.2 Traits pour la phase 2 (Linux natif)
 
