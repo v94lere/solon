@@ -51,6 +51,13 @@ struct Inner {
     /// Sérialise start/stop/restart.
     op: Mutex<()>,
     stopping: std::sync::atomic::AtomicBool,
+    /// Lecteurs partagés d'une machine en cours de démarrage, avant que `running` existe.
+    ///
+    /// Le serveur de fichiers doit répondre **pendant** que dockerd démarre : un conteneur à
+    /// relancer dont un dossier Windows est monté fait lire ce dossier à dockerd, qui attend
+    /// alors le partage. Tant que le serveur n'était lancé qu'une fois dockerd prêt, chacun
+    /// attendait l'autre et le démarrage échouait au bout de 90 s.
+    attaching_shares: std::sync::Mutex<Option<Vec<String>>>,
     /// Domaines locaux `*.solon.local` → port hôte (partagé avec le mandataire HTTP).
     domains: crate::domains::SharedDomains,
     /// Réveil à la demande (pause des conteneurs inactifs, réveil à la connexion).
@@ -86,6 +93,7 @@ impl Engine {
                 running: Mutex::new(None),
                 op: Mutex::new(()),
                 stopping: Default::default(),
+                attaching_shares: Default::default(),
                 domains: Default::default(),
                 sleeper,
                 endpoints: Mutex::new(Vec::new()),
@@ -135,17 +143,21 @@ impl Engine {
 
     /// Lettres des lecteurs partagés avec la machine en marche (vide si arrêtée).
     pub async fn shared_drives(&self) -> Vec<String> {
+        if let Some(r) = self.inner.running.lock().await.as_ref() {
+            return r.shares.keys().cloned().collect();
+        }
         self.inner
-            .running
+            .attaching_shares
             .lock()
-            .await
-            .as_ref()
-            .map(|r| r.shares.keys().cloned().collect())
+            .unwrap()
+            .clone()
             .unwrap_or_default()
     }
 
+    /// Ni machine en marche, ni machine en cours de démarrage.
     pub async fn is_stopped(&self) -> bool {
         self.inner.running.lock().await.is_none()
+            && self.inner.attaching_shares.lock().unwrap().is_none()
     }
 
     /// Recalcule la table `*.solon.local` et le bloc du fichier `hosts` d'après les conteneurs en marche.
@@ -179,12 +191,30 @@ impl Engine {
             .stopping
             .store(false, std::sync::atomic::Ordering::SeqCst);
         let t0 = Instant::now();
-        match self.provision().await {
+        let provisioned = self.provision().await;
+        // `running` prend le relais des lecteurs partagés ; en cas d'échec, plus rien n'est servi.
+        let provisioned = match provisioned {
             Ok(running) => {
-                let boot_ms = t0.elapsed().as_millis() as u64;
-                let guest_address = running.network.address.to_string();
-                let vm_id = running.vm.id().to_owned();
                 *self.inner.running.lock().await = Some(running);
+                Ok(())
+            }
+            Err(e) => Err(e),
+        };
+        *self.inner.attaching_shares.lock().unwrap() = None;
+        let ready = match provisioned {
+            Ok(()) => self
+                .inner
+                .running
+                .lock()
+                .await
+                .as_ref()
+                .map(|r| (r.network.address.to_string(), r.vm.id().to_owned()))
+                .ok_or_else(|| SolonError::internal("machine arrêtée pendant son démarrage")),
+            Err(e) => Err(e),
+        };
+        match ready {
+            Ok((guest_address, vm_id)) => {
+                let boot_ms = t0.elapsed().as_millis() as u64;
                 self.set(|s| {
                     s.state = Some(EngineState::Ready);
                     s.step = Some(ProvisionStep::Ready);
@@ -448,6 +478,16 @@ impl Engine {
         shares: Vec<solon_core::vm::HostShare>,
     ) -> Result<Running> {
         self.step(ProvisionStep::WaitingEngine);
+        // Serveur de fichiers solonfs (FUSE côté invité), lancé avant d'attendre dockerd : voir
+        // `Inner::attaching_shares`.
+        *self.inner.attaching_shares.lock().unwrap() =
+            Some(shares.iter().map(|sh| sh.name.clone()).collect());
+        let fileserver = {
+            let engine = self.clone();
+            tokio::spawn(async move {
+                crate::fileserver::serve(engine, guid).await;
+            })
+        };
         let mut events = AgentEvents::connect(&guid, Duration::from_secs(10)).await?;
         let deadline = Instant::now() + Duration::from_secs(90);
         let mut ports = PortRelays::new(self.inner.sleeper.clone());
@@ -556,13 +596,7 @@ impl Engine {
         tasks.push(self.spawn_exit_watcher(vm.clone()));
         // Le mandataire de l'API Docker (`\\.\pipe\solon`) n'est pas ici : il vit avec le service
         // (voir `main::run_core`) pour que le pipe existe avant la machine et lui survive.
-        {
-            // Serveur de fichiers solonfs (FUSE côté invité) : ouvre ses connexions vers l'agent.
-            let engine = self.clone();
-            tasks.push(tokio::spawn(async move {
-                crate::fileserver::serve(engine, guid).await;
-            }));
-        }
+        tasks.push(fileserver);
         tasks.push(tokio::spawn(async move {
             if let Err(e) = solon_hvsock::relay::serve_named_pipe_with_sddl(
                 solon_core::ipc::EXEC_PIPE.into(),

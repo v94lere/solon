@@ -29,6 +29,22 @@ Start-Sleep -Milliseconds 800
 $st = Status
 Check "port retiré après suppression du conteneur" (@($st.published_ports | Where-Object { $_.host_port -eq 8080 }).Count -eq 0) "$(@($st.published_ports).Count) liaison(s)"
 
+# La sortie d'erreur d'un conteneur doit arriver sur celle du client, et rien que là. Presque tous
+# les serveurs y écrivent leurs erreurs de démarrage : si elle se perd, un conteneur qui refuse de
+# démarrer ne dit plus rien (signalé dans le ticket 13, non reproduit ici — d'où ce garde-fou).
+# Passage par cmd pour séparer les deux canaux sans que PowerShell n'en fasse des erreurs.
+$name = "solon-e2e-stderr"
+docker rm -f $name 2>$null | Out-Null
+docker run -d --name $name $Image sh -c "echo e2e-sortie; echo e2e-erreur 1>&2; sleep 30" 2>&1 | Out-Null
+Start-Sleep -Seconds 2
+$out = (cmd /c "docker logs $name 2>nul") -join ""
+$err = (cmd /c "docker logs $name 2>&1 1>nul") -join ""
+Check "docker logs : sortie normale" ($out.Trim() -eq "e2e-sortie") "stdout='$($out.Trim())'"
+Check "docker logs : sortie d'erreur" ($err.Trim() -eq "e2e-erreur") "stderr='$($err.Trim())'"
+docker rm -f $name 2>&1 | Out-Null
+$err = (cmd /c "docker run --rm $Image sh -c ""echo e2e-erreur 1>&2"" 2>&1 1>nul") -join ""
+Check "docker run au premier plan : sortie d'erreur" ($err -match "e2e-erreur") "stderr='$($err.Trim())'"
+
 Log "mesure mémoire : attente 60 s d'inactivité"
 Start-Sleep -Seconds 60
 $vm = Get-Process | Where-Object { $_.ProcessName -like "vmmem*" -and $_.ProcessName -ne "vmmemWSL" }
