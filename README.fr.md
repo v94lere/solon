@@ -16,7 +16,7 @@ en quelques secondes dans une machine minuscule et invisible, gérée entièreme
 Solon **n'est pas** une interface pour un Docker Desktop déjà installé. Il remplace Docker Desktop :
 moteur Docker, Compose, images, volumes, réseaux, terminal, journaux, et une icône dans la barre des tâches.
 
-> État du projet (1er novembre 2026) : **0.2.1**, vingt versions en deux mois, écrit par une seule
+> État du projet (17 novembre 2026) : **0.2.2**, vingt et une versions en deux mois et demi, écrit par une seule
 > personne. Solon fait tourner mes propres projets tous les jours, et n'a été testé que sur deux machines :
 > un PC Windows 11 Pro et une machine virtuelle Windows 11 Famille neuve. L'installeur n'est **pas encore
 > signé** (avertissement SmartScreen ; empreinte SHA-256 publiée avec chaque version). Il reste sûrement des
@@ -118,7 +118,7 @@ le 3 septembre ; les deux autres d'après leur documentation (marqués *publié*
 
 ### Fonctionnalités comparées
 
-Solon en 0.2.1 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.
+Solon en 0.2.2 ; les autres d'après leur documentation en septembre 2026. « Partiel » : la fonction existe avec une réserve.
 
 | | Solon | Docker Desktop | Podman Desktop | Rancher Desktop |
 |---|---|---|---|---|

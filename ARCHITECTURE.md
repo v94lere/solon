@@ -1,6 +1,6 @@
 # Solon — Plan d'architecture
 
-> **Statut : documentation technique de référence. Dernière mise à jour : 1er novembre 2026 (version 0.2.1).**
+> **Statut : documentation technique de référence. Dernière mise à jour : 17 novembre 2026 (version 0.2.2).**
 > Le plan v0.1 a été validé le 2 septembre 2026 (six décisions de la section 0 acceptées) ; les sections « Résultats du bloc » et les paragraphes datés consignent ce qui a été construit depuis, sans réécrire le plan initial. Quand le plan et un paragraphe daté divergent, le paragraphe daté a raison.
 
 Solon est un gestionnaire de conteneurs autonome pour Windows, dans l'esprit d'OrbStack : une VM Linux minuscule, invisible, entièrement gérée par nous, avec des chemins de communication optimisés. Ce plan fixe les choix de virtualisation, de construction de l'image Linux, de communication hôte↔VM, de partage de fichiers, et le découpage du code. Il liste aussi, sans les cacher, les points pour lesquels il n'existe pas aujourd'hui de solution mature sur Windows.
@@ -411,6 +411,8 @@ solon/
 - Compilation : `cargo build --release -p solon-service -p solon-cli` **avant** `npm run tauri build`. Comme le service, le CLI est copié comme ressource (`tauri.conf.json` : `target/release/solon-cli.exe` → `bin/solon.exe`) et Tauri ne le reconstruit pas. Le binaire s'appelle `solon-cli.exe` dans `target/` parce que la crate de l'application s'appelle déjà `solon`.
 
 Vérifié le 31 octobre 2026 sur le PC de développement (Windows 11 Pro, service 0.1.16 en place) : toutes les commandes, la sauvegarde puis la restauration d'un projet réel, le redémarrage du moteur par `solon restart`.
+
+**17 novembre 2026 : 0.2.2, le moteur redémarre après un arrêt brutal.** Après un arrêt qui n'était pas propre, dockerd relance les conteneurs qui tournaient ; si l'un d'eux monte un dossier Windows, dockerd lit ce dossier par solonfs avant de répondre sur son socket. Or le serveur de fichiers de l'hôte (`fileserver::serve`) n'était lancé qu'après `EngineReady` : chaque lecture tombait sur le délai de 30 s de solonfs, et le démarrage échouait à 90 s (`EngineUnreachable`), à chaque essai. Le serveur est maintenant lancé avant l'attente de dockerd ; les lecteurs partagés d'une machine en cours de démarrage vivent dans `Inner::attaching_shares`, puisque `running` n'existe pas encore, et `is_stopped` en tient compte. Constaté sur le PC de développement : trois échecs de suite, puis moteur prêt en 5,1 s. `tests/e2e/e2e.ps1` vérifie en plus que la sortie d'erreur d'un conteneur arrive sur celle du client (ticket 13, non reproduit).
 
 **1er novembre 2026 : 0.2.0 et 0.2.1.** La 0.2.0 (31 octobre 2026) avait retiré le frontend et réduit `apps/desktop` à une icône dans la barre des tâches : plus de fenêtre, tout passait par l'icône et la commande `solon`. La 0.2.1 (1er novembre 2026) restaure l'application de la 0.1.18, fenêtre et écrans compris ; les sections 8.3 et 9 décrivent de nouveau ce qui est livré. Ce qui reste de la 0.2.0 :
 
