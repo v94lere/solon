@@ -283,7 +283,7 @@ pub async fn why(args: &Args) {
 
     let mut findings: Vec<String> = Vec::new();
     let mut failed: Vec<(&(String, String, u16), &Failures)> = failures.iter().collect();
-    failed.sort_by(|a, b| b.1.count.cmp(&a.1.count));
+    failed.sort_by_key(|a| std::cmp::Reverse(a.1.count));
     for ((src, dst, port), f) in failed.into_iter().take(5) {
         let mut text = if crate::text::french() {
             format!(
