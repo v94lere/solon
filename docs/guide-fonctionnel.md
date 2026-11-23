@@ -327,7 +327,7 @@ sortante (sauf `solon update`). Les messages sont en anglais, ou en français qu
 | `solon clear [projet]` | Oublier l'historique observé, d'un projet ou de tout. |
 | `solon backup [dossier] [fichier.zip] [--name projet]` | La sauvegarde du § 5.4, en un zip nommé `<projet>-AAAAMMJJ-HHMM.zip` par défaut. |
 | `solon restore <fichier.zip> [dossier]` | La restauration du § 5.4 ; il reste à faire `docker compose up -d`. |
-| `solon settings [clé=valeur…]` | Les réglages du § 11 : `memory` (Mo), `cpus`, `disk` (Gio), `autostart`, `resume`, `sleep`, `idle` (min), `never` (liste ou `none`), `bodies` (liste ou `none`), `legacy-9p`. Mémoire, processeurs, disque et partage s'appliquent au prochain démarrage. |
+| `solon settings [clé=valeur…]` | Les réglages du § 11 : `memory` (Mo), `cpus`, `disk` (Gio), `autostart`, `resume`, `sleep`, `idle` (min), `never` (noms de projet, de service, de conteneur ou `projet/service`, séparés par des virgules, ou `none` ; effet immédiat), `bodies` (liste ou `none`), `legacy-9p`. Mémoire, processeurs, disque et partage s'appliquent au prochain démarrage. |
 | `solon prereq` | Les prérequis Windows, ligne par ligne. |
 | `solon logs [-n N] [-f]` | Le journal du service. |
 | `solon diag [fichier.zip]` | L'export de diagnostic du § 11. |

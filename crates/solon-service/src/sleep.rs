@@ -22,7 +22,8 @@ use crate::agent_client::AgentClient;
 pub struct SleepSettings {
     pub enabled: bool,
     pub idle: Duration,
-    /// Noms de conteneurs à ne jamais endormir.
+    /// Ce qu'il ne faut jamais endormir : nom de conteneur, de projet Compose, de service, ou
+    /// `projet/service`.
     pub never: HashSet<String>,
 }
 
@@ -54,6 +55,8 @@ struct State {
     by_ip: HashMap<String, String>,
     by_name: HashMap<String, String>,
     names: HashMap<String, String>,
+    /// Projet et service Compose de chaque conteneur, quand il en a.
+    compose: HashMap<String, (Option<String>, Option<String>)>,
     /// Conteneurs éligibles au sommeil (port publié ou port HTTP exposé).
     eligible: HashSet<String>,
     activity: HashMap<String, Activity>,
@@ -121,11 +124,16 @@ impl Sleeper {
         st.by_ip.clear();
         st.by_name.clear();
         st.names.clear();
+        st.compose.clear();
         st.eligible.clear();
         for e in endpoints {
             st.by_ip.insert(e.ip.clone(), e.id.clone());
             st.by_name.insert(e.name.clone(), e.id.clone());
             st.names.insert(e.id.clone(), e.name.clone());
+            st.compose.insert(
+                e.id.clone(),
+                (e.compose_project.clone(), e.compose_service.clone()),
+            );
             if !e.published_tcp.is_empty() || e.exposed_tcp.iter().any(|p| HTTP_PORTS.contains(p)) {
                 st.eligible.insert(e.id.clone());
             }
@@ -279,7 +287,15 @@ impl Sleeper {
                             && !st.sleeping.contains(*id)
                     })
                     .map(|(id, _)| (id.clone(), st.names.get(id).cloned().unwrap_or_default()))
-                    .filter(|(_, name)| !settings.never.contains(name))
+                    .filter(|(id, name)| {
+                        let (project, service) = st.compose.get(id).cloned().unwrap_or_default();
+                        !is_protected(
+                            &settings.never,
+                            name,
+                            project.as_deref(),
+                            service.as_deref(),
+                        )
+                    })
                     .collect()
             };
             for (id, name) in candidates {
@@ -327,6 +343,34 @@ impl Sleeper {
     }
 }
 
+/// Vrai si la liste « jamais endormi » couvre ce conteneur. Une entrée peut désigner le conteneur
+/// (`infra-caddy`), tout un projet Compose (`infra`), un service (`caddy`) ou un service d'un
+/// projet précis (`infra/caddy`). Sans tenir compte de la casse : Compose met les noms de projet en
+/// minuscules, pas l'utilisateur qui les retape.
+fn is_protected(
+    never: &HashSet<String>,
+    name: &str,
+    project: Option<&str>,
+    service: Option<&str>,
+) -> bool {
+    never.iter().any(|entry| {
+        let entry = entry.trim();
+        if entry.is_empty() {
+            return false;
+        }
+        let same = |other: &str| entry.eq_ignore_ascii_case(other);
+        if same(name) || project.is_some_and(same) || service.is_some_and(same) {
+            return true;
+        }
+        match (entry.split_once('/'), project, service) {
+            (Some((p, s)), Some(project), Some(service)) => {
+                p.eq_ignore_ascii_case(project) && s.eq_ignore_ascii_case(service)
+            }
+            _ => false,
+        }
+    })
+}
+
 async fn agent_is_none(agent: &Mutex<Option<Arc<AgentClient>>>) -> bool {
     agent.lock().await.is_none()
 }
@@ -343,6 +387,28 @@ mod tests {
             exposed_tcp: vec![80],
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn la_liste_jamais_endormi_accepte_projet_service_et_conteneur() {
+        let never = |list: &[&str]| list.iter().map(|s| s.to_string()).collect::<HashSet<_>>();
+        let caddy =
+            |n: &HashSet<String>| is_protected(n, "infra-caddy", Some("infra"), Some("caddy"));
+        // Ce qu'a écrit l'auteur du ticket 13 : le nom du projet.
+        assert!(caddy(&never(&["infra"])));
+        assert!(caddy(&never(&["infra-caddy"])));
+        assert!(caddy(&never(&["caddy"])));
+        assert!(caddy(&never(&["infra/caddy"])));
+        assert!(caddy(&never(&["Infra"])));
+        assert!(caddy(&never(&["autre", " infra "])));
+        assert!(!caddy(&never(&[])));
+        assert!(!caddy(&never(&[""])));
+        assert!(!caddy(&never(&["infr"])));
+        assert!(!caddy(&never(&["autre/caddy"])));
+        assert!(!caddy(&never(&["infra/db"])));
+        // Un conteneur lancé par `docker run` n'a ni projet ni service.
+        assert!(is_protected(&never(&["web"]), "web", None, None));
+        assert!(!is_protected(&never(&["infra"]), "web", None, None));
     }
 
     #[tokio::test]

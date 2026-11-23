@@ -550,8 +550,8 @@ pub async fn settings(args: &Args) {
                     s.sleep_never.join(",")
                 },
                 tr(
-                    "containers never put to sleep",
-                    "conteneurs jamais endormis",
+                    "never put to sleep: project, service or container names (applies at once)",
+                    "jamais endormis : noms de projet, de service ou de conteneur (effet immédiat)",
                 )
                 .to_owned(),
             ],
