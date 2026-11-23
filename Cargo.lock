@@ -3997,7 +3997,7 @@ dependencies = [
 
 [[package]]
 name = "solon"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "base64 0.22.1",
  "bollard",
@@ -4024,7 +4024,7 @@ dependencies = [
 
 [[package]]
 name = "solon-agent"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "aya",
  "fuser",
@@ -4037,7 +4037,7 @@ dependencies = [
 
 [[package]]
 name = "solon-cli"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "chrono",
  "serde",
@@ -4050,7 +4050,7 @@ dependencies = [
 
 [[package]]
 name = "solon-client"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "bollard",
  "futures-util",
@@ -4066,7 +4066,7 @@ dependencies = [
 
 [[package]]
 name = "solon-core"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "serde",
  "serde_json",
@@ -4075,14 +4075,14 @@ dependencies = [
 
 [[package]]
 name = "solon-docker-shim"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "solon-hvsock"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "tokio",
  "tracing",
@@ -4091,7 +4091,7 @@ dependencies = [
 
 [[package]]
 name = "solon-prereq"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "solon-core",
  "solon-vm-hcs",
@@ -4102,7 +4102,7 @@ dependencies = [
 
 [[package]]
 name = "solon-service"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "rcgen",
  "rustls",
@@ -4125,11 +4125,11 @@ dependencies = [
 
 [[package]]
 name = "solon-trace-common"
-version = "0.2.2"
+version = "0.2.3"
 
 [[package]]
 name = "solon-vm-hcs"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "serde",
  "serde_json",

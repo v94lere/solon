@@ -17,7 +17,7 @@ members = [
 exclude = ["crates/solon-trace-ebpf"]
 
 [workspace.package]
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 license = "Apache-2.0"
 repository = "https://github.com/v94lere/solon"
