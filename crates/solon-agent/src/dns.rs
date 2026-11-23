@@ -5,6 +5,12 @@
 //! relais écoute sur l'adresse de la machine (port 53), transmet chaque question aux serveurs de
 //! l'hôte, rend la réponse telle quelle, et note au passage « cette adresse, c'est ce nom ».
 //!
+//! Il écoute en UDP et en TCP. Le TCP sert aux réponses trop grosses pour un datagramme (le client
+//! y revient de lui-même quand la réponse UDP porte le drapeau TC) et aux clients qui le préfèrent.
+//! Vers l'amont, une question restée sans réponse en UDP est reposée en TCP : certains réseaux
+//! laissent tomber en UDP ce qui n'est pas une simple demande d'adresse (SRV, TXT…), et le client
+//! ne voyait alors qu'un délai dépassé (ticket 13).
+//!
 //! Il ne change rien d'autre : pas de cache, pas de filtrage, pas de réécriture. Et il n'est pas
 //! un point de défaillance : `resolv.conf` le cite en premier, les serveurs de l'hôte ensuite, et
 //! la bibliothèque de résolution passe au suivant sur délai. S'il ne démarre pas (port pris), la
@@ -20,13 +26,23 @@
 #![cfg_attr(not(target_os = "linux"), allow(dead_code))]
 
 use std::collections::HashMap;
-use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket};
+use std::io::{Read, Write};
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, TcpListener, TcpStream, UdpSocket};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 /// Délai accordé à chaque serveur amont avant d'essayer le suivant. Court exprès : le client
 /// réessaie de lui-même au bout de 2 s, autant lui répondre avant.
 const UPSTREAM_TIMEOUT: Duration = Duration::from_millis(1500);
+/// Délai de connexion TCP vers un serveur amont. Un serveur sans DNS en TCP refuse tout de suite ;
+/// seul un serveur muet coûte ce délai.
+const TCP_CONNECT_TIMEOUT: Duration = Duration::from_millis(1000);
+/// Une connexion TCP cliente qui ne dit rien pendant ce temps est fermée.
+const TCP_CLIENT_IDLE: Duration = Duration::from_secs(5);
+/// Au-delà de cette taille, une réponse obtenue en TCP n'est pas rendue telle quelle à un client
+/// UDP : il reçoit un message tronqué (drapeau TC) et revient en TCP. 1 232 octets est la taille
+/// qui passe partout sans fragmentation (DNS Flag Day 2020).
+const UDP_SAFE: usize = 1232;
 /// Taille maximale d'un message UDP : une réponse EDNS peut dépasser 4 096 octets, et la tronquer
 /// sans le drapeau TC ferait échouer le client.
 const MAX_PACKET: usize = 65_535;
@@ -99,6 +115,17 @@ pub fn start(address: &str, upstream: &[String]) -> Result<(), String> {
     if upstream.is_empty() {
         return Err("serveurs amont illisibles".into());
     }
+    // Le TCP est un plus : s'il ne s'ouvre pas, le relais UDP d'avant reste tel quel.
+    match TcpListener::bind(bind) {
+        Ok(listener) => {
+            let upstream = upstream.clone();
+            let _ = std::thread::Builder::new()
+                .name("dns-tcp".into())
+                .spawn(move || serve_tcp(listener, upstream));
+        }
+        // `eprintln!` et non `system::log` : ce module se compile aussi sous Windows pour ses tests.
+        Err(e) => eprintln!("[solon-agent] relais DNS : pas d'écoute TCP sur {bind} ({e})"),
+    }
     std::thread::Builder::new()
         .name("dns".into())
         .spawn(move || serve(socket, upstream))
@@ -129,11 +156,7 @@ fn serve(socket: UdpSocket, upstream: Vec<SocketAddr>) {
         // questions par seconde, et un serveur amont lent ne doit pas bloquer les autres.
         let spawned = std::thread::Builder::new().spawn(move || {
             if let Some(answer) = resolve(&query, &upstream) {
-                if let Some((name, ips)) = parse_answers(&answer) {
-                    for ip in ips {
-                        remember(ip, &name);
-                    }
-                }
+                learn(&answer);
                 let _ = reply_socket.send_to(&answer, from);
             }
             IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
@@ -144,8 +167,122 @@ fn serve(socket: UdpSocket, upstream: Vec<SocketAddr>) {
     }
 }
 
-/// Pose la question à chaque serveur amont tour à tour, jusqu'à la première réponse.
+fn learn(answer: &[u8]) {
+    if let Some((name, ips)) = parse_answers(answer) {
+        for ip in ips {
+            remember(ip, &name);
+        }
+    }
+}
+
+/// Accepte les clients TCP. Même plafond que l'UDP : au-delà, la connexion est refermée aussitôt.
+fn serve_tcp(listener: TcpListener, upstream: Vec<SocketAddr>) {
+    use std::sync::atomic::Ordering;
+    for stream in listener.incoming() {
+        let Ok(stream) = stream else { continue };
+        if IN_FLIGHT.load(Ordering::Relaxed) >= MAX_IN_FLIGHT {
+            continue;
+        }
+        IN_FLIGHT.fetch_add(1, Ordering::Relaxed);
+        let upstream = upstream.clone();
+        let spawned = std::thread::Builder::new().spawn(move || {
+            serve_tcp_client(stream, &upstream);
+            IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
+        });
+        if spawned.is_err() {
+            IN_FLIGHT.fetch_sub(1, Ordering::Relaxed);
+        }
+    }
+}
+
+/// Sert un client TCP : des messages précédés de leur longueur sur deux octets, l'un après l'autre,
+/// jusqu'à ce qu'il raccroche ou se taise.
+fn serve_tcp_client(mut stream: TcpStream, upstream: &[SocketAddr]) {
+    let _ = stream.set_read_timeout(Some(TCP_CLIENT_IDLE));
+    let _ = stream.set_write_timeout(Some(TCP_CLIENT_IDLE));
+    while let Some(query) = read_framed(&mut stream) {
+        // Le client est venu en TCP, le plus souvent parce que la réponse ne tenait pas en UDP :
+        // on pose la question en TCP d'abord. Un amont sans TCP (beaucoup de box) répond en UDP.
+        let Some(answer) = resolve_tcp(&query, upstream).or_else(|| resolve_udp(&query, upstream))
+        else {
+            return;
+        };
+        learn(&answer);
+        if write_framed(&mut stream, &answer).is_err() {
+            return;
+        }
+    }
+}
+
+fn read_framed(stream: &mut TcpStream) -> Option<Vec<u8>> {
+    let mut len = [0u8; 2];
+    stream.read_exact(&mut len).ok()?;
+    let mut msg = vec![0u8; u16::from_be_bytes(len) as usize];
+    stream.read_exact(&mut msg).ok()?;
+    Some(msg)
+}
+
+fn write_framed(stream: &mut TcpStream, msg: &[u8]) -> std::io::Result<()> {
+    let len = u16::try_from(msg.len()).map_err(|_| std::io::ErrorKind::InvalidInput)?;
+    // Un seul envoi : longueur et message dans le même segment.
+    let mut out = Vec::with_capacity(msg.len() + 2);
+    out.extend_from_slice(&len.to_be_bytes());
+    out.extend_from_slice(msg);
+    stream.write_all(&out)
+}
+
+/// Réponse pour un client UDP : l'UDP d'abord ; si aucun serveur n'a répondu, le TCP.
 fn resolve(query: &[u8], upstream: &[SocketAddr]) -> Option<Vec<u8>> {
+    if let Some(answer) = resolve_udp(query, upstream) {
+        return Some(answer);
+    }
+    let answer = resolve_tcp(query, upstream)?;
+    if answer.len() <= UDP_SAFE {
+        Some(answer)
+    } else {
+        truncated(query)
+    }
+}
+
+/// La question renvoyée comme réponse vide marquée « tronquée » : le client la repose en TCP.
+fn truncated(query: &[u8]) -> Option<Vec<u8>> {
+    if query.len() < 12 {
+        return None;
+    }
+    let (_, end) = read_name(query, 12)?;
+    let mut m = query.get(..end + 4)?.to_vec();
+    m[2] |= 0x80 | 0x02; // QR, TC
+    m[3] = 0x80; // RA, RCODE = 0
+    m[4..6].copy_from_slice(&1u16.to_be_bytes());
+    m[6..12].fill(0); // ni réponse, ni autorité, ni additionnel
+    Some(m)
+}
+
+/// Pose la question en TCP à chaque serveur amont tour à tour, jusqu'à la première réponse.
+fn resolve_tcp(query: &[u8], upstream: &[SocketAddr]) -> Option<Vec<u8>> {
+    if query.len() < 12 {
+        return None;
+    }
+    for server in upstream {
+        let Ok(mut s) = TcpStream::connect_timeout(server, TCP_CONNECT_TIMEOUT) else {
+            continue;
+        };
+        if s.set_read_timeout(Some(UPSTREAM_TIMEOUT)).is_err()
+            || s.set_write_timeout(Some(UPSTREAM_TIMEOUT)).is_err()
+            || write_framed(&mut s, query).is_err()
+        {
+            continue;
+        }
+        match read_framed(&mut s) {
+            Some(answer) if answer.len() >= 12 && answer[..2] == query[..2] => return Some(answer),
+            _ => continue,
+        }
+    }
+    None
+}
+
+/// Pose la question en UDP à chaque serveur amont tour à tour, jusqu'à la première réponse.
+fn resolve_udp(query: &[u8], upstream: &[SocketAddr]) -> Option<Vec<u8>> {
     if query.len() < 12 {
         return None;
     }
@@ -321,6 +458,80 @@ mod tests {
         m[7] = 1;
         m.extend_from_slice(&[0xC0, 12]); // pointe sur lui-même
         assert!(parse_answers(&m).is_none());
+    }
+
+    /// Question `_sip._tcp.example.com SRV`, identifiant 0xBEEF, avec un enregistrement OPT.
+    fn question_srv() -> Vec<u8> {
+        let mut q = vec![0xBE, 0xEF, 0x01, 0x00, 0, 1, 0, 0, 0, 0, 0, 1];
+        q.extend_from_slice(b"\x04_sip\x04_tcp\x07example\x03com\x00");
+        q.extend_from_slice(&[0, 33, 0, 1]);
+        q.extend_from_slice(&[0, 0, 41, 0x10, 0, 0, 0, 0, 0, 0, 0]); // OPT
+        q
+    }
+
+    /// Faux serveur amont : muet en UDP, il répond en TCP par `answer_len` octets (en-tête de la
+    /// question, puis du remplissage). Rend son adresse.
+    fn amont_tcp_seulement(answer_len: usize) -> SocketAddr {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        // Le même port en UDP, ouvert mais muet : la question part et rien ne revient.
+        let mute = UdpSocket::bind(addr).unwrap();
+        std::thread::spawn(move || {
+            let _mute = mute;
+            for stream in listener.incoming() {
+                let mut stream = stream.unwrap();
+                while let Some(q) = read_framed(&mut stream) {
+                    let mut a = q[..12].to_vec();
+                    a[2] |= 0x80;
+                    a.resize(answer_len, 0);
+                    write_framed(&mut stream, &a).unwrap();
+                }
+            }
+        });
+        addr
+    }
+
+    #[test]
+    fn un_amont_muet_en_udp_est_interroge_en_tcp() {
+        let amont = amont_tcp_seulement(200);
+        let q = question_srv();
+        let a = resolve(&q, &[amont]).expect("réponse par TCP");
+        assert_eq!(a.len(), 200);
+        assert_eq!(a[..2], q[..2]);
+    }
+
+    #[test]
+    fn une_grosse_reponse_tcp_revient_tronquee_au_client_udp() {
+        let amont = amont_tcp_seulement(3000);
+        let q = question_srv();
+        let a = resolve(&q, &[amont]).expect("réponse tronquée");
+        assert!(a.len() < q.len(), "la question seule, sans l'OPT");
+        assert_eq!(a[..2], q[..2]);
+        assert_eq!(a[2] & 0x82, 0x82, "réponse, tronquée");
+        assert_eq!(a[4..12], [0, 1, 0, 0, 0, 0, 0, 0]);
+        let (name, _) = read_name(&a, 12).unwrap();
+        assert_eq!(name, "_sip._tcp.example.com");
+    }
+
+    #[test]
+    fn un_client_tcp_recoit_la_reponse_entiere() {
+        let amont = amont_tcp_seulement(3000);
+        let relais = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = relais.local_addr().unwrap();
+        std::thread::spawn(move || serve_tcp(relais, vec![amont]));
+        let mut client = TcpStream::connect(addr).unwrap();
+        // Deux questions sur la même connexion.
+        for _ in 0..2 {
+            write_framed(&mut client, &question_srv()).unwrap();
+            let a = read_framed(&mut client).expect("réponse");
+            assert_eq!(a.len(), 3000);
+        }
+    }
+
+    #[test]
+    fn une_question_illisible_ne_donne_rien() {
+        assert!(truncated(&[0u8; 5]).is_none());
+        assert!(resolve_tcp(&[0u8; 5], &[]).is_none());
     }
 
     #[test]

@@ -115,6 +115,11 @@ aux serveurs de l'hôte, rend la réponse telle quelle, et note « cette adresse
 radiographie s'en sert pour nommer tout ce qui est hors de la machine : `api.stripe.com` au lieu
 de `54.187.x.x`.
 
+Le relais écoute en UDP et en TCP. Le TCP sert aux réponses trop grosses pour un message UDP, et de
+repli vers l'amont : une question restée sans réponse en UDP est reposée en TCP, parce que certains
+réseaux laissent tomber en UDP ce qui n'est pas une simple demande d'adresse (SRV, TXT). Jusqu'à la
+0.2.2, le relais refusait le TCP (ticket 13).
+
 Pourquoi un relais et pas une sonde : une sonde sur le port 53 verrait la même chose, mais
 demanderait un programme noyau de plus à maintenir, pour un trafic qui ne compte pas en
 performance. Le relais tient en deux cents lignes de bibliothèque standard, sans dépendance.
