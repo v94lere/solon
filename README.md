@@ -16,7 +16,7 @@ tiny, invisible Linux machine managed entirely by Solon.
 Solon **is not** a front-end for an existing Docker Desktop. It replaces it: Docker engine, Compose, images,
 volumes, networks, terminal, logs, a system-tray icon, and a few things nothing else does on Windows.
 
-> Project status (23 November 2026): **0.2.3**, twenty-two releases in two and a half months, written by one
+> Project status (24 November 2026): **0.2.4**, twenty-three releases in two and a half months, written by one
 > person.
 > It runs my own projects every day, and it has been tested on exactly two machines: a Windows 11 Pro PC and a
 > fresh Windows 11 Home VM. The installer is **not code-signed yet** (SmartScreen warning; SHA-256 published
@@ -28,7 +28,8 @@ volumes, networks, terminal, logs, a system-tray icon, and a few things nothing 
 > (1 November 2026) brings the window and every screen back as they were in 0.1.18. What 0.2.0 added stays,
 > see the [release notes](https://github.com/v94lere/solon/releases/tag/v0.2.1). 0.2.2 (17 November 2026)
 > fixes an engine that would not start again after an unclean shutdown. 0.2.3 (23 November 2026) makes the
-> never-sleep list accept project and service names, and the DNS relay answer over TCP.
+> never-sleep list accept project and service names, and the DNS relay answer over TCP. 0.2.4 (24 November
+> 2026) stops Docker commands from hanging when the engine no longer answers.
 
 ![Containers list](docs/screenshots/containers.png)
 
@@ -115,7 +116,7 @@ on 3 September; the other two from their documentation (marked *published*).
 
 ### Features compared
 
-Solon as of 0.2.3; the others as documented in September 2026. "Partial" means it exists with a caveat.
+Solon as of 0.2.4; the others as documented in September 2026. "Partial" means it exists with a caveat.
 
 | | Solon | Docker Desktop | Podman Desktop | Rancher Desktop |
 |---|---|---|---|---|

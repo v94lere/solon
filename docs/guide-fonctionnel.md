@@ -1,6 +1,6 @@
 # Solon — guide fonctionnel
 
-*Version 0.2.3, 23 novembre 2026. Ce guide décrit ce que fait
+*Version 0.2.4, 24 novembre 2026. Ce guide décrit ce que fait
 l'application, écran par écran, du point de vue de la personne qui l'utilise. Les choix techniques sont dans `ARCHITECTURE.md`, les mesures dans
 `docs/measurements.md`.*
 
