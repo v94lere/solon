@@ -852,10 +852,21 @@ pub fn start_reaper(state: Arc<State>) {
 pub fn shutdown(state: &State, timeout: Duration) -> ! {
     *state.shutting_down.lock().unwrap() = true;
     log("arrêt : conteneurs en cours");
-    let mut cmd = Command::new("/usr/bin/docker");
-    cmd.args(["-H", &format!("unix://{DOCKER_SOCK}"), "ps", "-q"]);
-    if let Ok(out) = run_tracked(state, cmd) {
-        let ids: Vec<String> = String::from_utf8_lossy(&out.stdout)
+    // Avec un délai : un dockerd figé accepte la connexion et ne répond jamais. Sans cette borne,
+    // l'arrêt restait bloqué ici, et le service finissait par couper la machine au bout de 40 s,
+    // sans que les disques aient été démontés (ticket 13).
+    let listing = exec(
+        state,
+        &format!("/usr/bin/docker -H unix://{DOCKER_SOCK} ps -q"),
+        Duration::from_secs(5),
+    );
+    let dockerd_alive = !listing.timed_out && listing.code == Some(0);
+    if !dockerd_alive {
+        log("arrêt : dockerd ne répond pas, arrêt direct");
+    }
+    if dockerd_alive {
+        let ids: Vec<String> = listing
+            .stdout
             .split_whitespace()
             .map(str::to_owned)
             .collect();
@@ -879,7 +890,18 @@ pub fn shutdown(state: &State, timeout: Duration) -> ! {
     for pid in [d, c].into_iter().flatten() {
         unsafe { libc::kill(pid as i32, libc::SIGTERM) };
     }
-    let deadline = Instant::now() + Duration::from_secs(10);
+    // Un dockerd figé ne traitera jamais SIGTERM : inutile de lui laisser dix secondes.
+    if !dockerd_alive {
+        if let Some(pid) = d {
+            unsafe { libc::kill(pid as i32, libc::SIGKILL) };
+        }
+    }
+    let deadline = Instant::now()
+        + if dockerd_alive {
+            Duration::from_secs(10)
+        } else {
+            Duration::from_secs(2)
+        };
     while Instant::now() < deadline
         && Path::new(DOCKER_SOCK).exists()
         && UnixStream::connect(DOCKER_SOCK).is_ok()

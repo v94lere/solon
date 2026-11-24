@@ -60,6 +60,31 @@ pub async fn serve(engine: Engine) -> io::Result<()> {
 /// Temps maximal d'attente du moteur pour une requête arrivée pendant son démarrage (le premier
 /// provisionnement peut être long).
 const ENGINE_WAIT: Duration = Duration::from_secs(300);
+/// Temps maximal d'attente quand le moteur se dit prêt mais que dockerd reste injoignable : il n'y a
+/// alors aucun démarrage en cours à attendre, seulement une relance de dockerd par l'agent.
+const UNREACHABLE_WAIT: Duration = Duration::from_secs(60);
+/// Sans un octet de réponse au bout de ce temps, on vérifie que dockerd vit encore.
+const FIRST_BYTE_CHECK: Duration = Duration::from_secs(5);
+/// Puis à cet intervalle, tant que la réponse ne vient pas (un `docker stop -t 600` est légitime).
+const FIRST_BYTE_RECHECK: Duration = Duration::from_secs(30);
+/// Délai accordé à dockerd pour répondre à `/_ping`. Un dockerd sain y répond en millisecondes,
+/// même occupé.
+const PING_TIMEOUT: Duration = Duration::from_secs(3);
+/// Après un constat « dockerd figé », les requêtes suivantes sont vérifiées presque aussitôt
+/// pendant ce temps : le client Docker en enchaîne plusieurs (`_ping`, puis la vraie), et chacune
+/// attendait sinon son propre délai — 47 s mesurées pour un `docker version`.
+const HANG_MEMORY: Duration = Duration::from_secs(30);
+const HANG_RECHECK: Duration = Duration::from_secs(1);
+
+/// Instant du dernier constat « dockerd ne répond plus ».
+static LAST_HANG: std::sync::Mutex<Option<std::time::Instant>> = std::sync::Mutex::new(None);
+
+fn recently_hung() -> bool {
+    LAST_HANG
+        .lock()
+        .unwrap()
+        .is_some_and(|t| t.elapsed() < HANG_MEMORY)
+}
 /// Délai de grâce avant de répondre « arrêté » : au lancement du service, l'état est `Stopped` un
 /// court instant avant que le démarrage automatique ne le passe à `Starting`.
 const STOPPED_GRACE: Duration = Duration::from_secs(3);
@@ -82,9 +107,14 @@ async fn wait_for_engine(engine: &Engine) -> Result<std::net::TcpStream, String>
                 Ok(s) => return Ok(s),
                 Err(e) => {
                     let retry = matches!(state, Some(S::Ready | S::Degraded | S::Starting));
-                    if t0.elapsed() >= ENGINE_WAIT || !retry {
+                    let limit = if state == Some(S::Starting) {
+                        ENGINE_WAIT
+                    } else {
+                        UNREACHABLE_WAIT
+                    };
+                    if t0.elapsed() >= limit || !retry {
                         return Err(format!(
-                            "Solon's engine is not reachable ({e}). Restart it from the Solon app."
+                            "Solon's engine is not reachable ({e}). Run `solon restart`, or restart it from the Solon app."
                         ));
                     }
                     // dockerd relancé par l'agent (Degraded) ou pas encore prêt : on réessaie.
@@ -94,10 +124,16 @@ async fn wait_for_engine(engine: &Engine) -> Result<std::net::TcpStream, String>
         }
         match state {
             Some(S::Stopped) if t0.elapsed() >= STOPPED_GRACE => {
-                return Err("Solon is stopped. Open the Solon app to start it.".into());
+                return Err(
+                    "Solon is stopped. Run `solon start`, or open the Solon app to start it."
+                        .into(),
+                );
             }
             Some(S::Failed) => {
-                return Err("Solon failed to start. Open the Solon app for details.".into());
+                return Err(
+                    "Solon failed to start. Run `solon status` for the reason, or open the Solon app."
+                        .into(),
+                );
             }
             _ => {}
         }
@@ -110,7 +146,7 @@ async fn wait_for_engine(engine: &Engine) -> Result<std::net::TcpStream, String>
 
 /// Répond une erreur HTTP 503 au format de dockerd (`{"message": …}`), que le CLI affiche comme
 /// « Error response from daemon: … ».
-async fn reply_unavailable(mut pipe: tokio::io::DuplexStream, message: &str) {
+async fn reply_unavailable<W: AsyncWriteExt + Unpin>(mut pipe: W, message: &str) {
     let body = serde_json::json!({ "message": message }).to_string();
     let head = format!(
         "HTTP/1.1 503 Service Unavailable\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
@@ -119,6 +155,82 @@ async fn reply_unavailable(mut pipe: tokio::io::DuplexStream, message: &str) {
     let _ = pipe.write_all(head.as_bytes()).await;
     let _ = pipe.write_all(body.as_bytes()).await;
     let _ = pipe.shutdown().await;
+}
+
+/// Vrai si dockerd répond à `/_ping` sur une connexion neuve. Sert à distinguer une requête
+/// longue (dockerd travaille) d'un dockerd figé, qui accepte la connexion et ne répond jamais.
+async fn dockerd_answers(engine: &Engine) -> bool {
+    let Some(guid) = engine.guest_guid().await else {
+        return false;
+    };
+    tokio::task::spawn_blocking(move || {
+        use std::io::{Read, Write};
+        let Ok(mut s) =
+            solon_hvsock::connect_with_retry(&guid, PORT_DOCKER, Duration::from_secs(3))
+        else {
+            return false;
+        };
+        if s.set_read_timeout(Some(PING_TIMEOUT)).is_err()
+            || s.set_write_timeout(Some(PING_TIMEOUT)).is_err()
+            || s.write_all(b"GET /_ping HTTP/1.1\r\nHost: solon\r\nConnection: close\r\n\r\n")
+                .is_err()
+        {
+            return false;
+        }
+        let mut head = [0u8; 16];
+        matches!(s.read(&mut head), Ok(n) if n >= 5 && head.starts_with(b"HTTP/"))
+    })
+    .await
+    .unwrap_or(false)
+}
+
+/// Relaie la réponse de dockerd vers le client. Tant que le premier octet n'est pas arrivé alors
+/// qu'une requête est partie, vérifie de temps en temps que dockerd vit encore ; s'il ne répond
+/// plus du tout, rend une erreur claire au lieu de laisser le client attendre sans fin (ticket 13 :
+/// `docker version` bloqué plus de deux minutes).
+async fn relay_response<R, W>(
+    engine: &Engine,
+    guest: &mut R,
+    client: &mut W,
+    request_sent: &std::sync::atomic::AtomicBool,
+) -> io::Result<u64>
+where
+    R: AsyncReadExt + Unpin,
+    W: AsyncWriteExt + Unpin,
+{
+    let mut buf = vec![0u8; 16 * 1024];
+    let mut wait = if recently_hung() {
+        HANG_RECHECK
+    } else {
+        FIRST_BYTE_CHECK
+    };
+    let first = loop {
+        match tokio::time::timeout(wait, guest.read(&mut buf)).await {
+            Ok(r) => break r?,
+            // Connexion ouverte d'avance par le client, sans requête : rien à surveiller.
+            Err(_) if !request_sent.load(std::sync::atomic::Ordering::SeqCst) => {}
+            Err(_) => {
+                if !dockerd_answers(engine).await {
+                    *LAST_HANG.lock().unwrap() = Some(std::time::Instant::now());
+                    tracing::warn!("dockerd ne répond plus : requête Docker abandonnée");
+                    reply_unavailable(
+                        &mut *client,
+                        "Solon's engine is not responding. Run `solon restart`, then try again.",
+                    )
+                    .await;
+                    return Ok(0);
+                }
+                *LAST_HANG.lock().unwrap() = None;
+                wait = FIRST_BYTE_RECHECK;
+            }
+        }
+    };
+    if first == 0 {
+        return Ok(0);
+    }
+    client.write_all(&buf[..first]).await?;
+    let n = tokio::io::copy(guest, client).await?;
+    Ok(first as u64 + n)
 }
 
 async fn handle(engine: Engine, pipe: tokio::io::DuplexStream) -> io::Result<()> {
@@ -135,12 +247,17 @@ async fn handle(engine: Engine, pipe: tokio::io::DuplexStream) -> io::Result<()>
     let (mut pipe_read, mut pipe_write) = tokio::io::split(pipe);
     let (mut hv_read, mut hv_write) = hv.into_split();
 
+    let request_sent = std::sync::atomic::AtomicBool::new(false);
     let to_client = async {
-        let n = tokio::io::copy(&mut hv_read, &mut pipe_write).await;
+        let n = relay_response(&engine, &mut hv_read, &mut pipe_write, &request_sent).await;
         let _ = pipe_write.flush().await;
         n
     };
     let to_guest = async {
+        let mut hv_write = MarkOnWrite {
+            inner: &mut hv_write,
+            mark: &request_sent,
+        };
         let r = forward_requests(&engine, &mut pipe_read, &mut hv_write).await;
         let _ = hv_write.shutdown().await;
         r
@@ -150,6 +267,40 @@ async fn handle(engine: Engine, pipe: tokio::io::DuplexStream) -> io::Result<()>
     let (r1, r2) = tokio::join!(to_guest, to_client);
     tracing::trace!(?r1, ?r2, "connexion API Docker terminée");
     Ok(())
+}
+
+/// Écrivain qui note qu'au moins un octet est parti vers dockerd.
+struct MarkOnWrite<'a, W> {
+    inner: &'a mut W,
+    mark: &'a std::sync::atomic::AtomicBool,
+}
+
+impl<W: tokio::io::AsyncWrite + Unpin> tokio::io::AsyncWrite for MarkOnWrite<'_, W> {
+    fn poll_write(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> std::task::Poll<io::Result<usize>> {
+        let r = std::pin::Pin::new(&mut *self.inner).poll_write(cx, buf);
+        if matches!(r, std::task::Poll::Ready(Ok(n)) if n > 0) {
+            self.mark.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+        r
+    }
+
+    fn poll_flush(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<io::Result<()>> {
+        std::pin::Pin::new(&mut *self.inner).poll_flush(cx)
+    }
+
+    fn poll_shutdown(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<io::Result<()>> {
+        std::pin::Pin::new(&mut *self.inner).poll_shutdown(cx)
+    }
 }
 
 /// Lit les requêtes HTTP successives du client et les transmet à dockerd, en réécrivant celles qui
