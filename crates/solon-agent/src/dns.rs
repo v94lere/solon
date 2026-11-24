@@ -472,10 +472,16 @@ mod tests {
     /// Faux serveur amont : muet en UDP, il répond en TCP par `answer_len` octets (en-tête de la
     /// question, puis du remplissage). Rend son adresse.
     fn amont_tcp_seulement(answer_len: usize) -> SocketAddr {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
-        // Le même port en UDP, ouvert mais muet : la question part et rien ne revient.
-        let mute = UdpSocket::bind(addr).unwrap();
+        // Le même numéro de port en TCP et en UDP (ouvert mais muet : la question part et rien ne
+        // revient). Le port que le système donne en TCP peut être pris en UDP : on recommence.
+        let (listener, mute, addr) = (0..50)
+            .find_map(|_| {
+                let listener = TcpListener::bind("127.0.0.1:0").ok()?;
+                let addr = listener.local_addr().ok()?;
+                let mute = UdpSocket::bind(addr).ok()?;
+                Some((listener, mute, addr))
+            })
+            .expect("un port libre en TCP et en UDP");
         std::thread::spawn(move || {
             let _mute = mute;
             for stream in listener.incoming() {
